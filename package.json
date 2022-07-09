@@ -3,8 +3,9 @@
   "version": "0.1.0",
   "description": "none",
   "main": "dist/index.js",
+  "types": "./dist/index.d.ts",
   "scripts": {
-    "test": "tsc"
+    "build": "tsc"
   },
   "repository": {
     "type": "git",
