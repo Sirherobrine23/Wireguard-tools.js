@@ -1,0 +1,27 @@
+{
+  "name": "@ofvp_project/wireguard-tools.js",
+  "version": "0.1.0",
+  "description": "none",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OFVp-Project/Wireguard-tools.js.git"
+  },
+  "keywords": [
+    "wireguard"
+  ],
+  "author": "Matheus Sampaio Queiroga <srherobrine20@gmail.com> (https://sirherobrine23.org/)",
+  "license": "GPL-2.0-only",
+  "bugs": {
+    "url": "https://github.com/OFVp-Project/Wireguard-tools.js/issues"
+  },
+  "homepage": "https://github.com/OFVp-Project/Wireguard-tools.js#readme",
+  "devDependencies": {
+    "@types/node": "^18.0.3",
+    "ts-node": "^10.8.2",
+    "typescript": "^4.7.4"
+  }
+}
