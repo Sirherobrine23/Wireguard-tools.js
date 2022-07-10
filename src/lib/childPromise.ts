@@ -1,6 +1,6 @@
 import * as child_process from "node:child_process";
 
-export default async function run(command, args: string[], env: {[ke: string]: string}, cwd?: string) {
+export default async function run(command, args: string[], env: {[ke: string]: string}, cwd?: string): Promise<{stderr: string, stdout: string}> {
   return new Promise((res, rej) => {
     child_process.execFile(command, args, {
       cwd: cwd,
