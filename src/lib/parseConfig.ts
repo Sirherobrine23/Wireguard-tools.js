@@ -8,6 +8,7 @@ export type interfaceObject = {
   private: string,
   ip: ipObject[],
   post?: {up?: string[], down?: string[]},
+  pre?: {up?: string[], down?: string[]},
   DNS?: string[]
 };
 export type peerConfig = {
@@ -24,7 +25,7 @@ export type wireguardObject = {
   interface: interfaceObject
 };
 
-export async function parseConfig(configString: string): Promise<wireguardObject> {
+export function parseConfig(configString: string): wireguardObject {
   const peers: peerConfig[] = [];
   ([...configString.matchAll(/\[Peer\]([\s\S]+)\n?/g)]).map(x => x[1]).forEach(x => {
     for (let l of x.split(/\[Peer\]/).filter(x => !!x)) {
@@ -81,6 +82,20 @@ export async function parseConfig(configString: string): Promise<wireguardObject
     ip[1].split(",").forEach(x => {
       const [ip, sub] = x.trim().split("/");
       interfaceConfig.ip.push({ip: ip, subnet: parseInt(sub), type: !/:/.test(ip)?"ipv4":"ipv6"})
+    });
+  }
+
+  for (let ip of [...inter.matchAll(/PostUp\s+?=\s+?(.*)/g)]) {
+    ip[1].split(",").forEach(x => {
+      if (!interfaceConfig.post) interfaceConfig.post = {};
+      interfaceConfig.post.up = x.split(/;|&&/).map(z => z.trim());
+    });
+  }
+
+  for (let ip of [...inter.matchAll(/PostDown\s+?=\s+?(.*)/g)]) {
+    ip[1].split(",").forEach(x => {
+      if (!interfaceConfig.post) interfaceConfig.post = {};
+      interfaceConfig.post.down = x.split(/;|&&/).map(z => z.trim());
     });
   }
 
