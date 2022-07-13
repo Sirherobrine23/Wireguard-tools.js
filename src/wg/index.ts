@@ -2,4 +2,5 @@ export type { wgInterface as wgInterfaceStatus, peerInfo as peerInfoStatus } fro
 export type { keyObject, keyObjectPreshered } from "./genKey";
 import getStatus from "./getStatus";
 import genKey from "./genKey";
-export {getStatus, genKey};
+import syncInterface from "./updateInterface";
+export {genKey, getStatus, syncInterface};

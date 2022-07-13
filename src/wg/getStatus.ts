@@ -70,6 +70,7 @@ async function getInterfaces(): Promise<wgInterface[]> {
 export default function Status(wgIface: string): Promise<wgInterface>;
 export default function Status(wgIface?: string): Promise<wgInterface[]>;
 export default async function Status(wgIface?: string): Promise<wgInterface[]|wgInterface>  {
+  console.info("this api is under development, and for now it remains dependent on wg commands and wg-quick");
   const wgInterfaces = await getInterfaces();
   if (typeof wgIface === "string") {
     let __wgInterface = wgInterfaces.find(x => x.name === wgIface);
