@@ -1,15 +1,16 @@
 {
-  "name": "@ofvp_project/wireguard-tools.js",
+  "name": "wireguard-tools.js",
   "version": "0.1.0",
-  "description": "none",
+  "description": "A simple way to manage Wireguard in Node.js",
   "main": "dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "test": "ts-node ./customTest.ts"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/OFVp-Project/Wireguard-tools.js.git"
+    "url": "git+https://github.com/Sirherobrine23/Wireguard-tools.js.git"
   },
   "keywords": [
     "wireguard"
@@ -17,9 +18,9 @@
   "author": "Matheus Sampaio Queiroga <srherobrine20@gmail.com> (https://sirherobrine23.org/)",
   "license": "GPL-2.0-only",
   "bugs": {
-    "url": "https://github.com/OFVp-Project/Wireguard-tools.js/issues"
+    "url": "https://github.com/Sirherobrine23/Wireguard-tools.js/issues"
   },
-  "homepage": "https://github.com/OFVp-Project/Wireguard-tools.js#readme",
+  "homepage": "https://github.com/Sirherobrine23/Wireguard-tools.js#readme",
   "devDependencies": {
     "@types/node": "^18.0.3",
     "ts-node": "^10.8.2",
