@@ -1,7 +1,7 @@
 import * as os from "node:os";
 import * as fs from "node:fs";
-import execAsync from "../lib/childPromise";
-import commandExists from "../lib/commandExists";
+import execAsync from "../../lib/childPromise";
+import commandExists from "../../lib/commandExists";
 
 async function createInterface(wgInterface: string) {
   await execAsync("ip", ["link", "add", wgInterface], {}).catch(async () => {
