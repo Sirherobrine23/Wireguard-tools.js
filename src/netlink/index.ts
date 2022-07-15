@@ -2,7 +2,7 @@ import * as netlink from "netlink";
 
 // Defines from uapi/wireguard.h
 const WG_GENL_NAME = "wireguard"
-const WG_GENL_VERSION = 1
+export const WG_GENL_VERSION = 1
 export const WG_KEY_LEN = 32
 
 // WireGuard Device commands
@@ -48,11 +48,11 @@ export async function getFamily() {
 export type deviceList = {name: string, index: number};
 export async function getDevices() {
   const rt = netlink.createRtNetlink();
-  const generic = netlink.createGenericNetlink();
   const devices: deviceList[] = []
+  const generic = netlink.createGenericNetlink();
   for (const link of await rt.getLinks()) {
-    const interfaceName = link.attrs.ifname||link.attrs.altIfname||link.attrs.ifalias||"Null", interfaceIndex = link.data.index;
-    await generic.request(await getFamily(), WG_CMD_GET_DEVICE, WG_GENL_VERSION, Buffer.from("Null")).then(([res, info]) => {
+    const interfaceIndex = link.data.index, interfaceName = link.attrs.ifname||link.attrs.altIfname||link.attrs.ifalias||"Null";
+    await generic.request(2, WG_CMD_SET_DEVICE, 0, Buffer.from("FAAAAAMAAgA+zNBiMHUAAAAAAAA=", "base64")).then(([res, info]) => {
       console.log(res, info);
       if (res.length === 0) throw new Error("Not wireguard")
       devices.push({
