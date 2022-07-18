@@ -1,8 +1,4 @@
 {
-  "include": [
-    "src/**/*"
-  ],
-  "exclude": ["node_modules/"],
   "compilerOptions": {
     "outDir": "./dist",
     "forceConsistentCasingInFileNames": true,
@@ -19,5 +15,9 @@
     "typeRoots": [
       "node_modules/@types"
     ]
-  }
+  },
+  "exclude": ["node_modules/"],
+  "include": [
+    "src/**/*"
+  ]
 }
