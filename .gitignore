@@ -1,3 +1,7 @@
+# Ignore submodule
+addon/wg_tools
+
+# Ingore node folders
 node_modules/
 dist/
 build/
