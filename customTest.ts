@@ -19,10 +19,7 @@ async function readDirAndFilter(dir: string, test: Array<RegExp> = [/.*/]) {
 }
 
 // Add default envs
-process.env.PASSWORD_SECERET = "password";
-process.env.NODE_ENV = "development";
 const RandomUUIDs = Array(50).fill(0).map(() => crypto.randomUUID());
-
 async function runTest() {
   const testDir = path.join(__dirname, ".testDir");
   if (fsOld.existsSync(testDir)) await fs.rm(testDir, { recursive: true });
@@ -30,14 +27,13 @@ async function runTest() {
   const mainFind = path.join(process.cwd(), "src");
   const testsFiles = await readDirAndFilter(mainFind, [/.*\.test\.ts$/]);
   for (const file of testsFiles) {
-    console.log("************** Start Script: %s **************", file);
-    const testScript = await import(file) as {[key: string]: (...any) => Promise<void>};
+    const testScript = await import(file) as {[key: string]: (...any) => Promise<any>};
     for (const key in testScript) {
       const logFileJson = path.join(testDir, `${path.basename(file)}_${key}.json`);
-      console.log("************** Start Test: %s **************", key);
-      await fs.writeFile(logFileJson, JSON.stringify(await testScript[key](RandomUUIDs), null, 2));
+      console.log("************** Run: %s **************", key);
+      await fs.writeFile(logFileJson, JSON.stringify((await testScript[key](RandomUUIDs))||{}, null, 2));
     }
-    console.log("************** End Script: %s **************", file);
+    console.log("************** And Script: %s **************\n\n", file);
   }
 }
 

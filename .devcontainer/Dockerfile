@@ -1,4 +1,9 @@
 FROM ghcr.io/sirherobrine23/mydockerimage:latest
+
+# Install wireguard
+ARG DEBIAN_FRONTEND="noninteractive"
+RUN apt update && apt install -y dkms wireguard net-tools iproute2 iptables nftables systemctl
+
 # Add non root user and Install oh my zsh
 ARG USERNAME="devcontainer"
 ARG USER_UID="1000"
