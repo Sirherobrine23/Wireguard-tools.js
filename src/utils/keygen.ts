@@ -15,11 +15,11 @@ export type keyObject = {private: string, public: string};
 export type keyObjectPreshered = keyObject & {preshared: string};
 
 /**
- * Generate Wireguard keys with pershared key.
+ * Generate Wireguard keys withou preshared key
  *
  * @param genPreshared - In object includes Preshared key, defaults is `false`
  */
-export default function CreateKey(genPreshared: true): Promise<keyObjectPreshered>;
+export default function CreateKey(): Promise<keyObject>;
 
 /**
  * Generate Wireguard keys withou preshared key
@@ -27,6 +27,13 @@ export default function CreateKey(genPreshared: true): Promise<keyObjectPreshere
  * @param genPreshared - In object includes Preshared key, defaults is `false`
  */
 export default function CreateKey(genPreshared: false): Promise<keyObject>;
+
+/**
+ * Generate Wireguard keys with pershared key.
+ *
+ * @param genPreshared - In object includes Preshared key, defaults is `false`
+ */
+export default function CreateKey(genPreshared: true): Promise<keyObjectPreshered>;
 
 /**
  * Generate Wireguard keys without preshared key

@@ -130,31 +130,7 @@ export function parseConfig(configString: string): {type: "client"|"server", dat
     return toRe;
   }
   const InterfaceData = parseSet(def.filter(x => x.Key === "Interface")[0].data.trim().split(/\n/g).map(x => x.trim()));
-  if (!InterfaceData.find(({key}) => key === "Address") && !InterfaceData.find(({key}) => key === "ListenPort")) {
-    const config: clientConfig = {
-      interface: {
-        address: InterfaceData.find(({key}) => key === "Address")!.value.split(",").map(x => ({ip: x.split("/")[0].trim(), subnet: parseInt(x.split("/")[1].trim())})),
-        DNS: InterfaceData.find(({key}) => key === "DNS")?.value.split(",").map(x => x.trim()),
-        private: InterfaceData.find(({key}) => key === "PrivateKey")!.value,
-      },
-      peer: {},
-    };
-    for (const peer of def.filter(x => x.Key === "Peer")) {
-      const peerData = parseSet(peer.data.trim().split(/\n/g).map(x => x.trim()).filter(x => !!x));
-      const findValue = (key: string): string => peerData.find(({key: k}) => k === key)?.value;
-      const PublicKey = findValue("PublicKey")!;
-      if (!!config.peer[PublicKey]) throw new Error("Duplicate public key");
-      config.peer[PublicKey] = {
-        Endpoint: {host: findValue("Endpoint")?.split(":")[0].trim(), port: parseInt(findValue("Endpoint")!.split(":")[1].trim())},
-        preshared: findValue("PresharedKey"),
-        commend: findValue("Comment"),
-        allowIp: (!!findValue("AllowedIPs"))?findValue("AllowedIPs").split(",").map(x => ({ip: x.split("/")[0].trim(), subnet: parseInt(x.split("/")[1].trim())})):[],
-      };
-      if (findValue("Keepalive")) config.peer[PublicKey].Keepalive = parseInt(findValue("Keepalive"));
-      if (peerData.filter(x => /^(AllowedIPs|Endpoint|PresharedKey|Comment|Keepalive)$/.test(x.key)).length > 1) console.log("Warning: multiple invalid keys in peer %s", PublicKey);
-    }
-    return {type: "client", data: config};
-  } else if (!!InterfaceData.find(({key}) => key === "ListenPort") && !!InterfaceData.find(({key}) => key === "Address")) {
+  if (!!InterfaceData.find(({key}) => key === "Address") && !!InterfaceData.find(({key}) => key === "ListenPort")) {
     const config: serverConfig = {
       interface: {
         private: InterfaceData.find(({key}) => key === "PrivateKey")!.value,
@@ -185,7 +161,29 @@ export function parseConfig(configString: string): {type: "client"|"server", dat
     }
     return {type: "server", data: config};
   }
-  throw new Error("Cannot detect config type, please check your config");
+  const config: clientConfig = {
+    interface: {
+      address: InterfaceData.find(({key}) => key === "Address")!.value.split(",").map(x => ({ip: x.split("/")[0].trim(), subnet: parseInt(x.split("/")[1].trim())})),
+      DNS: InterfaceData.find(({key}) => key === "DNS")?.value.split(",").map(x => x.trim()),
+      private: InterfaceData.find(({key}) => key === "PrivateKey")!.value,
+    },
+    peer: {},
+  };
+  for (const peer of def.filter(x => x.Key === "Peer")) {
+    const peerData = parseSet(peer.data.trim().split(/\n/g).map(x => x.trim()).filter(x => !!x));
+    const findValue = (key: string): string => peerData.find(({key: k}) => k === key)?.value;
+    const PublicKey = findValue("PublicKey")!;
+    if (!!config.peer[PublicKey]) throw new Error("Duplicate public key");
+    config.peer[PublicKey] = {
+      Endpoint: {host: findValue("Endpoint")?.split(":")[0].trim(), port: parseInt(findValue("Endpoint")!.split(":")[1].trim())},
+      preshared: findValue("PresharedKey"),
+      commend: findValue("Comment"),
+      allowIp: (!!findValue("AllowedIPs"))?findValue("AllowedIPs").split(",").map(x => ({ip: x.split("/")[0].trim(), subnet: parseInt(x.split("/")[1].trim())})):[],
+    };
+    if (findValue("Keepalive")) config.peer[PublicKey].Keepalive = parseInt(findValue("Keepalive"));
+    if (peerData.filter(x => /^(AllowedIPs|Endpoint|PresharedKey|Comment|Keepalive)$/.test(x.key)).length > 1) console.log("Warning: multiple invalid keys in peer %s", PublicKey);
+  }
+  return {type: "client", data: config};
 }
 
 /**
