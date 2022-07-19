@@ -45,26 +45,20 @@ export async function getFamily() {
   return Family[0].familyId;
 }
 
-export type deviceList = {name: string, index: number};
+export type deviceList = {name: string, index: number, mtu: number, bytes: {rx: bigint, tx: bigint}};
+
+/**
+ * Get all wireguard interfaces and their global stats
+*/
 export async function getDevices() {
   const rt = netlink.createRtNetlink();
-  const devices: deviceList[] = []
-  const generic = netlink.createGenericNetlink();
-  for (const link of await rt.getLinks()) {
-    const interfaceIndex = link.data.index, interfaceName = link.attrs.ifname||link.attrs.altIfname||link.attrs.ifalias||"Null";
-    await generic.request(2, WG_CMD_SET_DEVICE, 0, Buffer.from("FAAAAAMAAgA+zNBiMHUAAAAAAAA=", "base64")).then(([res, info]) => {
-      console.log(res, info);
-      if (res.length === 0) throw new Error("Not wireguard")
-      devices.push({
-        index: interfaceIndex,
-        name: interfaceName
-      });
-    }).catch((err: Error) => {
-      console.log(interfaceName, err.toString());
-      return err;
-    });
+  const addrs = await (await rt.getLinks()).filter(({attrs}) => /wireguard/.test(attrs?.linkinfo?.toString()))
+  const devices: deviceList[] = addrs.map(({data: {index}, attrs: {ifname, altIfname, mtu, stats64: {rxBytes, txBytes}}}) => ({index, mtu, bytes: {rx: rxBytes, tx: txBytes}, name: ifname||altIfname}));
+  if (devices.length === 0) throw new Error("No wireguard devices found");
+  for (const {data: {index}, attrs: {ifname, altIfname, mtu, stats64}} of addrs) {
+    console.log("Index: %f, name: %s, mtu: %f", index, ifname||altIfname, mtu);
+    console.log("rx: %f, tx: %f\n", stats64.rxBytes, stats64.txBytes);
   }
-
   return devices;
 }
 getDevices().then(console.log)
