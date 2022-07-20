@@ -37,4 +37,27 @@ export const WG_MAX_PEERS = 1000
 export const WG_MAX_ALLOWEDIPS = 1000
 
 // Export type for wireguard device
-export type deviceList = {name: string, index: number, mtu: number, bytes: {rx: bigint, tx: bigint}};
+export type deviceList = {
+  name: string,
+  index: number,
+  mtu: number,
+  bytes: {
+    rx: bigint,
+    tx: bigint
+  }
+};
+
+// Export type for wireguard peer
+export type peerInfo = {
+  publicKey: string,
+  presharedKey?: string,
+  endpoint: string,
+  allowedIps: {
+    ip: string,
+    mask: number
+  }[],
+  persistentKeepalive?: number,
+  lastHandshakeTime?: Date,
+  rxBytes?: bigint,
+  txBytes?: bigint
+};
