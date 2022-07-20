@@ -1,12 +1,6 @@
 import * as wireguardNetlink from "./index";
 
 export default async function main() {
-  try {
-    await wireguardNetlink.getDevices();
-  } catch(err) {
-    console.log("Get devices works:", err);
-  }
-
   // Create interface and attempt to get devices again
   await wireguardNetlink.addInterface({
     interfaceName: "wg-test",
