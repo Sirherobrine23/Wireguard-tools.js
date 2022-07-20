@@ -1,2 +1,6 @@
+# Remove node paths
 node_modules/
 dist/
+
+# Remove test dir results for tests
+.testDir

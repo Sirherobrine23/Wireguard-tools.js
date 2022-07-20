@@ -35,3 +35,6 @@ export const WGPEER_F_UPDATE_ONLY = 2
 // Specific defines
 export const WG_MAX_PEERS = 1000
 export const WG_MAX_ALLOWEDIPS = 1000
+
+// Export type for wireguard device
+export type deviceList = {name: string, index: number, mtu: number, bytes: {rx: bigint, tx: bigint}};

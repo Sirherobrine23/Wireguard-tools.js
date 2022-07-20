@@ -1,7 +1,8 @@
 import * as netlink from "netlink";
 import * as childPromises from "../lib/childPromise";
-// import * as wgDefines from "./defines";
-//
+import * as wgDefines from "./defines";
+export type { deviceList } from "./defines";
+
 // export async function getFamily() {
 //   const generic = netlink.createGenericNetlink();
 //   const Family = await generic.ctrlRequest(netlink.genl.Commands.GET_FAMILY, {familyName: wgDefines.WG_GENL_NAME}, { flags: netlink.FlagsGet.DUMP });
@@ -9,24 +10,23 @@ import * as childPromises from "../lib/childPromise";
 //   return Family[0].familyId;
 // }
 
-export type deviceList = {name: string, index: number, mtu: number, bytes: {rx: bigint, tx: bigint}};
+
 /**
  * Get all wireguard interfaces and their global stats
 */
-export async function getDevices(): Promise<deviceList[]> {
+export async function getDevices(): Promise<wgDefines.deviceList[]> {
   const rt = netlink.createRtNetlink();
   const addrs = (await rt.getLinks()).filter(({attrs}) => /wireguard/.test(attrs?.linkinfo?.toString()))
   if (addrs.length === 0) throw new Error("No wireguard devices found");
-  return addrs.map(({data: {index}, attrs: {ifname, altIfname, mtu, stats64: {rxBytes, txBytes}}}) => ({index, mtu, bytes: {rx: rxBytes, tx: txBytes}, name: ifname||altIfname}) as deviceList);
+  return addrs.map(({data: {index}, attrs: {ifname, altIfname, mtu, stats64: {rxBytes, txBytes}}}) => ({index, mtu, bytes: {rx: rxBytes, tx: txBytes}, name: ifname||altIfname}) as wgDefines.deviceList);
 }
 
-export type addInterfaceOptions = {interfaceName: string, ip?: string[]};
 /**
  * Create interface and add ip addresses if iformation is provided
  *
  * This is an implementation using `ip` commands, so it has this compatibility, I will be converting with @mildsunrise to use `netlink`.
  */
-export async function addInterface(options: addInterfaceOptions) {
+export async function addInterface(options: {interfaceName: string, ip?: string[]}) {
   if (!options.interfaceName) throw new Error("Interface name is required");
   const interfaceName = options.interfaceName;
   await childPromises.execFile("ip", ["link", "add", interfaceName, "type", "wireguard"]);
@@ -35,3 +35,15 @@ export async function addInterface(options: addInterfaceOptions) {
     if (options.ip.length > 0) await childPromises.execFile("ip", ["addr", "add", ...options.ip, "dev", interfaceName]);
   }
 }
+
+// export async function expirementalAddInterface(options: {interfaceName: string, ip?: string[]}) {
+//   if (!options.interfaceName) throw new Error("Interface name is required");
+//   const interfaceName = options.interfaceName;
+//   if (!!options.ip) options.ip = options.ip.filter(x => /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+\/[0-9]{0,3}$/.test(x));
+//   const rt = netlink.createRtNetlink();
+//   rt.newLink({
+//     type: "NONE"
+//   }, {
+//     ifname: interfaceName,
+//   })
+// }
