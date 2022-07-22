@@ -44,27 +44,14 @@ export async function getDevices(): Promise<wgDefines.deviceList[]> {
   const rt = netlink.createRtNetlink();
   const addrs = (await rt.getLinks()).filter(({attrs}) => /wireguard/.test(attrs?.linkinfo?.toString()))
   if (addrs.length === 0) throw new Error("No wireguard devices found");
-  return addrs.map(({data: {index}, attrs: {ifname, altIfname, mtu, stats64: {rxBytes, txBytes}}}) => ({index, mtu, bytes: {rx: rxBytes, tx: txBytes}, name: ifname||altIfname}) as wgDefines.deviceList);
+  return addrs.map(({data: {index, family}, attrs: {ifname, altIfname, mtu, stats64: {rxBytes, txBytes}}}) => ({index, family, mtu, bytes: {rx: rxBytes, tx: txBytes}, name: ifname||altIfname}) as wgDefines.deviceList);
 }
 
-export async function getPeers() {
-  const deviceFilter: wgDefines.peerInfo[] = [];
-  for (const {name} of await getDevices()) {
-    console.log("getting peers to", name);
-    const familiId = await getFamilyId();
-    console.log(familiId)
-    // I need to create a header but I don't know how, I need to see how wg-tools works.
-    const genericSocket = netlink.createGenericNetlink();
-    let iSq = 1
-    while(true) {
-      try {
-        const data = await genericSocket.request(familiId, wgDefines.WG_CMD_GET_DEVICE, wgDefines.WG_GENL_VERSION, Buffer.from(`\u0000\u0000${name}\u0000\u0000`));
-        console.log(iSq, data);
-        break
-      } catch (err) {
-        iSq++
-      }
-    }
-  }
-  return deviceFilter;
+export async function deleteInterface(interfacename: string) {
+  const ifDev = (await getDevices()).find(x => x.name === interfacename);
+  if (!ifDev) throw new Error("Interface not found");
+  const rt = netlink.createRtNetlink();
+  await rt.delLink({
+    index: ifDev.index,
+  });
 }

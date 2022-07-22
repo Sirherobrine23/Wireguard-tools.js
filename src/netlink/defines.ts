@@ -40,6 +40,7 @@ export const WG_MAX_ALLOWEDIPS = 1000
 export type deviceList = {
   name: string,
   index: number,
+  family: number,
   mtu: number,
   bytes: {
     rx: bigint,
