@@ -20,5 +20,5 @@ jobs:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
     - run: npm ci
-    - run: sudo npm test
-
+    - run: sudo npm i -g typescript ts-node
+    - run: sudo ts-node customTest.ts

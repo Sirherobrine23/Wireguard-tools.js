@@ -17,25 +17,13 @@ export async function getFamilyId() {
  */
 export async function addInterface(options: {interfaceName: string, ip?: string[]}) {
   if (!options.interfaceName) throw new Error("Interface name is required");
-  const interfaceName = options.interfaceName;
-  await childPromises.execFile("ip", ["link", "add", interfaceName, "type", "wireguard"]);
+  if (!/[A-Za-z0-9_]+/.test(options.interfaceName)) throw new Error("Interface name must be alphanumeric or underscore");
+  await childPromises.execFile("ip", ["link", "add", options.interfaceName, "type", "wireguard"]);
   if (!!options.ip) {
     options.ip = options.ip.filter(x => /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+\/[0-9]{0,3}$/.test(x));
-    if (options.ip.length > 0) await childPromises.execFile("ip", ["addr", "add", ...options.ip, "dev", interfaceName]);
+    if (options.ip.length > 0) await childPromises.execFile("ip", ["addr", "add", ...options.ip, "dev", options.interfaceName]);
   }
 }
-
-// export async function expirementalAddInterface(options: {interfaceName: string, ip?: string[]}) {
-//   if (!options.interfaceName) throw new Error("Interface name is required");
-//   const interfaceName = options.interfaceName;
-//   if (!!options.ip) options.ip = options.ip.filter(x => /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+\/[0-9]{0,3}$/.test(x));
-//   const rt = netlink.createRtNetlink();
-//   rt.newLink({
-//     type: "NONE"
-//   }, {
-//     ifname: interfaceName,
-//   })
-// }
 
 /**
  * Get all wireguard interfaces and their global stats
