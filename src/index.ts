@@ -1,2 +1,2 @@
 export * as utils from "./utils/index";
-export { getDevices } from "./bridge";
+export { addDevice, delDevice, getDevices } from "./bridge";

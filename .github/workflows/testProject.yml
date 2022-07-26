@@ -8,6 +8,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/sirherobrine23/mydockerimage:latest
+      options: "--privileged --init"
     strategy:
       matrix:
         node-version: [14.x, 16.x, 18.x]
@@ -21,5 +24,5 @@ jobs:
         cache: 'npm'
     - run: sudo npm install -g ts-node typescript
     - run: npm ci
-    - run: npm run build
+    - run: npm run prebuild
     - run: sudo ts-node customTest.ts
