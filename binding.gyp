@@ -12,8 +12,8 @@
             ],
 
             # enable C++ exceptions
-            'cflags': [ '-fno-exceptions', '-fpermissive' ],
-
+            'cflags!': [ '-fno-exceptions', '-fpermissive', '-Wall' ],
+            'cflags_cc!': [ '-fno-exceptions' ],
             'xcode_settings': {
                 'GCC_ENABLE_CPP_EXCEPTIONS': 'YES',
                 'CLANG_CXX_LIBRARY': 'libc++',
