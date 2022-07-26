@@ -5,9 +5,17 @@ on:
   pull_request:
     branches: [ "main" ]
 
+env:
+  CXX_host: "g++"
+  CC_host: "gcc"
+  CXX: "g++"
+  CC: "gcc"
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/sirherobrine23/mydockerimage:latest
     strategy:
       matrix:
         node-version: [14.x, 16.x, 18.x]
@@ -19,6 +27,7 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
+    - run: sudo npm install -g ts-node typescript
     - run: npm ci
-    - run: npm test
-
+    - run: npm run prebuild
+    - run: sudo ts-node customTest.ts
