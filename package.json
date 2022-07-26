@@ -4,11 +4,12 @@
   "description": "A simple way to manage Wireguard in Node.js",
   "main": "dist/index.js",
   "types": "./dist/index.d.ts",
+  "gypfile": true,
   "scripts": {
     "build": "node-gyp build && tsc",
-    "postinstall": "node-gyp-build",
+    "prebuild": "node-gyp-build",
     "configure": "node-gyp configure",
-    "test": "ts-node ./customTest.ts"
+    "test": "npm run build && ts-node ./customTest.ts"
   },
   "repository": {
     "type": "git",

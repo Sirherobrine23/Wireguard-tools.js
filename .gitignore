@@ -5,4 +5,4 @@ addon/wg_tools
 node_modules/
 dist/
 build/
-.vscode-ctags
+.vscode-ctags*
