@@ -1,2 +1,11 @@
+# Ignore submodule
+addon/wg_tools
+
+# Ignore customTest
+.testDir/
+
+# Ingore node folders
 node_modules/
 dist/
+build/
+.vscode-ctags*
