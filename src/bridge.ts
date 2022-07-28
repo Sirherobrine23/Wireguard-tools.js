@@ -1,38 +1,48 @@
 // @ts-ignore
 import Bridge from "../build/Release/wireguard_bridge";
-Bridge.getPeers()
-export function getDevices() {
-  const devices = Bridge.getDeviceNames() as {[key: string]: string};
-  return Object.keys(devices).filter(x => !x.trim());
-}
 
-export async function addDevice(interfacename: string) {
+export type wireguardInterface = {
+  publicKey: string,
+  privateKey: string,
+  peers: {
+    [peerPublicKey: string]: {
+      presharedKey?: string,
+      rxBytes?: number,
+      txBytes?: number,
+      keepInterval?: number,
+      lastHandshake?: Date,
+    }
+  }
+};
+export type PeerAndInterface = {[interfaceName: string]: wireguardInterface};
+export function getAllPeersAndInterface(): PeerAndInterface {  return Bridge.getPeers();}
+export function getDevices() {return Object.keys(getAllPeersAndInterface);}
+
+export type newDevice = {
+  name: string,
+  portListen: number
+  publicKey: string,
+  privateKey: string
+};
+export async function addDevice(interfaceConfig: newDevice): Promise<wireguardInterface> {
+  const { name: interfacename, portListen, publicKey, privateKey  } = interfaceConfig;
   if (!interfacename) throw new Error("interface name is required");
   if (interfacename.length > 16) throw new Error("interface name is too long");
   if (!/^[a-zA-Z0-9_]+$/.test(interfacename)) throw new Error("interface name is invalid");
-  console.log(getDevices().some(x => interfacename === x), getDevices())
-  if (getDevices().some(x => interfacename === x)) throw new Error("interface name is already in use");
-  const res = Bridge.addDevice(interfacename);
-  console.log("Add:", res)
-  if (res < 0) {
-    let count = 0;
-    while (true) {
-      if (count++ > 15) return;
-      const devices = getDevices();
-      if (devices.some(x => interfacename === x)) return;
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-  }
-  throw new Error("interface name is already in use");
+  if (getAllPeersAndInterface()[interfacename]) throw new Error("interface name is already in use");
+  const res = Bridge.addDevice(interfacename, portListen, publicKey, privateKey);
+  if (res === -1) throw new Error("Unable to add device");
+  else if (res === -2) throw new Error("Unable to set device");
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  return getAllPeersAndInterface()[interfacename];
 }
 
 export function delDevice(interfacename: string) {
   if (!interfacename) throw new Error("interface name is required");
   if (interfacename.length > 16) throw new Error("interface name is too long");
   if (!/^[a-zA-Z0-9_]+$/.test(interfacename)) throw new Error("interface name is invalid");
-  if (!getDevices().some(x => interfacename === x)) throw new Error("interface name is not in use");
+  if (!getAllPeersAndInterface()[interfacename]) throw new Error("interface name is not in use");
   const res = Bridge.delDevice(interfacename);
-  console.log("Delete:", res)
-  if (res < 0) return;
-  throw new Error("interface name is not found");
+  if (res === 0) return;
+  throw new Error("Deleteinterface failed, return code: " + res);
 }
