@@ -18,17 +18,21 @@
     "url": "https://github.com/Sirherobrine23/Wireguard-tools.js/issues"
   },
   "homepage": "https://github.com/Sirherobrine23/Wireguard-tools.js#readme",
+  "os": [
+    "linux",
+    "android"
+  ],
   "engines": {
     "node": ">=14.0.0"
   },
   "scripts": {
-    "build": "node-gyp build && tsc",
-    "postinstall": "node-gyp-build",
+    "build": "tsc && npm run install",
+    "install": "node-gyp-build || exit 0",
     "nodegyp": "node-gyp configure && node-gyp rebuild",
     "test": "npm run build && sudo ts-node ./customTest.ts"
   },
   "devDependencies": {
-    "@types/node": "^18.0.4",
+    "@types/node": "^18.6.2",
     "node-gyp": "^9.1.0",
     "ts-node": "^10.9.1",
     "typescript": "^4.7.4"

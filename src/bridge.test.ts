@@ -1,5 +1,5 @@
 import { addDevice, delDevice, getAllPeersAndInterface } from "./bridge";
-import keyGen from "./utils/keygen";
+import { keygen as keyGen } from "./utils/keygen";
 
 export default async function main() {
   if (getAllPeersAndInterface()["wg_test"]) {
