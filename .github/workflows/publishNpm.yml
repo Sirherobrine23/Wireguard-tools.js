@@ -9,17 +9,21 @@ jobs:
   publishpackage:
     runs-on: ubuntu-latest
     name: Publish
+    # Run in same docker image from devcontainer/codespace
     container:
       image: ghcr.io/sirherobrine23/mydockerimage:latest
       options: "--privileged --init"
     steps:
     - uses: actions/checkout@v3
+    # Install basic tools
     - uses: actions/setup-node@v3
       with:
         node-version: 18.x
         registry-url: https://registry.npmjs.org/
     - run: sudo npm install -g ts-node typescript
-    - shell: node {0}
+
+    - name: Edit version
+      shell: node {0}
       run: |
         const fs = require("fs");
         const path = require("path");
@@ -28,7 +32,29 @@ jobs:
         package.version = "${{ github.ref }}";
         package.version = package.version.replace(/[A-Za-z_\/]+/, "");
         fs.writeFileSync(packagePath, JSON.stringify(package, null, 2));
+
+    # Add version to environment variables
+    - name: Add version to environment variables
+      run: |
+        cat package.json | jq -r '.version' > /tmp/version.txt
+        echo "PACKAGE_VERSION=$(cat /tmp/version.txt)" >> $GITHUB_ENV
+
+    # Install depencides and test
     - run: npm ci
     - run: npm run nodegyp
     - run: npm run build
-    - run: npm publish --tag ${{ github.event.prerelease && 'next' || 'latest' }}
+
+    # Publish
+    - name: Publish to npm
+      run: npm publish --tag ${{ github.event.release.prerelease && 'next' || 'latest' }}
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.MPM_PUBLISH_TOKEN }}
+
+    # Create pull request to update version in main branch
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@v4
+      with:
+        commit-message: Update version v${{ env.PACKAGE_VERSION }}
+        title: Update package version v${{ env.PACKAGE_VERSION }}
+        body: Auto update package version, created with GitHub Actions
+        branch: update-version
