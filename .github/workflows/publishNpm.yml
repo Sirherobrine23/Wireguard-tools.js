@@ -1,0 +1,34 @@
+name: Publish package
+on:
+  release:
+    types:
+      - prereleased
+      - released
+
+jobs:
+  publishpackage:
+    runs-on: ubuntu-latest
+    name: Publish
+    container:
+      image: ghcr.io/sirherobrine23/mydockerimage:latest
+      options: "--privileged --init"
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-node@v3
+      with:
+        node-version: 18.x
+        registry-url: https://registry.npmjs.org/
+    - run: sudo npm install -g ts-node typescript
+    - shell: node {0}
+      run: |
+        const fs = require("fs");
+        const path = require("path");
+        const packagePath = path.join(process.cwd(), "package.json");
+        const package = JSON.parse(fs.readFileSync(packagePath, "utf8"));
+        package.version = "${{ github.ref }}";
+        package.version = package.version.replace(/[A-Za-z_\/]+/, "");
+        fs.writeFileSync(packagePath, JSON.stringify(package, null, 2));
+    - run: npm ci
+    - run: npm run nodegyp
+    - run: npm run build
+    - run: npm publish --tag ${{ github.event.prerelease && 'next' || 'latest' }}

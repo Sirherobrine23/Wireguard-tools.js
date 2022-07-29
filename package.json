@@ -5,12 +5,6 @@
   "main": "dist/index.js",
   "types": "./dist/index.d.ts",
   "gypfile": true,
-  "scripts": {
-    "build": "node-gyp build && tsc",
-    "prebuild": "node-gyp-build",
-    "configure": "node-gyp configure",
-    "test": "npm run build && sudo ts-node ./customTest.ts"
-  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Sirherobrine23/Wireguard-tools.js.git"
@@ -24,6 +18,15 @@
     "url": "https://github.com/Sirherobrine23/Wireguard-tools.js/issues"
   },
   "homepage": "https://github.com/Sirherobrine23/Wireguard-tools.js#readme",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "scripts": {
+    "build": "node-gyp build && tsc",
+    "postinstall": "node-gyp-build",
+    "nodegyp": "node-gyp configure && node-gyp rebuild",
+    "test": "npm run build && sudo ts-node ./customTest.ts"
+  },
   "devDependencies": {
     "@types/node": "^18.0.4",
     "node-gyp": "^9.1.0",
