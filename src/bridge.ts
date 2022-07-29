@@ -8,6 +8,7 @@ export type wireguardInterface = {
   peers: {
     [peerPublicKey: string]: {
       presharedKey?: string,
+      endpoint: string,
       rxBytes?: number,
       txBytes?: number,
       keepInterval?: number,
