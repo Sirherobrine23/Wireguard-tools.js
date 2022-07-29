@@ -32,7 +32,7 @@ export async function addDevice(interfaceConfig: newDevice): Promise<wireguardIn
   if (interfacename.length > 16) throw new Error("interface name is too long");
   if (!/^[a-zA-Z0-9_]+$/.test(interfacename)) throw new Error("interface name is invalid");
   if (getAllPeersAndInterface()[interfacename]) throw new Error("interface name is already in use");
-  const res = Bridge.addDevice(interfacename, portListen, publicKey, privateKey);
+  const res = Bridge.addNewDevice(interfacename, portListen, publicKey, privateKey);
   if (res === -1) throw new Error("Unable to add device");
   else if (res === -2) throw new Error("Unable to set device");
   await new Promise(resolve => setTimeout(resolve, 1000));
