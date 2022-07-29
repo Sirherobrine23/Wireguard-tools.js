@@ -9,10 +9,6 @@ jobs:
   publishpackage:
     runs-on: ubuntu-latest
     name: Publish
-    # Run in same docker image from devcontainer/codespace
-    container:
-      image: ghcr.io/sirherobrine23/mydockerimage:latest
-      options: "--privileged --init"
     steps:
     - uses: actions/checkout@v3
     # Install basic tools
@@ -41,7 +37,7 @@ jobs:
 
     # Install depencides and test
     - run: npm ci
-    - run: npm run nodegyp
+    # - run: npm run nodegyp
     - run: npm run build
 
     # Publish
@@ -55,6 +51,9 @@ jobs:
       uses: peter-evans/create-pull-request@v4
       with:
         commit-message: Update version v${{ env.PACKAGE_VERSION }}
+        delete-branch: true
+        assignees: SirHerobrine23
+        reviewers: SirHerobrine23
+        branch: update-version
         title: Update package version v${{ env.PACKAGE_VERSION }}
         body: Auto update package version, created with GitHub Actions
-        branch: update-version

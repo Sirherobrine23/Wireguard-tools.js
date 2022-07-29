@@ -1,4 +1,4 @@
-import keyGen from "./keygen";
+import { keygen as keyGen } from "./keygen";
 
 export default async function main() {
   const keyWithoutPre = await keyGen();

@@ -19,28 +19,28 @@ export type keyObjectPreshered = keyObject & {preshared: string};
  *
  * @param genPreshared - In object includes Preshared key, defaults is `false`
  */
-export default function CreateKey(): Promise<keyObject>;
+export function keygen(): Promise<keyObject>;
 
 /**
  * Generate Wireguard keys withou preshared key
  *
  * @param genPreshared - In object includes Preshared key, defaults is `false`
  */
-export default function CreateKey(genPreshared: false): Promise<keyObject>;
+export function keygen(genPreshared: false): Promise<keyObject>;
 
 /**
  * Generate Wireguard keys with pershared key.
  *
  * @param genPreshared - In object includes Preshared key, defaults is `false`
  */
-export default function CreateKey(genPreshared: true): Promise<keyObjectPreshered>;
+export function keygen(genPreshared: true): Promise<keyObjectPreshered>;
 
 /**
  * Generate Wireguard keys without preshared key
  *
  * @param genPreshared - In object includes Preshared key, defaults is `false`
  */
-export default async function CreateKey(genPreshared: boolean = false): Promise<keyObject|keyObjectPreshered> {
+export async function keygen(genPreshared: boolean = false): Promise<keyObject|keyObjectPreshered> {
   const key = await cryptoCreateKey();
   if (genPreshared) {
     return {
