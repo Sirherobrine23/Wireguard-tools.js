@@ -1,4 +1,4 @@
-name: Test it works
+name: Test
 on:
   push:
     branches: [ "main" ]

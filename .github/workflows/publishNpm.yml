@@ -19,7 +19,8 @@ jobs:
         node-version: 18.x
         registry-url: https://registry.npmjs.org/
     - run: sudo npm install -g ts-node typescript
-    - shell: node {0}
+    - name: Edit version
+      shell: node {0}
       run: |
         const fs = require("fs");
         const path = require("path");
@@ -31,4 +32,6 @@ jobs:
     - run: npm ci
     - run: npm run nodegyp
     - run: npm run build
-    - run: npm publish --tag ${{ github.event.prerelease && 'next' || 'latest' }}
+    - run: npm publish --tag ${{ github.event.release.prerelease && 'next' || 'latest' }}
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.MPM_PUBLISH_TOKEN }}
