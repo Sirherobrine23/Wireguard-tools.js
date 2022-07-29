@@ -35,6 +35,9 @@ Napi::Object getPeers(const Napi::CallbackInfo& info) {
     wg_key_b64_string interfaceprivateKey; wg_key_to_base64(interfaceprivateKey, device->private_key);
     DeviceObj.Set(Napi::String::New(info.Env(), "privateKey"), Napi::String::New(info.Env(), interfaceprivateKey));
 
+    // Wireguard interface port listen
+    if (device->listen_port) DeviceObj.Set(Napi::String::New(info.Env(), "portListen"), Napi::Number::New(info.Env(), device->listen_port));
+
     // Peers
     Napi::Object PeerRoot = Napi::Object::New(info.Env());
     wg_for_each_peer(device, peer) {
@@ -65,7 +68,7 @@ Napi::Object getPeers(const Napi::CallbackInfo& info) {
       PeerRoot.Set(Napi::String::New(info.Env(), peerPublicKey), PeerObj);
     }
     DeviceObj.Set(Napi::String::New(info.Env(), "peers"), PeerRoot);
-    DevicesObj.Set(Napi::String::New(info.Env(), device_name), DeviceObj);
+    DevicesObj.Set(Napi::String::New(info.Env(), device->name), DeviceObj);
     wg_free_device(device);
   }
   free(device_names);
@@ -78,7 +81,10 @@ Napi::Number addDevice(const Napi::CallbackInfo& info) {
 };
 
 Napi::Number addNewDevice(const Napi::CallbackInfo& info) {
-  char *device_name = info[0].As<Napi::String>().Utf8Value().c_str();
+  if (wg_add_device(info[0].As<Napi::String>().Utf8Value().c_str()) < 0) {
+    return Napi::Number::New(info.Env(), -1);
+  }
+  char device_name = info[0].As<Napi::String>().Utf8Value().c_str();
   uint16_t portListen = info[1].As<Napi::Number>().Int32Value();
   wg_peer new_peer = {
     .flags = WGPEER_HAS_PUBLIC_KEY | WGPEER_REPLACE_ALLOWEDIPS
@@ -86,13 +92,10 @@ Napi::Number addNewDevice(const Napi::CallbackInfo& info) {
   wg_device new_device = {
     .name = device_name,
     .listen_port = portListen,
-    // .flags = WGDEVICE_HAS_PRIVATE_KEY | WGDEVICE_HAS_LISTEN_PORT,
+    // .flags = WGDEVICE_HAS_PRIVATE_KEY|WGDEVICE_HAS_LISTEN_PORT,
     .first_peer = &new_peer,
 		.last_peer = &new_peer
   };
-  if (wg_add_device(new_device.name) < 0) {
-    return Napi::Number::New(info.Env(), -1);
-  }
   if (wg_set_device(&new_device) < 0) {
     return Napi::Number::New(info.Env(), -2);
   }
@@ -106,9 +109,9 @@ Napi::Number delDevie(const Napi::CallbackInfo& info) {
 
 Napi::Object Init(Napi::Env env, Napi::Object exports) {
   exports.Set("addDevice", Napi::Function::New(env, addDevice));
+  exports.Set("addNewDevice", Napi::Function::New(env, addNewDevice));
   exports.Set("delDevice", Napi::Function::New(env, delDevie));
   exports.Set("getPeers", Napi::Function::New(env, getPeers));
-  exports.Set("addNewDevice", Napi::Function::New(env, addNewDevice));
   return exports;
 }
 NODE_API_MODULE(addon, Init)

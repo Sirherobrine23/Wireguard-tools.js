@@ -9,7 +9,7 @@
     "build": "node-gyp build && tsc",
     "prebuild": "node-gyp-build",
     "configure": "node-gyp configure",
-    "test": "npm run build && ts-node ./customTest.ts"
+    "test": "npm run build && sudo ts-node ./customTest.ts"
   },
   "repository": {
     "type": "git",

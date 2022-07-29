@@ -4,6 +4,7 @@ import Bridge from "../build/Release/wireguard_bridge";
 export type wireguardInterface = {
   publicKey: string,
   privateKey: string,
+  portListen: number,
   peers: {
     [peerPublicKey: string]: {
       presharedKey?: string,
@@ -46,3 +47,5 @@ export function delDevice(interfacename: string) {
   if (res === 0) return;
   throw new Error("Deleteinterface failed, return code: " + res);
 }
+
+export function setConfig() {}
