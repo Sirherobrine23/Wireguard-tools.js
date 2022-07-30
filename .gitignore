@@ -1,5 +1,5 @@
-# Ignore submodule
-addon/wg_tools
+# Ignore node addon
+*.node
 
 # Ignore customTest
 .testDir/

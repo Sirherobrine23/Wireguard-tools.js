@@ -9,3 +9,4 @@ build/
 configsExamples/
 node_modules/
 /customTest.ts
+*.node

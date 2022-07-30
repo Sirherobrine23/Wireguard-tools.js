@@ -1,5 +1,5 @@
 // @ts-ignore
-import Bridge from "../build/Release/wireguard_bridge";
+import Bridge from "../wireguard_bridge";
 
 export type wireguardInterface = {
   publicKey: string,
