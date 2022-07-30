@@ -25,16 +25,40 @@ async function runTest() {
   if (fsOld.existsSync(testDir)) await fs.rm(testDir, { recursive: true });
   await fs.mkdir(testDir);
   const mainFind = path.join(process.cwd(), "src");
-  const testsFiles = await readDirAndFilter(mainFind, [/.*\.test\.ts$/]);
+  const testsFiles = (await readDirAndFilter(mainFind, [/.*\.test\.ts$/])).reverse();
+  const testResults = {};
   for (const file of testsFiles) {
+    console.log("************** Test script: %s **************", file);
+    const StartTime = Date.now();
     const testScript = await import(file) as {[key: string]: (...any) => Promise<any>};
-    for (const key in testScript) {
-      const logFileJson = path.join(testDir, `${path.basename(file)}_${key}.json`);
-      console.log("************** Run: %s **************", key);
-      await fs.writeFile(logFileJson, JSON.stringify((await testScript[key](RandomUUIDs))||{}, null, 2));
+    testResults[file] = {};
+    const FunctionsKeys = Object.keys(testScript).sort((a, b) => {
+      if (a.toString().includes("pre")) return -1;
+      if (b.toString().includes("pre")) return 1;
+      return 0;
+    });
+    for (const key of FunctionsKeys) {
+      console.log("************** %s **************", key);
+      const result = await testScript[key](RandomUUIDs);
+      if (result) testResults[file][key] = result;
     }
-    console.log("************** And Script: %s **************\n\n", file);
+    const timeEnd = (Date.now() - StartTime);
+    console.log("************** End Script: %s, time Run: %fms **************", file, timeEnd);
+    testResults[file].consumedTime = timeEnd;
   }
+  await fs.writeFile(path.join(testDir, "testResults.json"), JSON.stringify(testResults, null, 2));
+  let READMEResult = "# Test Results\n\nThese are the test results!\n\n";
+  for (const file of Object.keys(testResults)) {
+    READMEResult += `## Time: ${testResults[file].consumedTime}ms, File: ${file}\n\n`;
+    for (const key of Object.keys(testResults[file])) {
+      if (key === "consumedTime") continue;
+      READMEResult += `### Function: ${key}\n\n`;
+      READMEResult += "```json\n";
+      READMEResult += JSON.stringify(testResults[file][key], null, 2);
+      READMEResult += "\n```\n\n";
+    }
+  }
+  await fs.writeFile(path.join(testDir, "README.md"), READMEResult.trim());
 }
 
 runTest().then(() => {

@@ -43,7 +43,8 @@
 	"ms-azuretools.vscode-docker",
 	"chrmarti.regex",
 	"formulahendry.code-runner",
-	"euskadi31.json-pretty-printer"
+	"euskadi31.json-pretty-printer",
+	"ms-vscode.cpptools"
 ],
   "settings": {
     "editor.tabSize": 2,

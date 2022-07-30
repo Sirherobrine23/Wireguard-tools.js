@@ -1,18 +1,33 @@
-import { addDevice, delDevice, getAllPeersAndInterface } from "./bridge";
+import * as Bridge from "./bridge";
 import { keygen as keyGen } from "./utils/keygen";
+const wireguardInterfaceName = "wg_test";
 
-export default async function main() {
-  if (getAllPeersAndInterface()["wg_test"]) {
-    delDevice("wg_test");
-    await new Promise(resolve => setTimeout(resolve, 1000));
+export function pre() {
+  if (Bridge.showAll()[wireguardInterfaceName]) {
+    console.log("Deleting wg_test");
+    Bridge.delDevice(wireguardInterfaceName);
   }
+}
+
+export async function main() {
+  const fistGet = Bridge.showAll();
+  console.log("Sucess to get all interfaces");
   const Keys = await keyGen(false);
-  console.log("Add device:", await addDevice({
-    name: "wg_test",
+  const addtest = Bridge.addDevice({
+    name: wireguardInterfaceName,
     portListen: 51880,
     privateKey: Keys.private,
     publicKey: Keys.public
-  }));
-  console.log("Del device:", delDevice("wg_test"));
-  console.log("Get devices:", getAllPeersAndInterface());
+  });
+  console.log("Sucess to add "+wireguardInterfaceName);
+  const secondGet = Bridge.showAll();
+  Bridge.delDevice(wireguardInterfaceName)
+  console.log("Sucess to delete wg_test");
+  return {
+    addtest,
+    gets: {
+      fist: fistGet,
+      second: secondGet
+    }
+  };
 }

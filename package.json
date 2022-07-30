@@ -26,9 +26,10 @@
     "node": ">=14.0.0"
   },
   "scripts": {
+    "nodegyp:clean": "node-gyp clean",
+    "nodegyp": "node-gyp rebuild && mv -fv build/Release/wireguard_bridge.node ./ && npm run nodegyp:clean",
+    "install": "npm run nodegyp || exit 0",
     "build": "tsc && npm run install",
-    "install": "node-gyp-build || exit 0",
-    "nodegyp": "node-gyp configure && node-gyp rebuild",
     "test": "npm run build && sudo ts-node ./customTest.ts"
   },
   "devDependencies": {
