@@ -2,9 +2,9 @@
 import Bridge from "../wireguard_bridge";
 
 export type wireguardInterface = {
-  publicKey: string,
-  privateKey: string,
-  portListen: number,
+  publicKey?: string,
+  privateKey?: string,
+  portListen?: number,
   peers: {
     [peerPublicKey: string]: {
       presharedKey?: string,
@@ -61,23 +61,18 @@ export function show(wgName: string): wireguardInterface {
  */
 export function getDeviceName() {return Object.keys(showAll());}
 
-export type newDevice = {
-  name: string,
-  portListen: number
-  publicKey: string,
-  privateKey: string
-};
+export function addDevice(interfaceConfig: wireguardInterface & {name: string}): wireguardInterface {
+  if (!interfaceConfig.name) throw new Error("interface name is required");
+  if (interfaceConfig.name.length > 16) throw new Error("interface name is too long");
+  if (!/^[a-zA-Z0-9_]+$/.test(interfaceConfig.name)) throw new Error("interface name is invalid");
+  if (showAll()[interfaceConfig.name]) throw new Error("interface name is already in use");
 
-export function addDevice(interfaceConfig: newDevice): wireguardInterface {
-  const { name: interfacename, portListen, publicKey, privateKey  } = interfaceConfig;
-  if (!interfacename) throw new Error("interface name is required");
-  if (interfacename.length > 16) throw new Error("interface name is too long");
-  if (!/^[a-zA-Z0-9_]+$/.test(interfacename)) throw new Error("interface name is invalid");
-  if (showAll()[interfacename]) throw new Error("interface name is already in use");
-  const res = Bridge.addNewDevice(interfacename, portListen, publicKey, privateKey);
-  if (res === -1) throw new Error("Unable to add device");
+  // Add interface
+  const res = Bridge.addNewDevice(interfaceConfig.name, interfaceConfig.portListen, interfaceConfig.privateKey);
+  if (res === 0) return showAll()[interfaceConfig.name];
+  else if (res === -1) throw new Error("Unable to add device");
   else if (res === -2) throw new Error("Unable to set device");
-  return showAll()[interfacename];
+  throw new Error("Unknown error, code: "+res);
 }
 
 export function delDevice(interfacename: string): void {

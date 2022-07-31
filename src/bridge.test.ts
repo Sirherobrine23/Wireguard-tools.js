@@ -17,7 +17,7 @@ export async function main() {
     name: wireguardInterfaceName,
     portListen: 51880,
     privateKey: Keys.private,
-    publicKey: Keys.public
+    peers: {}
   });
   console.log("Sucess to add "+wireguardInterfaceName);
   const secondGet = Bridge.showAll();
