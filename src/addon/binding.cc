@@ -1,22 +1,22 @@
 #define NAPI_DISABLE_CPP_EXCEPTIONS
 #include <time.h>
-#include <string>
-#include <napi.h>
-
 #include <arpa/inet.h>
 #include <stdlib.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <net/if.h>
 #include <netdb.h>
+#include <string>
+
+// N-API
+#include <napi.h>
 
 // Wireguard embedded library.
-#ifdef __cplusplus
 extern "C" {
   #include "wgEmbed/wireguard.h"
 }
-#endif
 
+// Stability: stable
 Napi::Object getPeers(const Napi::CallbackInfo& info) {
   char *device_names, *device_name;
   size_t len;
@@ -98,7 +98,7 @@ Napi::Object getPeers(const Napi::CallbackInfo& info) {
       PeerRoot.Set(Napi::String::New(info.Env(), peerPublicKey), PeerObj);
     }
     DeviceObj.Set(Napi::String::New(info.Env(), "peers"), PeerRoot);
-    DevicesObj.Set(Napi::String::New(info.Env(), device->name), DeviceObj);
+    DevicesObj.Set(Napi::String::New(info.Env(), (char *)device->name), DeviceObj);
     wg_free_device(device);
   }
   free(device_names);
@@ -106,26 +106,45 @@ Napi::Object getPeers(const Napi::CallbackInfo& info) {
 }
 
 Napi::Number addNewDevice(const Napi::CallbackInfo& info) {
-  if (wg_add_device(info[0].As<Napi::String>().Utf8Value().c_str()) < 0) {
-    return Napi::Number::New(info.Env(), -1);
-  }
-  /*
-  char device_name = info[0].As<Napi::String>().Utf8Value().c_str();
-  uint16_t portListen = info[1].As<Napi::Number>().Int32Value();
-  wg_peer new_peer = {
-    .flags = WGPEER_HAS_PUBLIC_KEY | WGPEER_REPLACE_ALLOWEDIPS
-  };
+  // wg_peer new_peer = {
+  //   .flags = (wg_peer_flags)(WGPEER_REPLACE_ALLOWEDIPS|WGPEER_HAS_PUBLIC_KEY|WGPEER_HAS_PERSISTENT_KEEPALIVE_INTERVAL|WGPEER_HAS_PRESHARED_KEY),
+  // };
+  // // Add peers
+  // int peerNumber = info.Length()-3;
+  // if (peerNumber > 0) {
+  //   for (int i = 0; i < peerNumber; i++) {
+  //     const Napi::Object peer = info[i+3].As<Napi::Object>();
+  //     const char *pubKey = peer["pubKey"].As<Napi::String>().Utf8Value().c_str();
+  //     if (!pubKey) return Napi::Number::New(info.Env(), -3);
+  //     wg_key pubKeyKey;
+  //     wg_key_from_base64(new_peer.public_key, pubKey);
+
+  //     // Preshared key
+  //     const char *presharedKey = peer["presharedKey"].As<Napi::String>().Utf8Value().c_str();
+  //     if (!!presharedKey) wg_key_from_base64(new_peer.preshared_key, presharedKey);
+
+  //     const uint16_t keepalive = (uint16_t)peer["keepalive"].As<Napi::Number>().Int32Value();
+  //     if (keepalive > 0) new_peer.persistent_keepalive_interval = keepalive;
+
+  //     // Next peer
+  //     new_peer.next_peer = &new_peer;
+  //   }
+  // }
+
   wg_device new_device = {
-    .name = device_name,
-    .listen_port = portListen,
-    // .flags = WGDEVICE_HAS_PRIVATE_KEY|WGDEVICE_HAS_LISTEN_PORT,
-    .first_peer = &new_peer,
-		.last_peer = &new_peer
+    .name = '\0',
+    .flags = (wg_device_flags)(WGDEVICE_HAS_PRIVATE_KEY|WGDEVICE_HAS_LISTEN_PORT),
+    .listen_port = (uint16_t)info[1].As<Napi::Number>().Int32Value(),
+    // .first_peer = &new_peer,
+    // .last_peer = &new_peer
   };
-  if (wg_set_device(&new_device) < 0) {
-    return Napi::Number::New(info.Env(), -2);
-  }
-  */
+
+  // Copy name to device struct.
+  strncpy(new_device.name, info[0].As<Napi::String>().Utf8Value().c_str(), sizeof(info[0].As<Napi::String>().Utf8Value().c_str()));
+  wg_key_from_base64(new_device.private_key, info[2].As<Napi::String>().Utf8Value().c_str());
+
+  if (wg_add_device(new_device.name) < 0) return Napi::Number::New(info.Env(), -1);
+  if (wg_set_device(&new_device) < 0) return Napi::Number::New(info.Env(), -2);
   return Napi::Number::New(info.Env(), 0);
 }
 
