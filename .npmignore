@@ -4,7 +4,6 @@
 .testDir/
 .git*
 .vscode-ctags
-addon/
 build/
 configsExamples/
 node_modules/
