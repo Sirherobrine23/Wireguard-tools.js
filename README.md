@@ -87,8 +87,8 @@ utils.config.writeConfig({
 Get Current peers and Statistics:
 
 ```ts
-import { getAllPeersAndInterface } from "wireguard-tools.js";
-const wireguardInterfaces = getAllPeersAndInterface();
+import { show } from "wireguard-tools.js";
+const wireguardInterfaces = show("wg0");
 // Wg0 is the interface name.
-console.log("Wg0:\n%o", wireguardInterfaces["wg0"]);
+console.log("Wg0:\n%o", wireguardInterfaces);
 ```

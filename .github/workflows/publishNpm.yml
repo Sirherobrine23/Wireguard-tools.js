@@ -11,12 +11,18 @@ jobs:
     name: Publish
     steps:
     - uses: actions/checkout@v3
+      name: Code checkout
+      with:
+        persist-credentials: true
     # Install basic tools
     - uses: actions/setup-node@v3
+      name: Setup node.js
       with:
         node-version: 18.x
         registry-url: https://registry.npmjs.org/
+    
     - run: sudo npm install -g ts-node typescript
+      name: Install typescript and ts-node
 
     - name: Edit version
       shell: node {0}
@@ -35,20 +41,14 @@ jobs:
         cat package.json | jq -r '.version' > /tmp/version.txt
         echo "PACKAGE_VERSION=$(cat /tmp/version.txt)" >> $GITHUB_ENV
 
-    # Install depencides and test
+    # Install depencides and build
     - run: npm ci
-    # - run: npm run nodegyp
     - run: npm run build
 
-    # Publish
-    - name: Publish to npm
-      run: npm publish --tag ${{ github.event.release.prerelease && 'next' || 'latest' }}
-      env:
-        NODE_AUTH_TOKEN: ${{ secrets.MPM_PUBLISH_TOKEN }}
-
     # Create pull request to update version in main branch
-    - name: Create Pull Request
-      uses: peter-evans/create-pull-request@v4
+    - uses: peter-evans/create-pull-request@v4
+      name: Create Pull Request
+      continue-on-error: true
       with:
         commit-message: Update version v${{ env.PACKAGE_VERSION }}
         delete-branch: true
@@ -57,3 +57,9 @@ jobs:
         branch: update-version
         title: Update package version v${{ env.PACKAGE_VERSION }}
         body: Auto update package version, created with GitHub Actions
+
+    # Publish
+    - run: npm publish --tag ${{ github.event.release.prerelease && 'next' || 'latest' }}
+      name: Publish to npm
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.MPM_PUBLISH_TOKEN }}

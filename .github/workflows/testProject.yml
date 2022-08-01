@@ -7,20 +7,29 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
     strategy:
       matrix:
         node-version: [14.x, 16.x, 18.x]
-
+    runs-on: ubuntu-latest
+    name: "Node: ${{ matrix.node-version }}"
     steps:
     - uses: actions/checkout@v3
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v3
+      name: Code checkout
+
+    - uses: actions/setup-node@v3
+      name: "Setup node.js, version: ${{ matrix.node-version }}"
       with:
         node-version: ${{ matrix.node-version }}
-        cache: 'npm'
+
+    - run: g++ --version
+
     - run: sudo npm install -g ts-node typescript
+      name: Install typescript and ts-node
+
+    # Install depenecies and build addon and typescript
     - run: npm ci
     - run: npm run nodegyp
+
+    # Run root test and add actions summary
     - run: sudo ts-node customTest.ts
     - run: cat .testDir/README.md >> $GITHUB_STEP_SUMMARY
