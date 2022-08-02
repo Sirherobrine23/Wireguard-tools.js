@@ -58,6 +58,7 @@ Napi::Object getPeers(const Napi::CallbackInfo& info) {
       // Keep interval alive
       if (peer->persistent_keepalive_interval) PeerObj.Set(Napi::String::New(info.Env(), "keepInterval"), Napi::Number::New(info.Env(), peer->persistent_keepalive_interval));
 
+      // Endoints
       if (peer->endpoint.addr.sa_family == AF_INET||peer->endpoint.addr.sa_family == AF_INET6) {
         const struct sockaddr *addr = &peer->endpoint.addr;
         char host[4096 + 1];
@@ -79,6 +80,20 @@ Napi::Object getPeers(const Napi::CallbackInfo& info) {
         } else
           snprintf(buf, sizeof(buf), (addr->sa_family == AF_INET6 && strchr(host, ':')) ? "[%s]:%s" : "%s:%s", host, service);
         PeerObj.Set(Napi::String::New(info.Env(), "endpoint"), Napi::String::New(info.Env(), buf));
+      }
+
+      // Allowed IPs
+      Napi::Array AllowedIPs = Napi::Array::New(info.Env());
+      wg_allowedip *allowedip;
+      if (peer->first_allowedip) {
+        wg_for_each_allowedip(peer, allowedip) {
+          static char buf[INET6_ADDRSTRLEN + 1];
+          memset(buf, 0, INET6_ADDRSTRLEN + 1);
+          if (allowedip->family == AF_INET) inet_ntop(AF_INET, &allowedip->ip4, buf, INET6_ADDRSTRLEN);
+          else if (allowedip->family == AF_INET6) inet_ntop(AF_INET6, &allowedip->ip6, buf, INET6_ADDRSTRLEN);
+          AllowedIPs.Set(AllowedIPs.Length()+1, Napi::String::New(info.Env(), buf));
+        }
+        PeerObj.Set(Napi::String::New(info.Env(), "allowedIPs"), AllowedIPs);
       }
 
       // Bytes sent and received
@@ -106,45 +121,83 @@ Napi::Object getPeers(const Napi::CallbackInfo& info) {
 }
 
 Napi::Number addNewDevice(const Napi::CallbackInfo& info) {
-  // wg_peer new_peer = {
-  //   .flags = (wg_peer_flags)(WGPEER_REPLACE_ALLOWEDIPS|WGPEER_HAS_PUBLIC_KEY|WGPEER_HAS_PERSISTENT_KEEPALIVE_INTERVAL|WGPEER_HAS_PRESHARED_KEY),
-  // };
-  // // Add peers
-  // int peerNumber = info.Length()-3;
-  // if (peerNumber > 0) {
-  //   for (int i = 0; i < peerNumber; i++) {
-  //     const Napi::Object peer = info[i+3].As<Napi::Object>();
-  //     const char *pubKey = peer["pubKey"].As<Napi::String>().Utf8Value().c_str();
-  //     if (!pubKey) return Napi::Number::New(info.Env(), -3);
-  //     wg_key pubKeyKey;
-  //     wg_key_from_base64(new_peer.public_key, pubKey);
-
-  //     // Preshared key
-  //     const char *presharedKey = peer["presharedKey"].As<Napi::String>().Utf8Value().c_str();
-  //     if (!!presharedKey) wg_key_from_base64(new_peer.preshared_key, presharedKey);
-
-  //     const uint16_t keepalive = (uint16_t)peer["keepalive"].As<Napi::Number>().Int32Value();
-  //     if (keepalive > 0) new_peer.persistent_keepalive_interval = keepalive;
-
-  //     // Next peer
-  //     new_peer.next_peer = &new_peer;
-  //   }
-  // }
-
-  wg_device new_device = {
-    .name = '\0',
-    .flags = (wg_device_flags)(WGDEVICE_HAS_PRIVATE_KEY|WGDEVICE_HAS_LISTEN_PORT),
-    .listen_port = (uint16_t)info[1].As<Napi::Number>().Int32Value(),
-    // .first_peer = &new_peer,
-    // .last_peer = &new_peer
+  wg_device wgDevice = {
+    flags: (wg_device_flags)WGDEVICE_HAS_LISTEN_PORT,
+    listen_port: (uint16_t)info[1].As<Napi::Number>().Int32Value(),
   };
-
   // Copy name to device struct.
-  strncpy(new_device.name, info[0].As<Napi::String>().Utf8Value().c_str(), sizeof(info[0].As<Napi::String>().Utf8Value().c_str()));
-  wg_key_from_base64(new_device.private_key, info[2].As<Napi::String>().Utf8Value().c_str());
+  strncpy(wgDevice.name, info[0].As<Napi::String>().Utf8Value().c_str(), sizeof(info[0].As<Napi::String>().Utf8Value().c_str()));
+  wg_key_from_base64(wgDevice.private_key, info[2].As<Napi::String>().Utf8Value().c_str());
+  wgDevice.flags |= (wg_device_flags)WGDEVICE_HAS_PRIVATE_KEY;
 
-  if (wg_add_device(new_device.name) < 0) return Napi::Number::New(info.Env(), -1);
-  if (wg_set_device(&new_device) < 0) return Napi::Number::New(info.Env(), -2);
+  // Add peers
+  int peerNumber = info.Length()-3;
+  if (peerNumber > 0) {
+    for (int i = 0; i < peerNumber; i++) {
+      const Napi::Object peer = info[i+3].As<Napi::Object>();
+      wg_peer new_peer = {
+        flags: (wg_peer_flags)WGPEER_HAS_PUBLIC_KEY,
+      };
+      if (!peer["pubKey"].As<Napi::String>().Utf8Value().c_str()) return Napi::Number::New(info.Env(), -3);
+      wg_key_from_base64(new_peer.public_key, peer["pubKey"].As<Napi::String>().Utf8Value().c_str());
+      // Preshared key
+      if (!!peer["presharedKey"].As<Napi::String>().Utf8Value().c_str()) {
+        wg_key_from_base64(new_peer.preshared_key, peer["presharedKey"].As<Napi::String>().Utf8Value().c_str());
+        new_peer.flags |= (wg_peer_flags)WGPEER_HAS_PRESHARED_KEY;
+      }
+
+      const uint16_t keepalive = (uint16_t)peer["keepalive"].As<Napi::Number>().Int32Value();
+      if (keepalive > 0) {
+        new_peer.persistent_keepalive_interval = keepalive;
+        new_peer.flags |= (wg_peer_flags)WGPEER_HAS_PERSISTENT_KEEPALIVE_INTERVAL;
+      }
+
+      // Allowed IPs
+      Napi::Array allowedIPs = peer["allowedIPs"].As<Napi::Array>();
+      if (allowedIPs.Length() > 0) {
+        new_peer.flags |= (wg_peer_flags)WGPEER_REPLACE_ALLOWEDIPS;
+        for (int a = 0; a<allowedIPs.Length(); a++) {
+          const Napi::String allowedIP = allowedIPs.Get(a).As<Napi::String>();
+          // Create allowed IP struct
+          wg_allowedip newAllowedIP = {};
+          newAllowedIP.family = AF_UNSPEC;
+          if (strchr(allowedIP.Utf8Value().c_str(), ':')) {
+            if (inet_pton(AF_INET6, allowedIP.Utf8Value().c_str(), &newAllowedIP.ip6) == 1) newAllowedIP.family = AF_INET6;
+          } else {
+            if (inet_pton(AF_INET, allowedIP.Utf8Value().c_str(), &newAllowedIP.ip4) == 1) newAllowedIP.family = AF_INET;
+          }
+          if (newAllowedIP.family == AF_UNSPEC) {
+            fprintf(stderr, "Unable to parse IP address: `%s'\n", allowedIP.Utf8Value().c_str());
+            continue;
+          }
+
+          // Add cidr
+          unsigned long cidr;
+          if (newAllowedIP.family == AF_INET) cidr = 32;
+          else if (newAllowedIP.family == AF_INET6) cidr = 128;
+          newAllowedIP.cidr = cidr;
+
+          // Add to Peer struct
+          if (!new_peer.first_allowedip) new_peer.first_allowedip = &newAllowedIP;
+          else {
+            if (new_peer.last_allowedip) newAllowedIP.next_allowedip = new_peer.last_allowedip;
+            new_peer.last_allowedip = &newAllowedIP;
+          }
+        }
+      }
+
+      // Next peer
+      if (!wgDevice.first_peer) wgDevice.first_peer = &new_peer;
+      else {
+        if (!wgDevice.last_peer) wgDevice.last_peer = &new_peer;
+        else new_peer.next_peer = wgDevice.last_peer;
+        wgDevice.last_peer = &new_peer;
+      }
+    }
+  }
+
+  if (wg_add_device(wgDevice.name) < 0) return Napi::Number::New(info.Env(), -1);
+  if (wg_set_device(&wgDevice) < 0) return Napi::Number::New(info.Env(), -2);
   return Napi::Number::New(info.Env(), 0);
 }
 

@@ -8,7 +8,8 @@ export type wireguardInterface = {
   peers: {
     [peerPublicKey: string]: {
       presharedKey?: string,
-      endpoint: string,
+      endpoint?: string,
+      allowedIPs?: string[],
       rxBytes?: number,
       txBytes?: number,
       keepInterval?: number,
@@ -66,9 +67,21 @@ export function addDevice(interfaceConfig: wireguardInterface & {name: string}):
   if (interfaceConfig.name.length > 16) throw new Error("interface name is too long");
   if (!/^[a-zA-Z0-9_]+$/.test(interfaceConfig.name)) throw new Error("interface name is invalid");
   if (showAll()[interfaceConfig.name]) throw new Error("interface name is already in use");
-
+  const peers: Array<{pubKey: string, presharedKey: string, keepalive: number, allowedIPs: string[]}> = [];
+  if (!!interfaceConfig.peers) {
+    for (const peerPublicKey in interfaceConfig.peers) {
+      const peer = interfaceConfig.peers[peerPublicKey];
+      if (!peer.allowedIPs) throw new Error("allowedIPs is required");
+      peers.push({
+        pubKey: peerPublicKey,
+        presharedKey: peer.presharedKey,
+        keepalive: peer.keepInterval || 0,
+        allowedIPs: peer.allowedIPs
+      });
+    }
+  }
   // Add interface
-  const res = Bridge.addNewDevice(interfaceConfig.name, interfaceConfig.portListen, interfaceConfig.privateKey);
+  const res = Bridge.addNewDevice(interfaceConfig.name, interfaceConfig.portListen, interfaceConfig.privateKey, ...peers);
   if (res === 0) return showAll()[interfaceConfig.name];
   else if (res === -1) throw new Error("Unable to add device");
   else if (res === -2) throw new Error("Unable to set device");
