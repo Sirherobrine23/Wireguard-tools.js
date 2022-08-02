@@ -14,6 +14,7 @@ export async function main() {
   console.log("Sucess to get all interfaces");
   const serverKeys = await utils.keygen(false);
   const peerKeys = await utils.keygen(true);
+  const peerKeys2 = await utils.keygen(true);
   const addtest = Bridge.addDevice({
     name: wireguardInterfaceName,
     portListen: 51880,
@@ -24,9 +25,14 @@ export async function main() {
         presharedKey: peerKeys.preshared,
         allowedIPs: [
           utils.ipManeger.shuffleIp("10.0.0.1/24"),
-          utils.ipManeger.convertToIpv6(utils.ipManeger.shuffleIp("10.0.0.1/24")),
           utils.ipManeger.shuffleIp("10.0.0.1/24"),
-          utils.ipManeger.convertToIpv6(utils.ipManeger.shuffleIp("10.0.0.1/24")),
+        ]
+      },
+      [peerKeys2.public]: {
+        presharedKey: peerKeys2.preshared,
+        allowedIPs: [
+          utils.ipManeger.shuffleIp("192.168.15.1/24"),
+          utils.ipManeger.shuffleIp("192.168.15.1/24"),
         ]
       }
     }
