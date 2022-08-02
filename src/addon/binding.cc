@@ -128,7 +128,7 @@ Napi::Number addNewDevice(const Napi::CallbackInfo& info) {
   // Copy name to device struct.
   strncpy(wgDevice.name, info[0].As<Napi::String>().Utf8Value().c_str(), sizeof(info[0].As<Napi::String>().Utf8Value().c_str()));
   wg_key_from_base64(wgDevice.private_key, info[2].As<Napi::String>().Utf8Value().c_str());
-  wgDevice.flags |= (wg_device_flags)WGDEVICE_HAS_PRIVATE_KEY;
+  wgDevice.flags = (wg_device_flags)(wgDevice.flags|WGDEVICE_HAS_PRIVATE_KEY);
 
   // Add peers
   int peerNumber = info.Length()-3;
@@ -143,19 +143,19 @@ Napi::Number addNewDevice(const Napi::CallbackInfo& info) {
       // Preshared key
       if (!!peer["presharedKey"].As<Napi::String>().Utf8Value().c_str()) {
         wg_key_from_base64(new_peer.preshared_key, peer["presharedKey"].As<Napi::String>().Utf8Value().c_str());
-        new_peer.flags |= (wg_peer_flags)WGPEER_HAS_PRESHARED_KEY;
+        new_peer.flags = (wg_peer_flags)(new_peer.flags|WGPEER_HAS_PRESHARED_KEY);
       }
 
       const uint16_t keepalive = (uint16_t)peer["keepalive"].As<Napi::Number>().Int32Value();
       if (keepalive > 0) {
         new_peer.persistent_keepalive_interval = keepalive;
-        new_peer.flags |= (wg_peer_flags)WGPEER_HAS_PERSISTENT_KEEPALIVE_INTERVAL;
+        new_peer.flags = (wg_peer_flags)(new_peer.flags|WGPEER_HAS_PERSISTENT_KEEPALIVE_INTERVAL);
       }
 
       // Allowed IPs
       Napi::Array allowedIPs = peer["allowedIPs"].As<Napi::Array>();
       if (allowedIPs.Length() > 0) {
-        new_peer.flags |= (wg_peer_flags)WGPEER_REPLACE_ALLOWEDIPS;
+        new_peer.flags = (wg_peer_flags)(new_peer.flags|WGPEER_REPLACE_ALLOWEDIPS);
         for (int a = 0; a<allowedIPs.Length(); a++) {
           const Napi::String allowedIP = allowedIPs.Get(a).As<Napi::String>();
           // Create allowed IP struct
