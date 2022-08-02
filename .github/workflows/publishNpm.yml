@@ -14,13 +14,15 @@ jobs:
       name: Code checkout
       with:
         persist-credentials: true
+        ref: main
+        fetch-depth: 2
+
     # Install basic tools
     - uses: actions/setup-node@v3
       name: Setup node.js
       with:
         node-version: 18.x
         registry-url: https://registry.npmjs.org/
-    
     - run: sudo npm install -g ts-node typescript
       name: Install typescript and ts-node
 
