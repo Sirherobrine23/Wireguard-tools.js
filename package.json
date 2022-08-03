@@ -1,6 +1,6 @@
 {
   "name": "wireguard-tools.js",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "A simple way to manage Wireguard in Node.js",
   "main": "dist/index.js",
   "types": "./dist/index.d.ts",
