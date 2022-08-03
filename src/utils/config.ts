@@ -58,24 +58,6 @@ export type serverConfig = base & {
   }
 };
 
-
-export function filterStringConfig(config: string): string {
-  const lineMath = /^(\[(Interface|Peer)\])|((PresharedKey|PublicKey|PrivateKey|AllowedIPs|Endpoint|Keepalive|DNS|ListenPort|Address|PreDown|PostDown|PreUp|PostUp)\s?\=\s?.*)/;
-  return config.split(/\r?\n/).filter(line => {
-    // if (!lineMath.test(line)) console.log("Result: %o, Line: '%s'", lineMath.test(line), line);
-    return lineMath.test(line);
-  }).join("\n");
-}
-
-export function parseKeys(env: string): {[key: string]: string} {
-  const keys: {[key: string]: string} = {};
-  for (const line of env.split(/\r?\n/)) {
-    const [key, value] = (line.match(/(PresharedKey|PublicKey|PrivateKey|AllowedIPs|Endpoint|Keepalive|DNS|ListenPort|Address|PreDown|PostDown|PreUp|PostUp)\s?\=\s?(.*)/)||[]).slice(1);
-    if (!!key) keys[key.trim()] = value.trim();
-  }
-  return keys;
-}
-
 /** Return Client config string */
 export function writeConfig(configbject: clientConfig): string;
 /** Return server config string */
@@ -117,90 +99,126 @@ export function writeConfig(configbject: clientConfig|serverConfig, interfaceNam
   }
 }
 
-// export function parseConfig(configString: string): {type: "client", data: clientConfig};
-// export function parseConfig(configString: string): {type: "server", data: serverConfig};
-export function parseConfig(configString: string): {type: "client"|"server", data: clientConfig | serverConfig} {
+function filterStringConfig(config: string): string {
+  const lineMath = /^(\[(Interface|Peer)\])|((PresharedKey|PublicKey|PrivateKey|AllowedIPs|Endpoint|Keepalive|DNS|ListenPort|Address|PreDown|PostDown|PreUp|PostUp)\s?\=\s?.*)/;
+  return config.split(/\r?\n/).filter(line => {
+    // if (!lineMath.test(line)) console.log("Result: %o, Line: '%s'", lineMath.test(line), line);
+    return lineMath.test(line);
+  }).join("\n");
+}
+
+function parseKeys(env: string): {[key: string]: string} {
+  const keys: {[key: string]: string} = {};
+  for (const line of env.split(/\r?\n/)) {
+    const [key, value] = (line.match(/(PresharedKey|PublicKey|PrivateKey|AllowedIPs|Endpoint|Keepalive|DNS|ListenPort|Address|PreDown|PostDown|PreUp|PostUp)\s?\=\s?(.*)/)||[]).slice(1);
+    if (!!key) {
+      if (!keys[key.trim()]) keys[key.trim()] = value.trim();
+      else keys[key.trim()] = `${keys[key.trim()]}, ${value.trim()}`;
+    }
+  }
+  return keys;
+}
+
+export function parseClientConfig(config: string): clientConfig {
+  const returnConfig = parseConfig(config);
+  if (returnConfig.type === "client") return returnConfig.data as clientConfig;
+  throw new Error("Config is not client config");
+}
+export function parseServerConfig(config: string): serverConfig {
+  const returnConfig = parseConfig(config);
+  if (returnConfig.type === "server") return returnConfig.data as serverConfig;
+  throw new Error("Config is not server config");
+}
+
+export function parseConfig(configString: string): {type: "client"|"server", data: clientConfig|serverConfig} {
   if (!configString) throw new Error("Config is empty");
+  if (!configString.trim()) throw new Error("Config is empty");
   // Remove comments
-  configString = configString.replace(/###[^\n]*\n/g, "");
-  const Get = configString.split(/\n?\[([A-Za-z]+)\]/g).map(x => x.trim()).filter(x => !!x);
-  const def: Array<{Key: string, data: string}> = [];
-  while (Get.length > 0) {
-    let data = {Key: Get.shift(), data: Get.shift()};
-    if(data.Key === "Peer"||data.Key === "Interface") {
-      configString = configString.replace(data.Key, "").replace("[]", "").replace(data.data, "").trim();
-      def.push(data);
-    }
+  configString = filterStringConfig(configString);
+  let arrayIndex = -1;
+  const objectValue = [];
+  for (let line of configString.split(process.platform === "win32" ? /\r?\n/ : /\n/)) {
+    if (/\[Interface|Peer\]/.test(line)) {
+      arrayIndex++
+      objectValue[arrayIndex] = [];
+      line = line.replace(/\[(Interface|Peer)\]/, (_, a1) => a1);
+    };
+    if (arrayIndex === -1) continue;
+    objectValue[arrayIndex].push(line);
   }
-  if (!!configString) throw new Error("Invalid wireguard config");
-  if (def.filter(x => x.Key === "Interface").length > 2 && def.filter(x => x.Key === "Interface").length < 0) throw new Error("Invalid wireguard config");
-  // Check if it is a client
-  const parseSet = (lines: string[]) => {
-    const toRe: {key: string, value: string}[] = [];
-    for (const line of lines) {
-      const set = line.match(/([A-Za-z0-9]+)\s+?\=\s+?(.*)/);
-      if (!!set)  {
-        const [key, value] = set.slice(1);
-        toRe.push({key: key.trim(), value: value.trim()});
-      } else console.log("Invalid line:", line);
-    }
-    return toRe;
-  }
-  const InterfaceData = parseSet(def.filter(x => x.Key === "Interface")[0].data.trim().split(/\n/g).map(x => x.trim()));
-  if (!!InterfaceData.find(({key}) => key === "Address") && !!InterfaceData.find(({key}) => key === "ListenPort")) {
-    const config: serverConfig = {
+  const typesConfig = objectValue.map(Object => {const type = Object.shift(); const doc = parseKeys(Object.join("\n")); return {type, doc}});
+  if (typesConfig.filter(type => type.type === "Interface").length > 1 && 0 < typesConfig.filter(type => type.type === "Interface").length) throw new Error("Invalid config");
+  const interfaceConfig = typesConfig.filter(type => type.type === "Interface")[0].doc;
+  const peerConfig = typesConfig.filter(type => type.type === "Peer").map(type => type.doc);
+  if (!!interfaceConfig.Address && !!interfaceConfig.ListenPort) {
+    // Init JSON config
+    const serverConfig: serverConfig = {
       interface: {
-        private: InterfaceData.find(({key}) => key === "PrivateKey")!.value,
-        portListen: parseInt(InterfaceData.find(({key}) => key === "ListenPort")!.value),
-        ip: InterfaceData.find(({key}) => key === "Address")!.value.split(/,/g).map(x => ({ip: x.split("/")[0].trim(), subnet: parseInt(x.split("/")[1].trim())})),
+        private: interfaceConfig.PrivateKey,
+        portListen: parseInt(interfaceConfig.ListenPort),
+        ip: [],
       },
-      peer: {},
+      peer: {}
     };
-    if (InterfaceData.find(({key}) => key === "PostUp")!.value||InterfaceData.find(({key}) => key === "PostDown")!.value) {
-      config.interface.post = {};
-      if (InterfaceData.find(({key}) => key === "PostUp")!.value) config.interface.post.up = InterfaceData.find(({key}) => key === "PostUp")!.value.split(/;|&&/).map(x => x.trim());
-      if (InterfaceData.find(({key}) => key === "PostDown")!.value) config.interface.post.down = InterfaceData.find(({key}) => key === "PostDown")!.value.split(/;|&&/).map(x => x.trim());
+
+    // Parse IPs
+    if (!/,/.test(interfaceConfig.Address)) serverConfig.interface.ip.push({ip: interfaceConfig.Address.split("/")[0], subnet: parseInt(interfaceConfig.Address.split("/")[1])});
+    else {
+      for (const ip of interfaceConfig.Address.split(/,/)) {
+        if (!ip.trim()) continue;
+        serverConfig.interface.ip.push({
+          ip: ip.split(/\//)[0].trim(),
+          subnet: parseInt(ip.split(/\//)[1].trim())
+        });
+      }
     }
-    if (InterfaceData.find(({key}) => key === "PreUp")!.value||InterfaceData.find(({key}) => key === "PreDown")!.value) {
-      config.interface.pre = {};
-      if (InterfaceData.find(({key}) => key === "PreUp")!.value) config.interface.pre.up = InterfaceData.find(({key}) => key === "PreUp")!.value.split(/;|&&/).map(x => x.trim());
-      if (InterfaceData.find(({key}) => key === "PreDown")!.value) config.interface.pre.down = InterfaceData.find(({key}) => key === "PreDown")!.value.split(/;|&&/).map(x => x.trim());
-    }
-    for (const peer of def.filter(x => x.Key === "Peer")) {
-      const findValue = (key: string): string => peerData.find(({key: k}) => k === key)?.value;
-      const peerData = parseSet(peer.data.trim().split(/\n/g).map(x => x.trim()).filter(x => !!x));;
-      const PublicKey = findValue("PublicKey")!;
-      if (!!config.peer[PublicKey]) throw new Error("Duplicate public key");
-      config.peer[PublicKey] = {
-        preshared: findValue("PresharedKey"),
-        allowIp: (!!findValue("AllowedIPs"))?findValue("AllowedIPs")!.split(",").map(x => ({ip: x.split("/")[0].trim(), subnet: parseInt(x.split("/")[1].trim())})):[],
+
+    // Parse Peers
+    for (const peer of peerConfig) {
+      if (!peer.PublicKey) throw new Error("PublicKey not found to peer");
+      if (!peer.AllowedIPs) throw new Error("AllowedIPs required to peer");
+      if (serverConfig.peer[peer.PublicKey]) {
+        console.warn("Peer with PublicKey %s already exists", peer.PublicKey);
+        continue;
+      }
+      serverConfig.peer[peer.PublicKey] = {
+        allowIp: peer.AllowedIPs.split(/,/).filter(ip => !!ip.trim()).map(ip => ({ip: ip.split("/")[0], subnet: parseInt(ip.split("/")[1])})),
       };
-    }
-    return {type: "server", data: config};
-  }
-  const config: clientConfig = {
-    interface: {
-      address: InterfaceData.find(({key}) => key === "Address")!.value.split(",").map(x => ({ip: x.split("/")[0].trim(), subnet: parseInt(x.split("/")[1].trim())})),
-      DNS: InterfaceData.find(({key}) => key === "DNS")?.value.split(",").map(x => x.trim()),
-      private: InterfaceData.find(({key}) => key === "PrivateKey")!.value,
-    },
-    peer: {},
-  };
-  for (const peer of def.filter(x => x.Key === "Peer")) {
-    const peerData = parseSet(peer.data.trim().split(/\n/g).map(x => x.trim()).filter(x => !!x));
-    const findValue = (key: string): string => peerData.find(({key: k}) => k === key)?.value;
-    const PublicKey = findValue("PublicKey")!;
-    if (!!config.peer[PublicKey]) throw new Error("Duplicate public key");
-    config.peer[PublicKey] = {
-      Endpoint: {host: findValue("Endpoint")?.split(":")[0].trim(), port: parseInt(findValue("Endpoint")!.split(":")[1].trim())},
-      preshared: findValue("PresharedKey"),
-      commend: findValue("Comment"),
-      allowIp: (!!findValue("AllowedIPs"))?findValue("AllowedIPs").split(",").map(x => ({ip: x.split("/")[0].trim(), subnet: parseInt(x.split("/")[1].trim())})):[],
+      if (!!peer.PresharedKey?.trim()) serverConfig.peer[peer.PublicKey].preshared = peer.PresharedKey.trim();
     };
-    if (findValue("Keepalive")) config.peer[PublicKey].Keepalive = parseInt(findValue("Keepalive"));
-    if (peerData.filter(x => /^(AllowedIPs|Endpoint|PresharedKey|Comment|Keepalive)$/.test(x.key)).length > 1) console.log("Warning: multiple invalid keys in peer %s", PublicKey);
+    return {type: "server", data: serverConfig};
+  } else if (!!interfaceConfig.Address && !!interfaceConfig.Address) {
+    const clientConfig: clientConfig = {
+      interface: {
+        private: interfaceConfig.PrivateKey,
+        address: interfaceConfig.Address.split(/,/).filter(ip => !!ip.trim()).map(ip => ({ip: ip.split("/")[0], subnet: parseInt(ip.split("/")[1])})),
+      },
+      peer: {}
+    };
+    // DNS
+    if (!!interfaceConfig.DNS) clientConfig.interface.DNS = interfaceConfig.DNS.split(/,/).filter(ip => !!ip.trim());
+
+    // Peers
+    for (const peer of peerConfig) {
+      if (!peer.PublicKey) throw new Error("PublicKey not found to peer");
+      if (!peer.Endpoint) throw new Error("Endpoint required to peer");
+      if (clientConfig.peer[peer.PublicKey]) {
+        console.warn("Peer with PublicKey %s already exists", peer.PublicKey);
+        continue;
+      }
+      const url = new URL(`udp://${peer.Endpoint}`);
+      clientConfig.peer[peer.PublicKey] = {
+        allowIp: peer.AllowedIPs.split(/,/).filter(ip => !!ip.trim()).map(ip => ({ip: ip.split("/")[0], subnet: parseInt(ip.split("/")[1])})),
+        Endpoint: {
+          host: url.hostname,
+          port: parseInt(url.port)
+        }
+      };
+      if (!!peer.PresharedKey?.trim()) clientConfig.peer[peer.PublicKey].preshared = peer.PresharedKey.trim();
+    }
+    return {type: "client", data: clientConfig};
   }
-  return {type: "client", data: config};
+  throw new Error("Config is invalid");
 }
 
 /**
@@ -208,7 +226,7 @@ export function parseConfig(configString: string): {type: "client"|"server", dat
  *
  * Config files are stored in /etc/wireguard/<interfaceName>.conf
  */
-export async function readConfig(interfaceName: string): Promise<{type: "client"|"server", data: clientConfig | serverConfig}> {
+export async function readConfig(interfaceName: string) {
   if (!(fsOld.existsSync("/etc/wireguard"))) throw new Error("/etc/wireguard not found");
   if (!(fsOld.existsSync(path.join("/etc/wireguard", `${interfaceName}.conf`)))) throw new Error(`${interfaceName}.conf not found`);
   return parseConfig(await fs.readFile(path.join("/etc/wireguard", `${interfaceName}.conf`), "utf8"));
