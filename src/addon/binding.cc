@@ -120,17 +120,21 @@ Napi::Object getPeers(const Napi::CallbackInfo& info) {
 }
 
 Napi::Value addNewDevice(const Napi::CallbackInfo& info) {
-  wg_device wgDevice = {
-    flags: (wg_device_flags)WGDEVICE_HAS_LISTEN_PORT,
-    listen_port: (uint16_t)info[1].As<Napi::Number>().Int32Value(),
-  };
+  wg_device wgDevice = {};
   // Copy name to device struct.
   strncpy(wgDevice.name, info[0].As<Napi::String>().Utf8Value().c_str(), sizeof(info[0].As<Napi::String>().Utf8Value().c_str()));
+
+  // Add interface
   if (wg_add_device(wgDevice.name) < 0) return Napi::Number::New(info.Env(), -1);
 
   // Add private key to device.
   wg_key_from_base64(wgDevice.private_key, info[2].As<Napi::String>().Utf8Value().c_str());
   wgDevice.flags = (wg_device_flags)(wgDevice.flags|WGDEVICE_HAS_PRIVATE_KEY);
+
+  if ((uint16_t)info[1].As<Napi::Number>().Int32Value() > 0 ) {
+    wgDevice.flags = (wg_device_flags)WGDEVICE_HAS_LISTEN_PORT;
+    wgDevice.listen_port = (uint16_t)info[1].As<Napi::Number>().Int32Value();
+  }
 
   // Add peers
   int peerNumber = info.Length()-3;
@@ -156,8 +160,9 @@ Napi::Value addNewDevice(const Napi::CallbackInfo& info) {
 
       // Allowed IPs
       Napi::Array allowedIPs = peer["allowedIPs"].As<Napi::Array>();
+      wg_allowedip Allowes[allowedIPs.Length()];
       if (allowedIPs.Length() > 0) {
-        // new_peer.flags = (wg_peer_flags)(new_peer.flags|WGPEER_REPLACE_ALLOWEDIPS);
+        new_peer.flags = (wg_peer_flags)(new_peer.flags|WGPEER_REPLACE_ALLOWEDIPS);
         new_peer.first_allowedip = NULL;
         new_peer.last_allowedip = NULL;
         for (int a = 0; a<allowedIPs.Length(); a++) {
@@ -183,9 +188,13 @@ Napi::Value addNewDevice(const Napi::CallbackInfo& info) {
           }
           newAllowedIP.cidr = cidr;
           // Add to Peer struct
-          new_peer.first_allowedip = &newAllowedIP;
-          wgDevice.first_peer = &new_peer;
-          if (wg_set_device(&wgDevice) < 0) return Napi::Number::New(info.Env(), -2);
+          Allowes[a] = newAllowedIP;
+        }
+        for (int a = 0; a<allowedIPs.Length(); a++) {
+          wg_allowedip *newAllowedIP = &Allowes[a];
+          newAllowedIP->next_allowedip = new_peer.first_allowedip;
+          new_peer.first_allowedip = newAllowedIP;
+          if (new_peer.last_allowedip == NULL) new_peer.last_allowedip = newAllowedIP;
         }
       }
 
