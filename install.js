@@ -8,7 +8,8 @@ if (fs.existsSync("./package.json")) {
     console.log("Wireguard-tools folder: %s", process.cwd());
   }
 }
-
+const argsBuild = [`--target=${process.version}`, `--real_openssl_major=${/^\d+/.exec(process.versions.openssl)[0]}`];
+if (process.argv.some(arg => arg === "--debug")) argsBuild.push("--debug");
 const outCpp = path.join(process.cwd(), "wireguard_bridge.node");
 function clean(nodeCpp = true) {
   if (fs.existsSync(path.join(process.cwd(), "build"))) fs.rmSync(path.join(process.cwd(), "build"), { recursive: true });
@@ -30,7 +31,7 @@ function moveFile() {
 
 function build() {
   clean();
-  const result = childprocess.spawnSync("node-gyp", [`--target=${process.version}`, `--real_openssl_major=${/^\d+/.exec(process.versions.openssl)[0]}`, "rebuild"], { stdio: !process.argv.some(arg => arg === "--silent") ? "inherit": "pipe" });
+  const result = childprocess.spawnSync("node-gyp", [...argsBuild, "rebuild"], { stdio: !process.argv.some(arg => arg === "--silent") ? "inherit": "pipe" });
   if (result.error || result.status !== 0) {
     console.log("Failed to build binding");
     if (!!result.stdout) console.log(result.stdout.toString());

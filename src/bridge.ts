@@ -62,26 +62,35 @@ export function show(wgName: string): wireguardInterface {
  */
 export function getDeviceName() {return Object.keys(showAll());}
 
-export function addDevice(interfaceConfig: wireguardInterface & {name: string}): wireguardInterface {
+export function addDevice(interfaceConfig: wireguardInterface & {name: string, cleanInterface?: boolean}): wireguardInterface {
   if (!interfaceConfig.name) throw new Error("interface name is required");
   if (interfaceConfig.name.length > 16) throw new Error("interface name is too long");
   if (!/^[a-zA-Z0-9_]+$/.test(interfaceConfig.name)) throw new Error("interface name is invalid");
-  if (showAll()[interfaceConfig.name]) throw new Error("interface name is already in use");
-  const peers: Array<{pubKey: string, presharedKey: string, keepalive: number, allowedIPs: string[]}> = [];
+  const peers: Array<wireguardInterface["peers"][""] & {pubKey: string}> = [];
   if (!!interfaceConfig.peers) {
     for (const peerPublicKey in interfaceConfig.peers) {
       const peer = interfaceConfig.peers[peerPublicKey];
       if (!peer.allowedIPs) throw new Error("allowedIPs is required");
-      peers.push({
-        pubKey: peerPublicKey,
-        presharedKey: peer.presharedKey,
-        keepalive: peer.keepInterval || 0,
-        allowedIPs: peer.allowedIPs
-      });
+      peers.push({...peer, pubKey: peerPublicKey});
     }
   }
+  if (!!showAll()[interfaceConfig.name] && !interfaceConfig.cleanInterface) {
+    const Peers = showAll()[interfaceConfig.name].peers;
+    for (const peerPublicKey in Peers) {
+      if (peers.some(peer => peer.pubKey === peerPublicKey)) continue;
+      const peer = Peers[peerPublicKey];
+      peers.push({...peer, pubKey: peerPublicKey});
+    }
+  }
+
   // Add interface
-  const res = Bridge.addNewDevice(interfaceConfig.name, interfaceConfig.portListen, interfaceConfig.privateKey, ...peers);
+  const res = Bridge.addNewDevice({
+    name: interfaceConfig.name,
+    portListen: interfaceConfig.portListen,
+    privateKey: interfaceConfig.privateKey,
+    publicKey: interfaceConfig.publicKey,
+    peers: peers
+  });
   if (res === 0) return showAll()[interfaceConfig.name];
   else if (res === -1) throw new Error("Unable to add device");
   else if (res === -2) throw new Error("Unable to set device");
