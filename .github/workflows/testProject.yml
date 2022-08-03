@@ -21,7 +21,7 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
 
-    - run: sudo npm install -g ts-node typescript
+    - run: sudo npm install -g ts-node typescript mocha
       name: Install typescript and ts-node
 
     # Install depenecies and build addon and typescript
@@ -29,5 +29,5 @@ jobs:
     - run: npm run nodegyp
 
     # Run root test and add actions summary
-    - run: sudo ts-node customTest.ts
-    - run: cat .testDir/README.md >> $GITHUB_STEP_SUMMARY
+    - run: bash -c "$(cat package.json | jq -r '.scripts.test')"
+      name: Test

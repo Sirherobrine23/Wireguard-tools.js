@@ -59,6 +59,23 @@ export type serverConfig = base & {
 };
 
 
+export function filterStringConfig(config: string): string {
+  const lineMath = /^(\[(Interface|Peer)\])|((PresharedKey|PublicKey|PrivateKey|AllowedIPs|Endpoint|Keepalive|DNS|ListenPort|Address|PreDown|PostDown|PreUp|PostUp)\s?\=\s?.*)/;
+  return config.split(/\r?\n/).filter(line => {
+    // if (!lineMath.test(line)) console.log("Result: %o, Line: '%s'", lineMath.test(line), line);
+    return lineMath.test(line);
+  }).join("\n");
+}
+
+export function parseKeys(env: string): {[key: string]: string} {
+  const keys: {[key: string]: string} = {};
+  for (const line of env.split(/\r?\n/)) {
+    const [key, value] = (line.match(/(PresharedKey|PublicKey|PrivateKey|AllowedIPs|Endpoint|Keepalive|DNS|ListenPort|Address|PreDown|PostDown|PreUp|PostUp)\s?\=\s?(.*)/)||[]).slice(1);
+    if (!!key) keys[key.trim()] = value.trim();
+  }
+  return keys;
+}
+
 /** Return Client config string */
 export function writeConfig(configbject: clientConfig): string;
 /** Return server config string */
@@ -100,8 +117,8 @@ export function writeConfig(configbject: clientConfig|serverConfig, interfaceNam
   }
 }
 
-export function parseConfig(configString: string): {type: "client", data: clientConfig};
-export function parseConfig(configString: string): {type: "server", data: serverConfig};
+// export function parseConfig(configString: string): {type: "client", data: clientConfig};
+// export function parseConfig(configString: string): {type: "server", data: serverConfig};
 export function parseConfig(configString: string): {type: "client"|"server", data: clientConfig | serverConfig} {
   if (!configString) throw new Error("Config is empty");
   // Remove comments
