@@ -100,11 +100,9 @@ Napi::Object getPeers(const Napi::CallbackInfo& info) {
       if (peer->tx_bytes) PeerObj.Set(Napi::String::New(info.Env(), "txBytes"), Napi::Number::New(info.Env(), peer->tx_bytes));
 
       // Latest handshake
-      if (peer->last_handshake_time.tv_sec) {
-        // time_t now = time(NULL);
-        double lastHandshake = peer->last_handshake_time.tv_sec * 1000;
-        PeerObj.Set(Napi::String::New(info.Env(), "lastHandshake"), Napi::Date::New(info.Env(), lastHandshake));
-      }
+      // sec: 1659573014
+      // nsec: 334757073
+      if (peer->last_handshake_time.tv_sec) PeerObj.Set(Napi::String::New(info.Env(), "lastHandshake"), Napi::Date::New(info.Env(), peer->last_handshake_time.tv_sec*1000));
 
       // Public key
       wg_key_b64_string peerPublicKey;
@@ -145,11 +143,9 @@ Napi::Value addNewDevice(const Napi::CallbackInfo& info) {
   }
 
   // Add interface
-  wg_device *blankDevice;
-  if (wg_get_device(&blankDevice, wgDevice.name) == -19) {
-    if (wg_add_device(wgDevice.name) < 0) return Napi::Number::New(info.Env(), -1);
-  }
-  wg_free_device(blankDevice);
+  int res = wg_add_device(wgDevice.name);
+  if (res == -17);
+  else if (res < 0) return Napi::Number::New(info.Env(), -1);
 
   // Add peers
   const Napi::Array Peers = Config["peers"].As<Napi::Array>();
@@ -215,6 +211,11 @@ Napi::Value addNewDevice(const Napi::CallbackInfo& info) {
           if (peerAdd.last_allowedip == NULL) peerAdd.last_allowedip = newAllowedIP;
         }
       }
+
+      // Endpoint
+      // if (peer["endpoint"].IsString()) {
+      //   const Napi::String Endpoint = peer["endpoint"].As<Napi::String>();
+      // }
 
       // Add peer to device
       wgDevice.first_peer = &peerAdd;
