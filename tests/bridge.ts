@@ -15,18 +15,20 @@ describe("Create interface", () => {
     const peerKeys = await utils.keygen(true);
     const peerKeys2 = await utils.keygen(true);
     if (Bridge.showAll()["wg_test"]) Bridge.delDevice("wg_test");
-    Bridge.addDevice({
+    return Bridge.addDevice({
       name: "wg_test",
       portListen: 51880,
       privateKey: serverKeys.private,
+      // Address: [utils.ipManeger.shuffleIp("10.0.0.1/24")],
       peers: {
         [peerKeys.public]: {
           keepInterval: 25,
           presharedKey: peerKeys.preshared,
+          endpoint: "example.com:51820",
           allowedIPs: [
             utils.ipManeger.shuffleIp("10.0.0.1/24"),
-            utils.ipManeger.shuffleIp("10.0.0.1/24"),
             utils.ipManeger.convertToIpv6(utils.ipManeger.shuffleIp("10.0.0.1/24")),
+            utils.ipManeger.shuffleIp("10.0.0.1/24"),
             utils.ipManeger.convertToIpv6(utils.ipManeger.shuffleIp("10.0.0.1/24")),
           ]
         },
@@ -34,8 +36,8 @@ describe("Create interface", () => {
           presharedKey: peerKeys2.preshared,
           allowedIPs: [
             utils.ipManeger.shuffleIp("192.168.15.1/24"),
-            utils.ipManeger.shuffleIp("192.168.15.1/24"),
             utils.ipManeger.convertToIpv6(utils.ipManeger.shuffleIp("192.168.15.1/24")),
+            utils.ipManeger.shuffleIp("192.168.15.1/24"),
             utils.ipManeger.convertToIpv6(utils.ipManeger.shuffleIp("192.168.15.1/24")),
           ]
         }

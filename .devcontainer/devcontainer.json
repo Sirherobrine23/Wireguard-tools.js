@@ -51,6 +51,12 @@
     "editor.minimap.enabled": false,
     "files.eol": "\n",
     "files.trimFinalNewlines": true,
-    "files.trimTrailingWhitespace": true
+    "files.trimTrailingWhitespace": true,
+    "googleTranslateExt.replaceText": true,
+    "material-icon-theme.showWelcomeMessage": false,
+    "gitlens.showWelcomeOnInstall": false,
+    "googleTranslateExt.languages": [
+      "en"
+    ]
   }
 }

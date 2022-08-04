@@ -1,10 +1,11 @@
 // @ts-ignore
-import Bridge from "../wireguard_bridge";
+import * as Bridge from "../wireguard_bridge";
 
 export type wireguardInterface = {
   publicKey?: string,
   privateKey?: string,
   portListen?: number,
+  Address?: string[],
   peers: {
     [peerPublicKey: string]: {
       presharedKey?: string,
@@ -17,7 +18,6 @@ export type wireguardInterface = {
     }
   }
 };
-export type PeerAndInterface = {[interfaceName: string]: wireguardInterface};
 
 /**
  * Get All Wireguard Interfaces with their Peers
@@ -45,7 +45,7 @@ export type PeerAndInterface = {[interfaceName: string]: wireguardInterface};
   }
   ```
  */
-export function showAll(): PeerAndInterface {return Bridge.getPeers();}
+export function showAll(): {[interfaceName: string]: wireguardInterface} {return Bridge.getPeers();}
 
 /**
  * Get one Wireguard Interface with its Peers
@@ -61,36 +61,19 @@ export function show(wgName: string): wireguardInterface {
  * Get only interfaces names
  */
 export function getDeviceName() {return Object.keys(showAll());}
-
 export function addDevice(interfaceConfig: wireguardInterface & {name: string, cleanInterface?: boolean}): wireguardInterface {
   if (!interfaceConfig.name) throw new Error("interface name is required");
   if (interfaceConfig.name.length > 16) throw new Error("interface name is too long");
   if (!/^[a-zA-Z0-9_]+$/.test(interfaceConfig.name)) throw new Error("interface name is invalid");
-  const peers: Array<wireguardInterface["peers"][""] & {pubKey: string}> = [];
-  if (!!interfaceConfig.peers) {
-    for (const peerPublicKey in interfaceConfig.peers) {
-      const peer = interfaceConfig.peers[peerPublicKey];
-      if (!peer.allowedIPs) throw new Error("allowedIPs is required");
-      peers.push({...peer, pubKey: peerPublicKey});
-    }
-  }
   if (!!showAll()[interfaceConfig.name] && !interfaceConfig.cleanInterface) {
     const Peers = showAll()[interfaceConfig.name].peers;
     for (const peerPublicKey in Peers) {
-      if (peers.some(peer => peer.pubKey === peerPublicKey)) continue;
-      const peer = Peers[peerPublicKey];
-      peers.push({...peer, pubKey: peerPublicKey});
+      if (interfaceConfig.peers[peerPublicKey]) continue;
+      interfaceConfig.peers[peerPublicKey] = Peers[peerPublicKey];
     }
   }
-
   // Add interface
-  const res = Bridge.addNewDevice({
-    name: interfaceConfig.name,
-    portListen: interfaceConfig.portListen,
-    privateKey: interfaceConfig.privateKey,
-    publicKey: interfaceConfig.publicKey,
-    peers: peers
-  });
+  const res = Bridge.addNewDevice(interfaceConfig);
   if (res === 0) return showAll()[interfaceConfig.name];
   else if (res === -1) throw new Error("Unable to add device");
   else if (res === -2) throw new Error("Unable to set device");

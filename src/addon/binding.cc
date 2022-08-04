@@ -6,6 +6,7 @@
 #include <sys/socket.h>
 #include <net/if.h>
 #include <netdb.h>
+#include <unistd.h>
 #include <string>
 
 // N-API
@@ -125,6 +126,19 @@ Napi::Value addNewDevice(const Napi::CallbackInfo& info) {
   // Copy name to device struct.
   strncpy(wgDevice.name, Config["name"].As<Napi::String>().Utf8Value().c_str(), sizeof(info[0].As<Napi::String>().Utf8Value().c_str()));
 
+  // Add interface
+  int res = wg_add_device(wgDevice.name);
+  if (res == -17);
+  else if (res < 0) return Napi::Number::New(info.Env(), -1);
+
+  // if (Config["Address"].IsArray()) {
+  //   const Napi::Array Address = Config["Address"].As<Napi::Array>();
+  //   for (int AdressIndex = 0; AdressIndex < Address.Length(); AdressIndex++) {
+  //     const Napi::String Adress = Address[AdressIndex].As<Napi::String>();
+
+  //   }
+  // }
+
   // Private key
   wg_key_from_base64(wgDevice.private_key, Config["privateKey"].As<Napi::String>().Utf8Value().c_str());
   wgDevice.flags = (wg_device_flags)WGDEVICE_HAS_PRIVATE_KEY;
@@ -142,22 +156,17 @@ Napi::Value addNewDevice(const Napi::CallbackInfo& info) {
     } else fprintf(stderr, "Invalid listen port\n");
   }
 
-  // Add interface
-  int res = wg_add_device(wgDevice.name);
-  if (res == -17);
-  else if (res < 0) return Napi::Number::New(info.Env(), -1);
-
   // Add peers
-  const Napi::Array Peers = Config["peers"].As<Napi::Array>();
-  if (Peers.Length() > 0) {
-    for (int i = 0; i < Peers.Length(); i++) {
-      if (Peers[i].IsObject() == 0) continue;
-      const Napi::Object peer = Peers[i].As<Napi::Object>();
+  const Napi::Object Peers = Config["peers"].As<Napi::Object>();
+  const Napi::Array Keys = Peers.GetPropertyNames();
+  if (Keys.Length() > 0) {
+    for (int i = 0; i < Keys.Length(); i++) {
+      const Napi::Object peer = Peers.Get(Keys[i]).As<Napi::Object>();
+      // Set peer publicKey
       wg_peer peerAdd = {
         flags: (wg_peer_flags)WGPEER_HAS_PUBLIC_KEY,
       };
-      Napi::String Pubkey = peer["pubKey"].As<Napi::String>();
-      wg_key_from_base64(peerAdd.public_key, Pubkey.Utf8Value().c_str());
+      wg_key_from_base64(peerAdd.public_key, Keys[i].As<Napi::String>().Utf8Value().c_str());
 
       // Preshared key
       if (peer["presharedKey"].IsString()) {
@@ -213,9 +222,74 @@ Napi::Value addNewDevice(const Napi::CallbackInfo& info) {
       }
 
       // Endpoint
-      // if (peer["endpoint"].IsString()) {
-      //   const Napi::String Endpoint = peer["endpoint"].As<Napi::String>();
-      // }
+      if (peer["endpoint"].IsString()) {
+        sockaddr endpoint;
+        int ret, retries;
+        char *begin, *end;
+        char *Endpoint = strdup(peer["endpoint"].As<Napi::String>().Utf8Value().c_str());
+        if (Endpoint[0] == '[') {
+          begin = &Endpoint[1];
+          end = strchr(Endpoint, ']');
+          if (!end) {
+            free(Endpoint);
+            return Napi::String::New(info.Env(), "Unable to find matching brace of endpoint");
+          }
+          *end++ = '\0';
+          if (*end++ != ':' || !*end) {
+            free(Endpoint);
+            return Napi::String::New(info.Env(), "Unable to find port of endpoint");
+          }
+        } else {
+          begin = Endpoint;
+          end = strrchr(Endpoint, ':');
+          if (!end || !*(end + 1)) {
+            free(Endpoint);
+            return Napi::String::New(info.Env(), "Unable to find port of endpoint");
+          }
+          *end++ = '\0';
+        }
+        addrinfo *resolved;
+        addrinfo hints = {
+          ai_family: AF_UNSPEC,
+          ai_socktype: SOCK_DGRAM,
+          ai_protocol: IPPROTO_UDP
+        };
+        #define min(a, b) ((a) < (b) ? (a) : (b))
+        for (unsigned int timeout = 1000000;; timeout = min(20000000, timeout * 6 / 5)) {
+          ret = getaddrinfo(begin, end, &hints, &resolved);
+          if (!ret) break;
+          if (ret == EAI_NONAME || ret == EAI_FAIL ||
+            #ifdef EAI_NODATA
+              ret == EAI_NODATA ||
+            #endif
+              (retries >= 0 && !retries--)) {
+            free(Endpoint);
+            fprintf(stderr, "%s: `%s'\n", ret == EAI_SYSTEM ? strerror(errno) : gai_strerror(ret), peer["endpoint"].As<Napi::String>().Utf8Value().c_str());
+            return Napi::String::New(info.Env(), "Unable to resolve endpoint");
+          }
+          fprintf(stderr, "%s: `%s'. Trying again in %.2f seconds...\n", ret == EAI_SYSTEM ? strerror(errno) : gai_strerror(ret), peer["endpoint"].As<Napi::String>().Utf8Value().c_str(), timeout / 1000000.0);
+          usleep(timeout);
+        }
+        if ((resolved->ai_family == AF_INET && resolved->ai_addrlen == sizeof(struct sockaddr_in)) || (resolved->ai_family == AF_INET6 && resolved->ai_addrlen == sizeof(struct sockaddr_in6))) {
+          memcpy(&endpoint, resolved->ai_addr, resolved->ai_addrlen);
+          memccpy(&peerAdd.endpoint.addr, &endpoint, 0, sizeof(peerAdd.endpoint.addr));
+          if (resolved->ai_family == AF_INET) {
+            peerAdd.endpoint.addr4.sin_addr.s_addr = ((struct sockaddr_in *)&endpoint)->sin_addr.s_addr;
+            peerAdd.endpoint.addr4.sin_port = ((struct sockaddr_in *)&endpoint)->sin_port;
+            peerAdd.endpoint.addr4.sin_family = AF_INET;
+          } else {
+            peerAdd.endpoint.addr6.sin6_addr = ((struct sockaddr_in6 *)&endpoint)->sin6_addr;
+            peerAdd.endpoint.addr6.sin6_port = ((struct sockaddr_in6 *)&endpoint)->sin6_port;
+            peerAdd.endpoint.addr6.sin6_family = AF_INET6;
+          }
+        } else {
+          freeaddrinfo(resolved);
+          free(Endpoint);
+          return Napi::String::New(info.Env(), "Neither IPv4 nor IPv6 address found");
+        }
+        freeaddrinfo(resolved);
+        free(Endpoint);
+      }
 
       // Add peer to device
       wgDevice.first_peer = &peerAdd;
