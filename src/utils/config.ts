@@ -1,6 +1,7 @@
 import * as fs from "node:fs/promises";
 import * as fsOld from "node:fs";
 import * as path from "node:path";
+import type { wireguardInterface } from "../bridge";
 
 export type ipObject = {ip: string, subnet: number};
 type base = {
@@ -62,12 +63,8 @@ export type serverConfig = base & {
 export function writeConfig(configbject: clientConfig): string;
 /** Return server config string */
 export function writeConfig(configbject: serverConfig): string;
-/** Write config file */
-export function writeConfig(configbject: clientConfig, interfaceName: string): Promise<void>;
-/** Write server config file */
-export function writeConfig(configbject: serverConfig, interfaceName: string): Promise<void>;
-/** Create config string, if interfaceName is not specified return config string */
-export function writeConfig(configbject: clientConfig|serverConfig, interfaceName?: string): Promise<void>|string {
+/** Create config string */
+export function writeConfig(configbject: clientConfig|serverConfig): string {
   let wireguardConfigString = "[Interface]\n";
   const isClient = (config: clientConfig | serverConfig): config is clientConfig => (config as clientConfig).interface.address !== undefined;
   if (isClient(configbject)) {
@@ -92,11 +89,7 @@ export function writeConfig(configbject: clientConfig|serverConfig, interfaceNam
       if (configbject.peer[peerPub].Keepalive) wireguardConfigString += `Keepalive = ${configbject.peer[peerPub].Keepalive}\n`;
     }
   }
-  if (!interfaceName) return wireguardConfigString;
-  else {
-    if (!(fsOld.existsSync("/etc/wireguard"))) throw new Error("/etc/wireguard not found");
-    return fs.writeFile(path.join("/etc/wireguard", `${interfaceName}.conf`), wireguardConfigString);
-  }
+  return wireguardConfigString;
 }
 
 function filterStringConfig(config: string): string {
@@ -227,7 +220,56 @@ export function parseConfig(configString: string): {type: "client"|"server", dat
  * Config files are stored in /etc/wireguard/<interfaceName>.conf
  */
 export async function readConfig(interfaceName: string) {
+  if (!interfaceName) throw new Error("Interface name is required");
   if (!(fsOld.existsSync("/etc/wireguard"))) throw new Error("/etc/wireguard not found");
+  if (interfaceName.includes(".conf")) interfaceName = interfaceName.replace(".conf", "");
   if (!(fsOld.existsSync(path.join("/etc/wireguard", `${interfaceName}.conf`)))) throw new Error(`${interfaceName}.conf not found`);
   return parseConfig(await fs.readFile(path.join("/etc/wireguard", `${interfaceName}.conf`), "utf8"));
+}
+
+/**
+ *
+ */
+export function Convert_wireguardInterface_to_config_utils(wgConfig: wireguardInterface): clientConfig|serverConfig {
+  if (!!wgConfig.Address && !!wgConfig.portListen) {
+    const serverConfig: serverConfig = {
+      interface: {
+        private: wgConfig.privateKey,
+        ip: wgConfig.Address.map((ip) => ({ip: ip.split("/")[0], subnet: parseInt(ip.split("/")[1])})),
+        portListen: wgConfig.portListen
+      },
+      peer: {}
+    };
+    for (const peerPublicKey in wgConfig.peers) {
+      serverConfig.peer[peerPublicKey] = {
+        preshared: wgConfig.peers[peerPublicKey].presharedKey,
+        allowIp: wgConfig.peers[peerPublicKey].allowedIPs.map((ip) => ({ip: ip.split("/")[0], subnet: parseInt(ip.split("/")[1])})),
+      };
+    }
+    return serverConfig;
+  }
+  const clientConfig: clientConfig = {
+    interface: {
+      private: wgConfig.privateKey,
+      address: wgConfig.Address?.map((ip) => ({ip: ip, subnet: ip.includes("::")?128:32})),
+    },
+    peer: {}
+  };
+  for (const peerPublicKey in wgConfig.peers) {
+    clientConfig.peer[peerPublicKey] = {
+      preshared: wgConfig.peers[peerPublicKey].presharedKey,
+      allowIp: wgConfig.peers[peerPublicKey].allowedIPs?.map((ip) => ({ip: ip, subnet: ip.includes("::")?128:32})),
+      Keepalive: wgConfig.peers[peerPublicKey].keepInterval,
+      Endpoint: {host: "", port: 0}
+    };
+    if (!/::/.test(wgConfig.peers[peerPublicKey].endpoint)) {
+      clientConfig.peer[peerPublicKey].Endpoint.host = wgConfig.peers[peerPublicKey].endpoint?.split(":")[0];
+      clientConfig.peer[peerPublicKey].Endpoint.port = parseInt(wgConfig.peers[peerPublicKey].endpoint?.split(":")[1]);
+    } else {
+      const [host, port] = wgConfig.peers[peerPublicKey].endpoint?.match(/^\[(.*)\]:(\d+)$/)!;
+      clientConfig.peer[peerPublicKey].Endpoint.host = host;
+      clientConfig.peer[peerPublicKey].Endpoint.port = parseInt(port);
+    }
+  }
+  return clientConfig;
 }

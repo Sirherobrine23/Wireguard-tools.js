@@ -1,5 +1,8 @@
+import { networkInterfaces } from "node:os";
+import { expect } from "chai";
 import * as Bridge from "../src/bridge";
 import * as utils from "../src/utils/index";
+const interfaceName = !networkInterfaces()["wg_test"] ? "sh23Test":"wg_test";
 
 // Show
 describe("Show", () => {
@@ -8,40 +11,44 @@ describe("Show", () => {
   });
 });
 
-
 describe("Create interface", () => {
-  it("Create interface", async () => {
+  it(`Create interface ('${interfaceName}')`, async () => {
     const serverKeys = await utils.keygen(false);
-    const peerKeys = await utils.keygen(true);
-    const peerKeys2 = await utils.keygen(true);
-    if (Bridge.showAll()["wg_test"]) Bridge.delDevice("wg_test");
-    return Bridge.addDevice({
-      name: "wg_test",
+    // Make base config
+    const deviceConfig: Bridge.wireguardInterface & {name: string} = {
+      name: interfaceName,
       portListen: 51880,
       privateKey: serverKeys.private,
-      // Address: [utils.ipManeger.shuffleIp("10.0.0.1/24")],
-      peers: {
-        [peerKeys.public]: {
-          keepInterval: 25,
-          presharedKey: peerKeys.preshared,
-          endpoint: "example.com:51820",
-          allowedIPs: [
-            utils.ipManeger.shuffleIp("10.0.0.1/24"),
-            utils.ipManeger.convertToIpv6(utils.ipManeger.shuffleIp("10.0.0.1/24")),
-            utils.ipManeger.shuffleIp("10.0.0.1/24"),
-            utils.ipManeger.convertToIpv6(utils.ipManeger.shuffleIp("10.0.0.1/24")),
-          ]
-        },
-        [peerKeys2.public]: {
-          presharedKey: peerKeys2.preshared,
-          allowedIPs: [
-            utils.ipManeger.shuffleIp("192.168.15.1/24"),
-            utils.ipManeger.convertToIpv6(utils.ipManeger.shuffleIp("192.168.15.1/24")),
-            utils.ipManeger.shuffleIp("192.168.15.1/24"),
-            utils.ipManeger.convertToIpv6(utils.ipManeger.shuffleIp("192.168.15.1/24")),
-          ]
-        }
+      // Address: [utils.nodeCidr4.shuffleIp("10.0.0.1/24")],
+      peers: {}
+    };
+    for (let i = 0; i < 10; i++) {
+      const peerKey = await utils.keygen(true);
+      deviceConfig.peers[peerKey.public] = {
+        allowedIPs: [
+          utils.nodeCidr4.randomIp("192.168.15.1/24"),
+          utils.nodeCidr6.FourToSix(utils.nodeCidr4.randomIp("192.168.15.1/24")),
+          utils.nodeCidr4.randomIp("192.168.15.1/24"),
+          utils.nodeCidr6.FourToSix(utils.nodeCidr4.randomIp("192.168.15.1/24")),
+        ]
+      };
+      if (i%2 === 0) {
+        deviceConfig.peers[peerKey.public].endpoint = utils.nodeCidr4.randomIp("20.0.0.1/24")+":51880";
+        deviceConfig.peers[peerKey.public].presharedKey = peerKey.preshared;
       }
+    }
+    Bridge.addDevice(deviceConfig);
+  });
+  it("Convert wireguardInterface to config utils", () => {
+    const wireguardInterface = Bridge.showAll()[interfaceName];
+    const config = utils.config.Convert_wireguardInterface_to_config_utils(wireguardInterface);
+    return expect(config.interface.private).equal(wireguardInterface.privateKey);
+  });
+  after(async () => {
+    describe("Cleaning", ()=>{
+      it(`Remove interface ${interfaceName}`, () => {
+        Bridge.delDevice(interfaceName);
+      });
     });
   });
 });

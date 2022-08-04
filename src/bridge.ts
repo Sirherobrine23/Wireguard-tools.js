@@ -61,17 +61,10 @@ export function show(wgName: string): wireguardInterface {
  * Get only interfaces names
  */
 export function getDeviceName() {return Object.keys(showAll());}
-export function addDevice(interfaceConfig: wireguardInterface & {name: string, cleanInterface?: boolean}): wireguardInterface {
+export function addDevice(interfaceConfig: wireguardInterface & {name: string}): wireguardInterface {
   if (!interfaceConfig.name) throw new Error("interface name is required");
   if (interfaceConfig.name.length > 16) throw new Error("interface name is too long");
   if (!/^[a-zA-Z0-9_]+$/.test(interfaceConfig.name)) throw new Error("interface name is invalid");
-  if (!!showAll()[interfaceConfig.name] && !interfaceConfig.cleanInterface) {
-    const Peers = showAll()[interfaceConfig.name].peers;
-    for (const peerPublicKey in Peers) {
-      if (interfaceConfig.peers[peerPublicKey]) continue;
-      interfaceConfig.peers[peerPublicKey] = Peers[peerPublicKey];
-    }
-  }
   // Add interface
   const res = Bridge.addNewDevice(interfaceConfig);
   if (res === 0) return showAll()[interfaceConfig.name];

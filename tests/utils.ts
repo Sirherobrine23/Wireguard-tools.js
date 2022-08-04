@@ -37,13 +37,13 @@ describe("Parse config", () => {
 // Shuffle IP and Convert to IPv6
 describe("Random IP and IPv4 in to IPv6", () => {
   it("Shuffle IP", () => {
-    const Ip = utils.ipManeger.shuffleIp("10.0.0.0/24");
+    const Ip = utils.nodeCidr4.randomIp("10.0.0.0/24");
     if (/[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/.test(Ip)) return;
     throw new Error("Shuffle IP failed");
   });
   it("IPv6 Convert", () => {
-    const Ip = utils.ipManeger.shuffleIp("192.168.1.1/24");
-    const IPv6 = utils.ipManeger.convertToIpv6(Ip);
+    const Ip = utils.nodeCidr4.randomIp("192.168.1.1/24");
+    const IPv6 = utils.nodeCidr6.FourToSix(Ip);
     if (!/[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/.test(IPv6)) return;
     throw new Error("IPv6 conversion failed");
   });

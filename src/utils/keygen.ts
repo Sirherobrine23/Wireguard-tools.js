@@ -1,4 +1,5 @@
 import * as crypto from "node:crypto";
+
 async function cryptoCreateKey() {
   return new Promise<{privateKey: string, publicKey: string}>((res, rej) => {
     return crypto.generateKeyPair("x25519", {publicKeyEncoding: {format: "der", type: "spki"}, privateKeyEncoding: {format: "der", type: "pkcs8"}}, (err: Error, publicKey: Buffer, privateKey: Buffer) => {
