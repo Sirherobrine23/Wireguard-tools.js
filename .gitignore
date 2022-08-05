@@ -1,12 +1,13 @@
 # Ignore node addon
 *.node
 
-# Ignore customTest
-.testDir/
+# C/C++ builds
+/libnlSource/
+build/
+libnl/
 
 # Ingore node folders
 node_modules/
 wireguard-tools.js*.tgz
 dist/
-build/
 .vscode-ctags*

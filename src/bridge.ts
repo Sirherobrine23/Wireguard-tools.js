@@ -70,7 +70,7 @@ export function addDevice(interfaceConfig: wireguardInterface & {name: string}):
   if (res === 0) return showAll()[interfaceConfig.name];
   else if (res === -1) throw new Error("Unable to add device");
   else if (res === -2) throw new Error("Unable to set device");
-  throw new Error("Unknown error, code: "+res);
+  throw new Error("Add device error: "+res);
 }
 
 export function delDevice(interfacename: string): void {

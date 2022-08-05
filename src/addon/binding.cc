@@ -17,6 +17,9 @@ extern "C" {
   #include "wgEmbed/wireguard.h"
 }
 
+#include "set_address.cc"
+#include "set_route.cc"
+
 // Stability: stable
 Napi::Object getPeers(const Napi::CallbackInfo& info) {
   char *device_names, *device_name;
@@ -129,15 +132,18 @@ Napi::Value addNewDevice(const Napi::CallbackInfo& info) {
   // Add interface
   int res = wg_add_device(wgDevice.name);
   if (res == -17);
-  else if (res < 0) return Napi::Number::New(info.Env(), -1);
+  else if (res < 0) return Napi::String::New(info.Env(), "Error adding device");
 
-  // if (Config["Address"].IsArray()) {
-  //   const Napi::Array Address = Config["Address"].As<Napi::Array>();
-  //   for (int AdressIndex = 0; AdressIndex < Address.Length(); AdressIndex++) {
-  //     const Napi::String Adress = Address[AdressIndex].As<Napi::String>();
-
-  //   }
-  // }
+  // Set interface ip address
+  if (Config["Address"].IsArray()) {
+    const Napi::Array Address = Config["Address"].As<Napi::Array>();
+    for (int AdressIndex = 0; AdressIndex < Address.Length(); AdressIndex++) {
+      const Napi::String Adress = Address[AdressIndex].As<Napi::String>();
+      if (setAdress(wgDevice.name, Adress.Utf8Value().c_str()) < 0) return Napi::String::New(info.Env(), "Error setting address");
+      const char *RouteRes = setRoute(wgDevice.name, Adress.Utf8Value().c_str());
+      if (RouteRes != SucessRouteAdd) return Napi::String::New(info.Env(), RouteRes);
+    }
+  }
 
   // Private key
   wg_key_from_base64(wgDevice.private_key, Config["privateKey"].As<Napi::String>().Utf8Value().c_str());

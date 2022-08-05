@@ -4,9 +4,10 @@
         {
             "name": "Linux",
             "includePath": [
+                "/usr/include/node",
                 "${workspaceFolder}/**",
                 "${workspaceFolder}/node_modules/**",
-                "/usr/include/node"
+                "${workspaceFolder}/libnl/include/libnl3/**"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",

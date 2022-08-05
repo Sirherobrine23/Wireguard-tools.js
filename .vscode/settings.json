@@ -54,6 +54,7 @@
     "optional": "cpp",
     "regex": "cpp",
     "variant": "cpp",
-    "istream": "cpp"
+    "istream": "cpp",
+    "netlink.h": "c"
   }
 }

@@ -1,11 +1,23 @@
+# vscode
 .devcontainer/
 .vscode/
-.github/
-.testDir/
-.git*
 .vscode-ctags
-build/
-configsExamples/
+
+# node modules
 node_modules/
-/customTest.ts
+/*.tgz
+
+# Github and Git
+.github/
+.git*
+
+# node-gyp
+build/
 *.node
+
+# Project
+configsExamples/
+
+# libnl
+libnl/**/*
+libnlSource/**/*

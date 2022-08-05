@@ -1,7 +1,7 @@
 {
   "name": "wireguard-tools.js",
   "version": "1.2.0",
-  "description": "A simple way to manage Wireguard in Node.js",
+  "description": "Control your wireguard interface from node.js, not a wireguard-tools wrapper!",
   "main": "dist/index.js",
   "types": "./dist/index.d.ts",
   "gypfile": true,
@@ -26,10 +26,12 @@
     "node": ">=14.0.0"
   },
   "scripts": {
-    "nodegyp": "node install.js --install",
-    "install": "node install.js --install --silent || exit 0",
+    "nodegyp": "node install.js --nodegyp",
+    "libnl": "node install.js --libnl",
+    "install": "node install.js --all --silent || exit 0",
     "build": "tsc && npm run install",
-    "test": "node install.js --install --debug && sudo PATH=\"$PATH\" env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register 'tests/**/*.ts'"
+    "test": "sudo PATH=\"$PATH\" env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register 'tests/**/*.ts'",
+    "test:full": "npm run nodegyp && npm run test"
   },
   "devDependencies": {
     "@types/chai": "^4.3.1",

@@ -13,6 +13,10 @@ To manage Wireguard interfaces:
 - Delete Interface.
 - Get the peers along with the interface and peer information.
 
+> **Note**
+>
+> This module needs `make` and `gcc/g++` or `clang`. this module needs some tools to compile `libnl` and `embbeded-wireguard`.
+
 ## Example
 
 Parse wireguard configuration file:

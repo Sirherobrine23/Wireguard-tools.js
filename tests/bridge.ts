@@ -19,7 +19,12 @@ describe("Create interface", () => {
       name: interfaceName,
       portListen: 51880,
       privateKey: serverKeys.private,
-      // Address: [utils.nodeCidr4.shuffleIp("10.0.0.1/24")],
+      Address: [
+        utils.nodeCidr4.randomIp("10.0.0.1/24"),
+        utils.nodeCidr4.randomIp("10.0.0.1/24"),
+        utils.nodeCidr4.randomIp("10.0.0.1/24"),
+        utils.nodeCidr4.randomIp("10.0.0.1/24"),
+      ],
       peers: {}
     };
     for (let i = 0; i < 10; i++) {
@@ -47,7 +52,7 @@ describe("Create interface", () => {
   after(async () => {
     describe("Cleaning", ()=>{
       it(`Remove interface ${interfaceName}`, () => {
-        Bridge.delDevice(interfaceName);
+        // Bridge.delDevice(interfaceName);
       });
     });
   });

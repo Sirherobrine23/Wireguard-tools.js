@@ -16,6 +16,7 @@ jobs:
         persist-credentials: true
         ref: main
         fetch-depth: 2
+        submodules: true
 
     # Install basic tools
     - uses: actions/setup-node@v3
