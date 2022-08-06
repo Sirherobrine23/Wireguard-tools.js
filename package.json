@@ -27,7 +27,6 @@
   },
   "scripts": {
     "nodegyp": "node install.js --nodegyp",
-    "libnl": "node install.js --libnl",
     "install": "node install.js --all --silent || exit 0",
     "build": "tsc && npm run install",
     "test": "sudo PATH=\"$PATH\" env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register 'tests/**/*.ts'",

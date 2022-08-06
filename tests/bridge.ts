@@ -12,6 +12,15 @@ describe("Show", () => {
 });
 
 describe("Create interface", () => {
+  before(() => {
+    if (Bridge.showAll()[interfaceName]) {
+      describe("before cleaning test interface", ()=>{
+        it(`Remove interface ${interfaceName}`, () => {
+          Bridge.delDevice(interfaceName);
+        });
+      });
+    }
+  });
   it(`Create interface ('${interfaceName}')`, async () => {
     const serverKeys = await utils.keygen(false);
     // Make base config
@@ -42,7 +51,7 @@ describe("Create interface", () => {
         deviceConfig.peers[peerKey.public].presharedKey = peerKey.preshared;
       }
     }
-    Bridge.addDevice(deviceConfig);
+    return Bridge.addDevice(deviceConfig);
   });
   it("Convert wireguardInterface to config utils", () => {
     const wireguardInterface = Bridge.showAll()[interfaceName];
@@ -50,9 +59,9 @@ describe("Create interface", () => {
     return expect(config.interface.private).equal(wireguardInterface.privateKey);
   });
   after(async () => {
-    describe("Cleaning", ()=>{
+    describe("Cleaning test interface", ()=>{
       it(`Remove interface ${interfaceName}`, () => {
-        // Bridge.delDevice(interfaceName);
+        Bridge.delDevice(interfaceName);
       });
     });
   });

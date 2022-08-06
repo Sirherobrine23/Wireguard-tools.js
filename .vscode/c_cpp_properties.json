@@ -6,8 +6,7 @@
             "includePath": [
                 "/usr/include/node",
                 "${workspaceFolder}/**",
-                "${workspaceFolder}/node_modules/**",
-                "${workspaceFolder}/libnl/include/libnl3/**"
+                "${workspaceFolder}/node_modules/**"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",

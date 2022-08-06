@@ -45,29 +45,36 @@ export type wireguardInterface = {
   }
   ```
  */
-export function showAll(): {[interfaceName: string]: wireguardInterface} {return Bridge.getPeers();}
+export function showAll(): {[interfaceName: string]: wireguardInterface} {return Bridge.getDevices();}
 
 /**
  * Get one Wireguard Interface with its Peers
  *
 */
 export function show(wgName: string): wireguardInterface {
-  const insterfaces = showAll();
-  if (!insterfaces[wgName]) throw new Error(`Wireguard interface ${wgName} not found`);
-  return insterfaces[wgName];
+  const InterfaceInfo = Bridge.getDevice(wgName);
+  if (typeof InterfaceInfo === "string") throw new Error(InterfaceInfo);
+  return InterfaceInfo;
 }
 
 /**
  * Get only interfaces names
  */
 export function getDeviceName() {return Object.keys(showAll());}
+
+/**
+ * Create Wireguard interface and return its name
+ */
 export function addDevice(interfaceConfig: wireguardInterface & {name: string}): wireguardInterface {
+  // Check interface name
   if (!interfaceConfig.name) throw new Error("interface name is required");
   if (interfaceConfig.name.length > 16) throw new Error("interface name is too long");
   if (!/^[a-zA-Z0-9_]+$/.test(interfaceConfig.name)) throw new Error("interface name is invalid");
+  if (showAll()[interfaceConfig.name]) throw new Error("interface name is already used");
+
   // Add interface
   const res = Bridge.addNewDevice(interfaceConfig);
-  if (res === 0) return showAll()[interfaceConfig.name];
+  if (res === 0) return show(interfaceConfig.name);
   else if (res === -1) throw new Error("Unable to add device");
   else if (res === -2) throw new Error("Unable to set device");
   throw new Error("Add device error: "+res);

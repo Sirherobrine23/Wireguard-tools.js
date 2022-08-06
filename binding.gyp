@@ -23,16 +23,7 @@
         "src/addon/wgEmbed/wireguard.c",
       ],
       "include_dirs" : [
-        "<!(node -p \"require('node-addon-api').include_dir\")",
-        "$(srcdir)/libnl/include/libnl3"
-      ],
-      "libraries": [
-        "$(srcdir)/libnl/lib/libnl-xfrm-3.a",
-        "$(srcdir)/libnl/lib/libnl-nf-3.a",
-        "$(srcdir)/libnl/lib/libnl-3.a",
-        "$(srcdir)/libnl/lib/libnl-idiag-3.a",
-        "$(srcdir)/libnl/lib/libnl-route-3.a",
-        "$(srcdir)/libnl/lib/libnl-genl-3.a",
+        "<!(node -p \"require('node-addon-api').include_dir\")"
       ],
     }
   ],
