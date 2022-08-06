@@ -12,15 +12,6 @@ describe("Show", () => {
 });
 
 describe("Create interface", () => {
-  before(() => {
-    if (Bridge.showAll()[interfaceName]) {
-      describe("before cleaning test interface", ()=>{
-        it(`Remove interface ${interfaceName}`, () => {
-          Bridge.delDevice(interfaceName);
-        });
-      });
-    }
-  });
   it(`Create interface ('${interfaceName}')`, async () => {
     const serverKeys = await utils.keygen(false);
     // Make base config
@@ -30,13 +21,13 @@ describe("Create interface", () => {
       privateKey: serverKeys.private,
       Address: [
         utils.nodeCidr4.randomIp("10.0.0.1/24"),
+        utils.nodeCidr6.FourToSix(utils.nodeCidr4.randomIp("10.0.0.1/24")),
         utils.nodeCidr4.randomIp("10.0.0.1/24"),
-        utils.nodeCidr4.randomIp("10.0.0.1/24"),
-        utils.nodeCidr4.randomIp("10.0.0.1/24"),
+        utils.nodeCidr6.FourToSix(utils.nodeCidr4.randomIp("10.0.0.1/24")),
       ],
       peers: {}
     };
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 2; i++) {
       const peerKey = await utils.keygen(true);
       deviceConfig.peers[peerKey.public] = {
         allowedIPs: [
@@ -60,9 +51,7 @@ describe("Create interface", () => {
   });
   after(async () => {
     describe("Cleaning test interface", ()=>{
-      it(`Remove interface ${interfaceName}`, () => {
-        Bridge.delDevice(interfaceName);
-      });
+      it(`Remove interface ${interfaceName}`, () => Bridge.delDevice(interfaceName));
     });
   });
 });

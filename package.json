@@ -4,23 +4,37 @@
   "description": "Control your wireguard interface from node.js, not a wireguard-tools wrapper!",
   "main": "dist/index.js",
   "types": "./dist/index.d.ts",
+  "private": false,
   "gypfile": true,
+  "type": "commonjs",
+  "homepage": "https://github.com/Sirherobrine23/Wireguard-tools.js#readme",
+  "author": "Matheus Sampaio Queiroga <srherobrine20@gmail.com> (https://sirherobrine23.org/)",
+  "license": "GPL-2.0-only",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Sirherobrine23/Wireguard-tools.js.git"
   },
   "keywords": [
-    "wireguard"
+    "wireguard",
+    "node-addon",
+    "wireguard-tools",
+    "wireguard-basic-tools",
+    "wireguard-utils"
   ],
-  "author": "Matheus Sampaio Queiroga <srherobrine20@gmail.com> (https://sirherobrine23.org/)",
-  "license": "GPL-2.0-only",
   "bugs": {
     "url": "https://github.com/Sirherobrine23/Wireguard-tools.js/issues"
   },
-  "homepage": "https://github.com/Sirherobrine23/Wireguard-tools.js#readme",
+  "sponsor": {
+    "url": "https://github.com/sponsors/Sirherobrine23"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "os": [
     "linux",
-    "android"
+    "android",
+    "freebsd",
+    "darwin"
   ],
   "engines": {
     "node": ">=14.0.0"
@@ -28,6 +42,7 @@
   "scripts": {
     "nodegyp": "node install.js --nodegyp",
     "install": "node install.js --all --silent || exit 0",
+    "postinstall": "node install.js --all --silent || exit 0",
     "build": "tsc && npm run install",
     "test": "sudo PATH=\"$PATH\" env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register 'tests/**/*.ts'",
     "test:full": "npm run nodegyp && npm run test"

@@ -1,5 +1,7 @@
 // @ts-ignore
 import * as Bridge from "../wireguard_bridge";
+import * as child_process from "node:child_process";
+import * as os from "node:os";
 
 export type wireguardInterface = {
   publicKey?: string,
@@ -18,6 +20,21 @@ export type wireguardInterface = {
     }
   }
 };
+
+async function promiseFork(cmd: string, args?: string[]) {
+  // console.log("[wireguard-tools.js] '%s' '%s'", cmd, args.join("' '"));
+  return new Promise<void>((resolve, reject) => {
+    const childProcess = child_process.execFile(cmd, args||[]);
+    childProcess.stdout.on("data", (data) => process.stdout.write(data instanceof Buffer ? data.toString() : data));
+    childProcess.stderr.on("data", (data) => process.stderr.write(data instanceof Buffer ? data.toString() : data));
+    childProcess.on("error", (err) => reject(err));
+    childProcess.on("exit", () => resolve());
+  });
+}
+
+export async function setAddress(wgName: string, Address: string[]) {
+  return Address.map(addr => /\//.test(addr) ? addr : addr+"/"+(/::/.test(addr) ? "128":"32")).map(addr => promiseFork("ip", ["address", "add", addr, "dev", wgName]).then(() => promiseFork("ip", ["route", "add", addr, "dev", wgName])))
+}
 
 /**
  * Get All Wireguard Interfaces with their Peers
@@ -45,15 +62,22 @@ export type wireguardInterface = {
   }
   ```
  */
-export function showAll(): {[interfaceName: string]: wireguardInterface} {return Bridge.getDevices();}
+export function showAll(): {[interfaceName: string]: wireguardInterface} {
+  const devices = Bridge.getDevices() as {[interfaceName: string]: wireguardInterface};
+  for (const devname in devices) {
+    if (os.networkInterfaces()[devname]) devices[devname].Address = os.networkInterfaces()[devname].map(link => link.address);
+  }
+  return devices;
+}
 
 /**
  * Get one Wireguard Interface with its Peers
  *
 */
 export function show(wgName: string): wireguardInterface {
-  const InterfaceInfo = Bridge.getDevice(wgName);
+  const InterfaceInfo = Bridge.getDevice(wgName) as wireguardInterface;
   if (typeof InterfaceInfo === "string") throw new Error(InterfaceInfo);
+  if (os.networkInterfaces()[wgName]) InterfaceInfo.Address = os.networkInterfaces()[wgName].map(link => link.address);
   return InterfaceInfo;
 }
 

@@ -19,12 +19,16 @@ Napi::Value parseWgDevice(const Napi::CallbackInfo& info, wg_device *device) {
   Napi::Object DeviceObj = Napi::Object::New(info.Env());
 
   // Set device public key
-  wg_key_b64_string interfacePublicKey; wg_key_to_base64(interfacePublicKey, device->public_key);
+  wg_key_b64_string interfacePublicKey;
+  wg_key_to_base64(interfacePublicKey, device->public_key);
   DeviceObj.Set(Napi::String::New(info.Env(), "publicKey"), Napi::String::New(info.Env(), interfacePublicKey));
 
   // Set device private key
-  wg_key_b64_string interfaceprivateKey; wg_key_to_base64(interfaceprivateKey, device->private_key);
-  DeviceObj.Set(Napi::String::New(info.Env(), "privateKey"), Napi::String::New(info.Env(), interfaceprivateKey));
+  if (device->flags & WGDEVICE_HAS_PRIVATE_KEY) {
+    wg_key_b64_string interfaceprivateKey;
+    wg_key_to_base64(interfaceprivateKey, device->private_key);
+    DeviceObj.Set(Napi::String::New(info.Env(), "privateKey"), Napi::String::New(info.Env(), interfaceprivateKey));
+  }
 
   // Wireguard interface port listen
   if (device->listen_port) DeviceObj.Set(Napi::String::New(info.Env(), "portListen"), Napi::Number::New(info.Env(), device->listen_port));
@@ -34,13 +38,14 @@ Napi::Value parseWgDevice(const Napi::CallbackInfo& info, wg_device *device) {
   wg_for_each_peer(device, peer) {
     Napi::Object PeerObj = Napi::Object::New(info.Env());
     // if preshared set
-    if (peer->preshared_key) {
-      wg_key_b64_string presharedKey; wg_key_to_base64(presharedKey, peer->preshared_key);
+    if (peer->flags & WGPEER_HAS_PRESHARED_KEY) {
+      wg_key_b64_string presharedKey;
+      wg_key_to_base64(presharedKey, peer->preshared_key);
       PeerObj.Set(Napi::String::New(info.Env(), "presharedKey"), Napi::String::New(info.Env(), presharedKey));
     }
 
     // Keep interval alive
-    if (peer->persistent_keepalive_interval) PeerObj.Set(Napi::String::New(info.Env(), "keepInterval"), Napi::Number::New(info.Env(), peer->persistent_keepalive_interval));
+    if (peer->flags & WGPEER_HAS_PERSISTENT_KEEPALIVE_INTERVAL) PeerObj.Set(Napi::String::New(info.Env(), "keepInterval"), Napi::Number::New(info.Env(), peer->persistent_keepalive_interval));
 
     // Endoints
     if (peer->endpoint.addr.sa_family == AF_INET||peer->endpoint.addr.sa_family == AF_INET6) {
