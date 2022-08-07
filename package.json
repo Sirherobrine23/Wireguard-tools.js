@@ -5,7 +5,6 @@
   "main": "dist/index.js",
   "types": "./dist/index.d.ts",
   "private": false,
-  "gypfile": true,
   "type": "commonjs",
   "homepage": "https://github.com/Sirherobrine23/Wireguard-tools.js#readme",
   "author": "Matheus Sampaio Queiroga <srherobrine20@gmail.com> (https://sirherobrine23.org/)",
@@ -40,12 +39,11 @@
     "node": ">=14.0.0"
   },
   "scripts": {
-    "configure": "node-gyp configure",
-    "preinstall": "node install.js --all --silent || exit 0",
+    "preinstall": "node install.js --all",
     "nodegyp": "node install.js --nodegyp",
-    "build": "tsc && npm run install",
+    "build": "tsc && node install.js --all",
     "test": "sudo PATH=\"$PATH\" env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register 'tests/**/*.ts'",
-    "test:full": "npm run nodegyp && npm run test"
+    "test:full": "npm run build && npm run test"
   },
   "devDependencies": {
     "@types/chai": "^4.3.1",

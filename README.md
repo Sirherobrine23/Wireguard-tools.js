@@ -15,7 +15,7 @@ To manage Wireguard interfaces:
 
 > **Note**
 >
-> This module needs `make` and `gcc/g++` or `clang`. this module needs some tools to compile `libnl` and `embbeded-wireguard`.
+> This module needs `make` and `gcc/g++` or `clang`. this module needs some tools to compile `embbeded-wireguard`.
 
 ## Example
 
