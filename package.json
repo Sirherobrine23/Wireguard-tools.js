@@ -40,9 +40,9 @@
     "node": ">=14.0.0"
   },
   "scripts": {
+    "configure": "node-gyp configure",
+    "preinstall": "node install.js --all --silent || exit 0",
     "nodegyp": "node install.js --nodegyp",
-    "install": "node install.js --all --silent || exit 0",
-    "postinstall": "node install.js --all --silent || exit 0",
     "build": "tsc && npm run install",
     "test": "sudo PATH=\"$PATH\" env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register 'tests/**/*.ts'",
     "test:full": "npm run nodegyp && npm run test"

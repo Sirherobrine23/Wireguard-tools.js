@@ -1,13 +1,6 @@
 const childprocess = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
-if (!/node_modules/.test(process.env.PATH)) process.env.PATH += path.delimiter+path.join(process.cwd(), "node_modules/.bin");
-if (fs.existsSync("./package.json")) {
-  if (require("./package.json").name !== "wireguard-tools.js") {
-    process.chdir("./node_modules/wireguard-tools.js");
-    console.log("Wireguard-tools folder: %s", process.cwd());
-  }
-}
 const silentBuild = !!process.argv.some(arg => arg === "--silent");
 const debugBuild = !!process.argv.some(arg => arg === "--debug");
 const outNodeFile = path.join(process.cwd(), "wireguard_bridge.node");
