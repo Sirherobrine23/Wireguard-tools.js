@@ -12,8 +12,7 @@ node_modules/
 .git*
 
 # node-gyp
-build/
-*.node
+build/**/*
 
 # Project
 configsExamples/

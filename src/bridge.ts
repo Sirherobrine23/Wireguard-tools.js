@@ -1,7 +1,6 @@
-// @ts-ignore
-import * as Bridge from "../wireguard_bridge";
 import * as child_process from "node:child_process";
 import * as os from "node:os";
+const Bridge = require('node-gyp-build')(__dirname+"/..");
 
 export type wireguardInterface = {
   publicKey?: string,
