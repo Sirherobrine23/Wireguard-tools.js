@@ -6,11 +6,15 @@
 #include "add_new_device.cc"
 #include "parse_device.cc"
 
+Napi::Value delDevie(const Napi::CallbackInfo& info) {
+  return Napi::Number::New(info.Env(), wg_del_device(info[0].As<Napi::String>().Utf8Value().c_str()));
+};
+
 Napi::Value getDevice(const Napi::CallbackInfo& info) {
   char *device_name = strdup(info[0].As<Napi::String>().Utf8Value().c_str());
   wg_device *device;
   if (wg_get_device(&device, device_name) < 0) return Napi::String::New(info.Env(), "Error getting device");
-  return parseWgDevice(info, device);
+  return parseWgDevice(info, device, device_name);
 }
 
 Napi::Value getDevices(const Napi::CallbackInfo& info) {
@@ -22,7 +26,7 @@ Napi::Value getDevices(const Napi::CallbackInfo& info) {
   wg_for_each_device_name(device_names, device_name, len) {
     wg_device *device;
     if (wg_get_device(&device, device_name) < 0) continue;
-    Napi::Value DeviceObj = parseWgDevice(info, device);
+    Napi::Value DeviceObj = parseWgDevice(info, device, device_name);
     if (DeviceObj.IsString()) {
       printf("Get devices error: '%s'\n", DeviceObj.As<Napi::String>().Utf8Value().c_str());
       continue;
@@ -32,8 +36,6 @@ Napi::Value getDevices(const Napi::CallbackInfo& info) {
   free(device_names);
   return wgRootObject;
 }
-
-Napi::Value delDevie(const Napi::CallbackInfo& info) {return Napi::Number::New(info.Env(), wg_del_device(info[0].As<Napi::String>().Utf8Value().c_str()));};
 
 Napi::Object Init(Napi::Env env, Napi::Object exports) {
   exports.Set("addNewDevice", Napi::Function::New(env, addNewDevice));

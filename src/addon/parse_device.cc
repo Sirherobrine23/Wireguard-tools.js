@@ -3,25 +3,39 @@
 #include <time.h>
 #include <arpa/inet.h>
 #include <stdlib.h>
-#include <netinet/in.h>
 #include <sys/socket.h>
-#include <net/if.h>
 #include <netdb.h>
+#include <unistd.h>
+#include <string.h>
+#include <netinet/in.h>
+#include <net/if.h>
+#include <linux/netlink.h>
+#include <linux/rtnetlink.h>
+#include <linux/if_link.h>
+#include <linux/if_addr.h>
+#include <linux/if_ether.h>
+#include <linux/if_arp.h>
+#include <sys/ioctl.h>
+using namespace Napi;
 
 // Wireguard embedded library.
 extern "C" {
   #include "wgEmbed/wireguard.h"
 }
-using namespace Napi;
 
-Napi::Value parseWgDevice(const Napi::CallbackInfo& info, wg_device *device) {
+Napi::Value parseWgDevice(const Napi::CallbackInfo& info, wg_device *device, const char *interfaceName) {
   wg_peer *peer;
-  Napi::Object DeviceObj = Napi::Object::New(info.Env());
+  const Napi::Object DeviceObj = Napi::Object::New(info.Env());
+
+  // Wireguard interface port listen
+  if (device->listen_port) DeviceObj.Set(Napi::String::New(info.Env(), "portListen"), Napi::Number::New(info.Env(), device->listen_port));
 
   // Set device public key
-  wg_key_b64_string interfacePublicKey;
-  wg_key_to_base64(interfacePublicKey, device->public_key);
-  DeviceObj.Set(Napi::String::New(info.Env(), "publicKey"), Napi::String::New(info.Env(), interfacePublicKey));
+  if (device->flags & WGDEVICE_HAS_PUBLIC_KEY) {
+    wg_key_b64_string interfacePublicKey;
+    wg_key_to_base64(interfacePublicKey, device->public_key);
+    DeviceObj.Set(Napi::String::New(info.Env(), "publicKey"), Napi::String::New(info.Env(), interfacePublicKey));
+  }
 
   // Set device private key
   if (device->flags & WGDEVICE_HAS_PRIVATE_KEY) {
@@ -30,8 +44,8 @@ Napi::Value parseWgDevice(const Napi::CallbackInfo& info, wg_device *device) {
     DeviceObj.Set(Napi::String::New(info.Env(), "privateKey"), Napi::String::New(info.Env(), interfaceprivateKey));
   }
 
-  // Wireguard interface port listen
-  if (device->listen_port) DeviceObj.Set(Napi::String::New(info.Env(), "portListen"), Napi::Number::New(info.Env(), device->listen_port));
+  // Set Address array
+  DeviceObj.Set(Napi::String::New(info.Env(), "Address"), Napi::Array::New(info.Env()));
 
   // Peers
   Napi::Object PeerRoot = Napi::Object::New(info.Env());
@@ -100,5 +114,23 @@ Napi::Value parseWgDevice(const Napi::CallbackInfo& info, wg_device *device) {
   }
   DeviceObj.Set(Napi::String::New(info.Env(), "peers"), PeerRoot);
   wg_free_device(device);
+
+  // Get interface ip addresses
+  int fd;
+  if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) > 0) {
+    struct ifreq ifr;
+    memset(&ifr, 0, sizeof(ifr));
+    strncpy(ifr.ifr_name, interfaceName, sizeof(ifr.ifr_name) - 1);
+    if (ioctl(fd, SIOCGIFADDR, &ifr) == 0) {
+      socklen_t addr_len = 0;
+      char host[4096 + 1], service[512 + 1];
+      static char buf[sizeof(host) + sizeof(service) + 4];
+      memset(buf, 0, sizeof(buf));
+      if (ifr.ifr_addr.sa_family == AF_INET) addr_len = sizeof(struct sockaddr_in);
+      else if (ifr.ifr_addr.sa_family == AF_INET6) addr_len = sizeof(struct sockaddr_in6);
+      if (getnameinfo(&ifr.ifr_addr, addr_len, host, sizeof(host), service, sizeof(service), NI_DGRAM|NI_NUMERICSERV|NI_NUMERICHOST) >= 0) DeviceObj["Address"].As<Napi::Array>().Set(DeviceObj["Address"].As<Napi::Array>().Length(), Napi::String::New(info.Env(), host));
+    }
+    close(fd);
+  }
   return DeviceObj;
 }

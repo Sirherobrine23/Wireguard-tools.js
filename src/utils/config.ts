@@ -227,6 +227,11 @@ export async function readConfig(interfaceName: string) {
   return parseConfig(await fs.readFile(path.join("/etc/wireguard", `${interfaceName}.conf`), "utf8"));
 }
 
+const ipRaw = (ip: string): {ip: string, subnet: number} => ({
+  ip: ip.split("/")[0],
+  subnet: parseInt(ip.split("/")[1]||/:/.test(ip) ? "128" : "32")
+});
+
 /**
  *
  */
@@ -235,33 +240,37 @@ export function Convert_wireguardInterface_to_config_utils(wgConfig: wireguardIn
     const serverConfig: serverConfig = {
       interface: {
         private: wgConfig.privateKey,
-        ip: wgConfig.Address.map((ip) => ({ip: ip.split("/")[0], subnet: parseInt(ip.split("/")[1])})),
-        portListen: wgConfig.portListen
+        portListen: wgConfig.portListen,
+        ip: []
       },
       peer: {}
     };
+    if (wgConfig?.Address?.length > 0 || wgConfig.Address) serverConfig.interface.ip.push(...wgConfig.Address.map(ipRaw));
     for (const peerPublicKey in wgConfig.peers) {
       serverConfig.peer[peerPublicKey] = {
         preshared: wgConfig.peers[peerPublicKey].presharedKey,
-        allowIp: wgConfig.peers[peerPublicKey].allowedIPs.map((ip) => ({ip: ip.split("/")[0], subnet: parseInt(ip.split("/")[1])})),
+        allowIp: [],
       };
+      if(wgConfig.peers[peerPublicKey].allowedIPs) serverConfig.peer[peerPublicKey].allowIp = wgConfig.peers[peerPublicKey].allowedIPs.map(ipRaw)
     }
     return serverConfig;
   }
   const clientConfig: clientConfig = {
     interface: {
       private: wgConfig.privateKey,
-      address: wgConfig.Address?.map((ip) => ({ip: ip, subnet: ip.includes("::")?128:32})),
+      address: [],
     },
     peer: {}
   };
+  if (wgConfig?.Address?.length > 0 || wgConfig.Address) clientConfig.interface.address.push(...wgConfig.Address.map(ipRaw));
   for (const peerPublicKey in wgConfig.peers) {
     clientConfig.peer[peerPublicKey] = {
       preshared: wgConfig.peers[peerPublicKey].presharedKey,
-      allowIp: wgConfig.peers[peerPublicKey].allowedIPs?.map((ip) => ({ip: ip, subnet: ip.includes("::")?128:32})),
       Keepalive: wgConfig.peers[peerPublicKey].keepInterval,
-      Endpoint: {host: "", port: 0}
+      Endpoint: {host: "", port: 0},
+      allowIp: []
     };
+    if (wgConfig.peers[peerPublicKey].allowedIPs) clientConfig.peer[peerPublicKey].allowIp.push(...wgConfig.peers[peerPublicKey].allowedIPs.map(ipRaw));
     if (!/::/.test(wgConfig.peers[peerPublicKey].endpoint)) {
       clientConfig.peer[peerPublicKey].Endpoint.host = wgConfig.peers[peerPublicKey].endpoint?.split(":")[0];
       clientConfig.peer[peerPublicKey].Endpoint.port = parseInt(wgConfig.peers[peerPublicKey].endpoint?.split(":")[1]);

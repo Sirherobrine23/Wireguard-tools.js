@@ -5,14 +5,21 @@
 #include <net/if.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <linux/netlink.h>
+#include <linux/rtnetlink.h>
+#include <linux/if_link.h>
+#include <linux/if_addr.h>
+#include <linux/if_ether.h>
+#include <linux/if_arp.h>
+#include <sys/ioctl.h>
 extern "C" {
   #include "wgEmbed/wireguard.h"
 }
 
 Napi::Value addNewDevice(const Napi::CallbackInfo& info) {
   const Napi:: Object Config = info[0].As<Napi::Object>();
-  if (Config.IsEmpty()) return Napi::Number::New(info.Env(), -255);
-  if (Config["name"].IsEmpty()) return Napi::Number::New(info.Env(), -254);
+  if (Config.IsEmpty()) return Napi::String::New(info.Env(), "Settings are empty");
+  if (Config["name"].IsEmpty()) return Napi::String::New(info.Env(), "Interface name is empty");
   wg_device wgDevice = {};
   // Copy name to device struct.
   strncpy(wgDevice.name, Config["name"].As<Napi::String>().Utf8Value().c_str(), sizeof(info[0].As<Napi::String>().Utf8Value().c_str()));
@@ -153,12 +160,12 @@ Napi::Value addNewDevice(const Napi::CallbackInfo& info) {
           fprintf(stderr, "%s: `%s'. Trying again in %.2f seconds...\n", ret == EAI_SYSTEM ? strerror(errno) : gai_strerror(ret), peer["endpoint"].As<Napi::String>().Utf8Value().c_str(), timeout / 1000000.0);
           usleep(timeout);
         }
-        if ((resolved->ai_family == AF_INET && resolved->ai_addrlen == sizeof(struct sockaddr_in)) || (resolved->ai_family == AF_INET6 && resolved->ai_addrlen == sizeof(struct sockaddr_in6))) {
+        if ((resolved->ai_family == AF_INET && resolved->ai_addrlen == sizeof(sockaddr_in)) || (resolved->ai_family == AF_INET6 && resolved->ai_addrlen == sizeof(sockaddr_in6))) {
           memcpy(&endpoint, resolved->ai_addr, resolved->ai_addrlen);
           memccpy(&peerAdd.endpoint.addr, &endpoint, 0, sizeof(peerAdd.endpoint.addr));
           if (resolved->ai_family == AF_INET) {
-            peerAdd.endpoint.addr4.sin_addr.s_addr = ((struct sockaddr_in *)&endpoint)->sin_addr.s_addr;
-            peerAdd.endpoint.addr4.sin_port = ((struct sockaddr_in *)&endpoint)->sin_port;
+            peerAdd.endpoint.addr4.sin_addr.s_addr = ((sockaddr_in *)&endpoint)->sin_addr.s_addr;
+            peerAdd.endpoint.addr4.sin_port = ((sockaddr_in *)&endpoint)->sin_port;
             peerAdd.endpoint.addr4.sin_family = AF_INET;
           } else {
             peerAdd.endpoint.addr6.sin6_addr = ((struct sockaddr_in6 *)&endpoint)->sin6_addr;
@@ -178,6 +185,88 @@ Napi::Value addNewDevice(const Napi::CallbackInfo& info) {
       wgDevice.first_peer = &peerAdd;
       if (wg_set_device(&wgDevice) < 0) return Napi::Number::New(info.Env(), -2);
     }
+  }
+  if (Config["Address"].IsArray()) {
+    Napi::Array Address = Config["Address"].As<Napi::Array>();
+    for (int i = 0; i < Address.Length(); i++) {
+      if (Address.Get(i).IsString()) {
+        const Napi::String ipaddr = Address.Get(i).As<Napi::String>();
+        bool is_ipv6 = false;
+        if (strchr(ipaddr.Utf8Value().c_str(), ':')) is_ipv6 = true;
+        struct sockaddr_nl addr;
+        memset(&addr, 0, sizeof(addr));
+        addr.nl_family = AF_NETLINK;
+        addr.nl_pid = getpid();
+        addr.nl_groups = RTMGRP_LINK;
+        if (is_ipv6) addr.nl_groups |= RTMGRP_IPV6_IFADDR|RTMGRP_IPV6_ROUTE;
+        else addr.nl_groups |= RTMGRP_IPV4_IFADDR|RTMGRP_IPV4_ROUTE;
+        struct {
+          struct nlmsghdr nlh;
+          struct ifaddrmsg ifa;
+          char buf[256];
+        } req;
+        memset(&req, 0, sizeof(req));
+        rtattr *rta_addr = (rtattr *)req.buf;
+        req.nlh.nlmsg_len = sizeof(req);
+        req.nlh.nlmsg_type = RTM_NEWADDR;
+        req.nlh.nlmsg_flags = NLM_F_REQUEST|NLM_F_CREATE|NLM_F_EXCL;
+        req.nlh.nlmsg_pid = getpid();
+        req.ifa.ifa_scope = RT_SCOPE_UNIVERSE;
+
+        req.ifa.ifa_family = is_ipv6 ? AF_INET6:AF_INET;
+        req.ifa.ifa_prefixlen = req.ifa.ifa_family == AF_INET6 ? 128:32;
+        rta_addr->rta_type = IFA_LOCAL;
+        rta_addr->rta_len = RTA_LENGTH(16);
+        inet_pton(req.ifa.ifa_family, ipaddr.Utf8Value().c_str(), RTA_DATA(rta_addr));
+
+        // set broadcast address
+        rtattr *rta_broadcast = (rtattr *)(((char *)rta_addr) + RTA_ALIGN(rta_addr->rta_len));
+        rta_broadcast->rta_type = IFA_BROADCAST;
+        rta_broadcast->rta_len = rta_addr->rta_len;
+        inet_pton(req.ifa.ifa_family, ipaddr.Utf8Value().c_str(), RTA_DATA(rta_broadcast));
+
+        // set destination address
+        rtattr *rta_dstaddr = (rtattr *)(((char *)rta_broadcast) + RTA_ALIGN(rta_broadcast->rta_len));
+        rta_dstaddr->rta_type = IFA_BROADCAST;
+        rta_dstaddr->rta_len = rta_addr->rta_len;
+        inet_pton(req.ifa.ifa_family, ipaddr.Utf8Value().c_str(), RTA_DATA(rta_dstaddr));
+
+        req.ifa.ifa_index = if_nametoindex(wgDevice.name);
+        if (req.ifa.ifa_index == 0) return Napi::String::New(info.Env(), "Unable to find interface");
+
+        int fdSock = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+        if (fdSock < 0) return Napi::String::New(info.Env(), "Unable to create socket");
+        if (bind(fdSock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+          close(fdSock);
+          return Napi::String::New(info.Env(), "Unable to bind socket");
+        }
+        // send request
+        if (send(fdSock, &req, req.nlh.nlmsg_len, 0) < 0) {
+          close(fdSock);
+          return Napi::String::New(info.Env(), "Error sending request");
+        }
+        close(fdSock);
+      }
+    }
+    // set interface up with ioctl
+    ifreq ifr;
+    memset(&ifr, 0, sizeof(ifr));
+    strncpy(ifr.ifr_name, wgDevice.name, sizeof(ifr.ifr_name));
+    ifr.ifr_flags = IFF_UP|IFF_RUNNING|IFF_POINTOPOINT|IFF_NOARP;
+    int fd;
+    fd = socket(PF_INET, SOCK_DGRAM, 0);
+    if (fd < 0) {
+      fd = socket(PF_PACKET, SOCK_DGRAM, 0);
+      if (fd < 0) {
+        fd = socket(PF_INET6, SOCK_DGRAM, 0);
+        return Napi::String::New(info.Env(), "Unable to create socket");
+      }
+    }
+    if (ioctl(fd, SIOCSIFFLAGS, &ifr) < 0) {
+      close(fd);
+      return Napi::String::New(info.Env(), "Unable to set interface up");
+    }
+    close(fd);
   }
   return Napi::Number::New(info.Env(), 0);
 }

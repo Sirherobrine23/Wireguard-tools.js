@@ -1,39 +1,24 @@
-import * as child_process from "node:child_process";
 import * as os from "node:os";
-const Bridge = require('node-gyp-build')(__dirname+"/..");
+const Bridge = require("node-gyp-build")(__dirname+"/..");
 
+export type peerConfig = {
+  presharedKey?: string,
+  endpoint?: string,
+  allowedIPs?: string[],
+  rxBytes?: number,
+  txBytes?: number,
+  keepInterval?: number,
+  lastHandshake?: Date,
+};
 export type wireguardInterface = {
   publicKey?: string,
   privateKey?: string,
   portListen?: number,
   Address?: string[],
   peers: {
-    [peerPublicKey: string]: {
-      presharedKey?: string,
-      endpoint?: string,
-      allowedIPs?: string[],
-      rxBytes?: number,
-      txBytes?: number,
-      keepInterval?: number,
-      lastHandshake?: Date,
-    }
+    [peerPublicKey: string]: peerConfig
   }
 };
-
-async function promiseFork(cmd: string, args?: string[]) {
-  // console.log("[wireguard-tools.js] '%s' '%s'", cmd, args.join("' '"));
-  return new Promise<void>((resolve, reject) => {
-    const childProcess = child_process.execFile(cmd, args||[]);
-    childProcess.stdout.on("data", (data) => process.stdout.write(data instanceof Buffer ? data.toString() : data));
-    childProcess.stderr.on("data", (data) => process.stderr.write(data instanceof Buffer ? data.toString() : data));
-    childProcess.on("error", (err) => reject(err));
-    childProcess.on("exit", () => resolve());
-  });
-}
-
-export async function setAddress(wgName: string, Address: string[]) {
-  return Address.map(addr => /\//.test(addr) ? addr : addr+"/"+(/::/.test(addr) ? "128":"32")).map(addr => promiseFork("ip", ["address", "add", addr, "dev", wgName]).then(() => promiseFork("ip", ["route", "add", addr, "dev", wgName])))
-}
 
 /**
  * Get All Wireguard Interfaces with their Peers
