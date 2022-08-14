@@ -46,7 +46,6 @@ jobs:
 
     # Install depencides and build
     - run: npm ci
-    - run: npm run build
 
     # Create pull request to update version in main branch
     - uses: peter-evans/create-pull-request@v4

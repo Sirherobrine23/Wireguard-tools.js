@@ -41,7 +41,7 @@
   "scripts": {
     "clean": "rm -rf build prebuilds dist",
     "install": "node-gyp-build",
-    "prepack": "npm run clean && tsc && prebuildify --napi",
+    "prepack": "npm run clean && tsc && for Arch in 'x64' 'arm64'; do prebuildify --napi --arch=$Arch; done && rm -rf build",
     "nodegyp": "npm run clean && node-gyp rebuild",
     "build": "tsc && npm run nodegyp",
     "test": "sudo PATH=\"$PATH\" env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register 'tests/**/*.ts'",
