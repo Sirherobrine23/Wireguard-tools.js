@@ -2,7 +2,6 @@ import { networkInterfaces } from "node:os";
 import { expect } from "chai";
 import * as Bridge from "../src/bridge";
 import * as utils from "../src/utils/index";
-import { execFileSync } from "node:child_process";
 const interfaceName = !networkInterfaces()["wg_test"] ? "sh23Test":"wg_test";
 
 function getFistIp(peerIp: string): string {
