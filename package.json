@@ -32,20 +32,21 @@
   "os": [
     "linux",
     "android",
-    "freebsd",
-    "darwin"
+    "freebsd"
   ],
   "engines": {
     "node": ">=14.0.0"
   },
   "scripts": {
     "clean": "rm -rf build prebuilds dist",
-    "install": "node-gyp-build",
-    "prepack": "npm run clean && tsc && for Arch in 'x64' 'arm64'; do prebuildify --napi --arch=$Arch; done && rm -rf build",
+    "prebuildify": "prebuildify --napi",
+    "prebuildify:linux": "for Arch in 'arm64' 'x64'; do npm run prebuildify -- --platform=linux --arch=$Arch; done",
     "nodegyp": "npm run clean && node-gyp rebuild",
-    "build": "tsc && npm run nodegyp",
+    "build": "npm run nodegyp && tsc",
     "test": "sudo PATH=\"$PATH\" env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register 'tests/**/*.ts'",
-    "test:full": "npm run build && npm run test"
+    "test:full": "npm run build && npm run test",
+    "install": "node-gyp-build",
+    "prepack": "npm run clean && tsc && npm run prebuildify:linux && rm -rf build"
   },
   "devDependencies": {
     "@types/chai": "^4.3.3",

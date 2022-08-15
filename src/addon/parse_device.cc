@@ -44,8 +44,24 @@ Napi::Value parseWgDevice(const Napi::CallbackInfo& info, wg_device *device, con
     DeviceObj.Set(Napi::String::New(info.Env(), "privateKey"), Napi::String::New(info.Env(), interfaceprivateKey));
   }
 
-  // Set Address array
+  // Set Address array and get interface ip addresses
   DeviceObj.Set(Napi::String::New(info.Env(), "Address"), Napi::Array::New(info.Env()));
+  int fd;
+  if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) > 0) {
+    struct ifreq ifr;
+    memset(&ifr, 0, sizeof(ifr));
+    strncpy(ifr.ifr_name, interfaceName, sizeof(ifr.ifr_name) - 1);
+    if (ioctl(fd, SIOCGIFADDR, &ifr) == 0) {
+      socklen_t addr_len = 0;
+      char host[4096 + 1], service[512 + 1];
+      static char buf[sizeof(host) + sizeof(service) + 4];
+      memset(buf, 0, sizeof(buf));
+      if (ifr.ifr_addr.sa_family == AF_INET) addr_len = sizeof(struct sockaddr_in);
+      else if (ifr.ifr_addr.sa_family == AF_INET6) addr_len = sizeof(struct sockaddr_in6);
+      if (getnameinfo(&ifr.ifr_addr, addr_len, host, sizeof(host), service, sizeof(service), NI_DGRAM|NI_NUMERICSERV|NI_NUMERICHOST) >= 0) DeviceObj["Address"].As<Napi::Array>().Set(DeviceObj["Address"].As<Napi::Array>().Length(), Napi::String::New(info.Env(), host));
+    }
+    close(fd);
+  }
 
   // Peers
   Napi::Object PeerRoot = Napi::Object::New(info.Env());
@@ -114,23 +130,5 @@ Napi::Value parseWgDevice(const Napi::CallbackInfo& info, wg_device *device, con
   }
   DeviceObj.Set(Napi::String::New(info.Env(), "peers"), PeerRoot);
   wg_free_device(device);
-
-  // Get interface ip addresses
-  int fd;
-  if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) > 0) {
-    struct ifreq ifr;
-    memset(&ifr, 0, sizeof(ifr));
-    strncpy(ifr.ifr_name, interfaceName, sizeof(ifr.ifr_name) - 1);
-    if (ioctl(fd, SIOCGIFADDR, &ifr) == 0) {
-      socklen_t addr_len = 0;
-      char host[4096 + 1], service[512 + 1];
-      static char buf[sizeof(host) + sizeof(service) + 4];
-      memset(buf, 0, sizeof(buf));
-      if (ifr.ifr_addr.sa_family == AF_INET) addr_len = sizeof(struct sockaddr_in);
-      else if (ifr.ifr_addr.sa_family == AF_INET6) addr_len = sizeof(struct sockaddr_in6);
-      if (getnameinfo(&ifr.ifr_addr, addr_len, host, sizeof(host), service, sizeof(service), NI_DGRAM|NI_NUMERICSERV|NI_NUMERICHOST) >= 0) DeviceObj["Address"].As<Napi::Array>().Set(DeviceObj["Address"].As<Napi::Array>().Length(), Napi::String::New(info.Env(), host));
-    }
-    close(fd);
-  }
   return DeviceObj;
 }

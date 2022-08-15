@@ -76,9 +76,8 @@ export function getDeviceName() {return Object.keys(showAll());}
 export function addDevice(interfaceConfig: wireguardInterface & {name: string}): wireguardInterface {
   // Check interface name
   if (!interfaceConfig.name) throw new Error("interface name is required");
-  if (interfaceConfig.name.length > 16) throw new Error("interface name is too long");
+  if (interfaceConfig.name.length >= 16) throw new Error("interface name is too long");
   if (!/^[a-zA-Z0-9_]+$/.test(interfaceConfig.name)) throw new Error("interface name is invalid");
-  if (showAll()[interfaceConfig.name]) throw new Error("interface name is already used");
 
   // Add interface
   const res = Bridge.addNewDevice(interfaceConfig);
@@ -90,9 +89,9 @@ export function addDevice(interfaceConfig: wireguardInterface & {name: string}):
 
 export function delDevice(interfacename: string): void {
   if (!interfacename) throw new Error("interface name is required");
-  if (interfacename.length > 16) throw new Error("interface name is too long");
+  if (interfacename.length > 15) throw new Error("interface name is too long");
   if (!/^[a-zA-Z0-9_]+$/.test(interfacename)) throw new Error("interface name is invalid");
-  if (!showAll()[interfacename]) throw new Error("interface name is not in use");
+  if (!showAll()[interfacename]) return;
   const res = Bridge.delDevice(interfacename);
   if (res !== 0) throw new Error("Deleteinterface failed, return code: " + res);
   return;

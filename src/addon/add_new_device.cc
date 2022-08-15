@@ -19,10 +19,12 @@ extern "C" {
 Napi::Value addNewDevice(const Napi::CallbackInfo& info) {
   const Napi:: Object Config = info[0].As<Napi::Object>();
   if (Config.IsEmpty()) return Napi::String::New(info.Env(), "Settings are empty");
-  if (Config["name"].IsEmpty()) return Napi::String::New(info.Env(), "Interface name is empty");
+  const Napi::String interfaceName = Config["name"].As<Napi::String>();
   wg_device wgDevice = {};
   // Copy name to device struct.
-  strncpy(wgDevice.name, Config["name"].As<Napi::String>().Utf8Value().c_str(), sizeof(info[0].As<Napi::String>().Utf8Value().c_str()));
+  if (interfaceName.IsEmpty()) return Napi::String::New(info.Env(), "Interface name is empty");
+  if (interfaceName.Utf8Value().length() > sizeof(wgDevice.name) >= interfaceName.Utf8Value().length()) return Napi::String::New(info.Env(), "Interface name is too long");
+  strncpy(wgDevice.name, interfaceName.Utf8Value().c_str(), interfaceName.Utf8Value().length());
 
   // Add interface
   int res = wg_add_device(wgDevice.name);
@@ -58,10 +60,8 @@ Napi::Value addNewDevice(const Napi::CallbackInfo& info) {
         struct sockaddr_nl addr;
         memset(&addr, 0, sizeof(addr));
         addr.nl_family = AF_NETLINK;
+        addr.nl_groups = RTMGRP_LINK | is_ipv6 ? RTMGRP_IPV6_IFADDR|RTMGRP_IPV6_ROUTE:RTMGRP_IPV4_IFADDR|RTMGRP_IPV4_ROUTE;
         addr.nl_pid = getpid();
-        addr.nl_groups = RTMGRP_LINK;
-        if (is_ipv6) addr.nl_groups |= RTMGRP_IPV6_IFADDR|RTMGRP_IPV6_ROUTE;
-        else addr.nl_groups |= RTMGRP_IPV4_IFADDR|RTMGRP_IPV4_ROUTE;
         struct {
           struct nlmsghdr nlh;
           struct ifaddrmsg ifa;
@@ -72,8 +72,10 @@ Napi::Value addNewDevice(const Napi::CallbackInfo& info) {
         req.nlh.nlmsg_len = sizeof(req);
         req.nlh.nlmsg_type = RTM_NEWADDR;
         req.nlh.nlmsg_flags = NLM_F_REQUEST|NLM_F_CREATE|NLM_F_EXCL|ifr.ifr_flags;
+        req.ifa.ifa_scope = RT_SCOPE_LINK;
         req.nlh.nlmsg_pid = getpid();
-        req.ifa.ifa_scope = RT_SCOPE_UNIVERSE;
+        req.ifa.ifa_index = if_nametoindex(wgDevice.name);
+        if (req.ifa.ifa_index == 0) return Napi::String::New(info.Env(), "Unable to find interface");
 
         req.ifa.ifa_family = is_ipv6 ? AF_INET6:AF_INET;
         req.ifa.ifa_prefixlen = req.ifa.ifa_family == AF_INET6 ? 128:32;
@@ -98,9 +100,6 @@ Napi::Value addNewDevice(const Napi::CallbackInfo& info) {
         rta_dst->rta_type = is_ipv6 ? IFA_ADDRESS:IFA_BROADCAST;
         rta_dst->rta_len = rta_addr->rta_len;
         inet_pton(req.ifa.ifa_family, ipaddr.Utf8Value().c_str(), RTA_DATA(rta_dst));
-
-        req.ifa.ifa_index = if_nametoindex(wgDevice.name);
-        if (req.ifa.ifa_index == 0) return Napi::String::New(info.Env(), "Unable to find interface");
 
         if ((fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE)) < 0) return Napi::String::New(info.Env(), "Unable to create socket");
         if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
@@ -271,7 +270,7 @@ Napi::Value addNewDevice(const Napi::CallbackInfo& info) {
 
       // Add peer to device
       wgDevice.first_peer = &peerAdd;
-      if (wg_set_device(&wgDevice) < 0) return Napi::Number::New(info.Env(), -2);
+      if (wg_set_device(&wgDevice) < 0) return Napi::String::New(info.Env(), "Unable to add peer");
     }
   }
   return Napi::Number::New(info.Env(), 0);

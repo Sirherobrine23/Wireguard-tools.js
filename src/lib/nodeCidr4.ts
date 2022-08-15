@@ -119,10 +119,13 @@ export function previous(ip: string): string {
 }
 
 export function toCidr(ip: string | number): string {
-  if (typeof ip === 'number') {
-    ip = toString(ip);
+  if (typeof ip === 'number') ip = toString(ip);
+  let mask = 8;
+  while (true) {
+    // arendondar para um valor par
+    mask = Math.floor(mask* 2);
+    if (includes(ip+"/"+mask, ip)) return min(`${ip}/${mask}`)+"/"+mask;
   }
-  return `${ip}/32`;
 }
 
 export function validateIp(ip: string): string | null {
@@ -205,6 +208,11 @@ export function max(cidr: string): string {
   let initial: number = toInt(min(cidr));
   let add = 2 ** (32 - mask(cidr));
   return toString(initial + add - 1);
+}
+
+export function fistIp(cidr: string): string {
+  if (!/\//.test(cidr)) cidr = toCidr(cidr);
+  return toString(toInt(min(cidr))+1);
 }
 
 export function count(cidr: string): number {

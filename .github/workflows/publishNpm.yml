@@ -47,6 +47,12 @@ jobs:
     # Install depencides and build
     - run: npm ci
 
+    # Publish
+    - run: npm publish --tag ${{ github.event.release.prerelease && 'next' || 'latest' }}
+      name: Publish to npm
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.MPM_PUBLISH_TOKEN }}
+
     # Create pull request to update version in main branch
     - uses: peter-evans/create-pull-request@v4
       name: Create Pull Request
@@ -59,9 +65,3 @@ jobs:
         branch: update-version
         title: Update package version v${{ env.PACKAGE_VERSION }}
         body: Auto update package version, created with GitHub Actions
-
-    # Publish
-    - run: npm publish --tag ${{ github.event.release.prerelease && 'next' || 'latest' }}
-      name: Publish to npm
-      env:
-        NODE_AUTH_TOKEN: ${{ secrets.MPM_PUBLISH_TOKEN }}
