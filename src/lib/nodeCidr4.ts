@@ -123,9 +123,10 @@ export function toCidr(ip: string | number): string {
   let mask = 8;
   while (true) {
     // arendondar para um valor par
-    mask = Math.floor(mask* 2);
-    if (includes(ip+"/"+mask, ip)) return min(`${ip}/${mask}`)+"/"+mask;
+    mask+=4;
+    if (includes(ip+"/"+mask, ip)) break;
   }
+  return min(`${ip}/${mask}`)+"/"+mask;
 }
 
 export function validateIp(ip: string): string | null {
