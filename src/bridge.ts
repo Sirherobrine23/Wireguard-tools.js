@@ -1,4 +1,3 @@
-import * as os from "node:os";
 const Bridge = require("node-gyp-build")(__dirname+"/..");
 
 export type peerConfig = {
@@ -48,9 +47,6 @@ export type wireguardInterface = {
  */
 export function showAll(): {[interfaceName: string]: wireguardInterface} {
   const devices = Bridge.getDevices() as {[interfaceName: string]: wireguardInterface};
-  for (const devname in devices) {
-    if (os.networkInterfaces()[devname]) devices[devname].Address = os.networkInterfaces()[devname].map(link => link.address);
-  }
   return devices;
 }
 
@@ -61,7 +57,6 @@ export function showAll(): {[interfaceName: string]: wireguardInterface} {
 export function show(wgName: string): wireguardInterface {
   const InterfaceInfo = Bridge.getDevice(wgName) as wireguardInterface;
   if (typeof InterfaceInfo === "string") throw new Error(InterfaceInfo);
-  if (os.networkInterfaces()[wgName]) InterfaceInfo.Address = os.networkInterfaces()[wgName].map(link => link.address);
   return InterfaceInfo;
 }
 
@@ -73,15 +68,17 @@ export function getDeviceName() {return Object.keys(showAll());}
 /**
  * Create Wireguard interface and return its name
  */
-export function addDevice(interfaceConfig: wireguardInterface & {name: string}): wireguardInterface {
+export function addDevice(interfaceName: string, interfaceConfig: wireguardInterface): wireguardInterface {
   // Check interface name
-  if (!interfaceConfig.name) throw new Error("interface name is required");
-  if (interfaceConfig.name.length >= 16) throw new Error("interface name is too long");
-  if (!/^[a-zA-Z0-9_]+$/.test(interfaceConfig.name)) throw new Error("interface name is invalid");
+  if (!interfaceName) throw new Error("interface name is required");
+  if (interfaceName.length >= 16) throw new Error("interface name is too long");
+  if (!/^[a-zA-Z0-9_]+$/.test(interfaceName)) throw new Error("interface name is invalid");
+
+  Bridge.addDevice(interfaceName);
 
   // Add interface
-  const res = Bridge.addNewDevice(interfaceConfig);
-  if (res === 0) return show(interfaceConfig.name);
+  const res = Bridge.setupInterface(interfaceName, interfaceConfig);
+  if (res === 0) return show(interfaceName);
   else if (res === -1) throw new Error("Unable to add device");
   else if (res === -2) throw new Error("Unable to set device");
   throw new Error("Add device error: "+res);

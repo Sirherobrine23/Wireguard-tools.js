@@ -3,11 +3,14 @@
 #include <napi.h>
 #include <unistd.h>
 #include <string>
-#include "add_new_device.cc"
 #include "parse_device.cc"
+#include "add_device.cpp"
 
-Napi::Value delDevie(const Napi::CallbackInfo& info) {
+Napi::Value delDevice(const Napi::CallbackInfo& info) {
   return Napi::Number::New(info.Env(), wg_del_device(info[0].As<Napi::String>().Utf8Value().c_str()));
+};
+Napi::Value addDevice(const Napi::CallbackInfo& info) {
+  return Napi::Number::New(info.Env(), wg_add_device(info[0].As<Napi::String>().Utf8Value().c_str()));
 };
 
 Napi::Value getDevice(const Napi::CallbackInfo& info) {
@@ -38,8 +41,9 @@ Napi::Value getDevices(const Napi::CallbackInfo& info) {
 }
 
 Napi::Object Init(Napi::Env env, Napi::Object exports) {
-  exports.Set("addNewDevice", Napi::Function::New(env, addNewDevice));
-  exports.Set("delDevice", Napi::Function::New(env, delDevie));
+  exports.Set("delDevice", Napi::Function::New(env, delDevice));
+  exports.Set("addDevice", Napi::Function::New(env, addDevice));
+  exports.Set("setupInterface", Napi::Function::New(env, setupInterface));
   exports.Set("getDevices", Napi::Function::New(env, getDevices));
   exports.Set("getDevice", Napi::Function::New(env, getDevice));
   return exports;

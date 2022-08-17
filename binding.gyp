@@ -19,7 +19,7 @@
         "-static"
         ],
       "sources": [
-        "src/addon/binding.cc",
+        "src/addon/binding.cpp",
         "src/addon/wgEmbed/wireguard.c",
       ],
       "include_dirs" : [

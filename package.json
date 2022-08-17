@@ -41,7 +41,7 @@
     "clean": "rm -rf build prebuilds dist",
     "prebuildify": "prebuildify --napi",
     "prebuildify:linux": "for Arch in 'arm64' 'x64'; do npm run prebuildify -- --platform=linux --arch=$Arch; done",
-    "nodegyp": "npm run clean && node-gyp rebuild",
+    "nodegyp": "npm run clean && node-gyp rebuild --silent",
     "build": "npm run nodegyp && tsc",
     "test": "sudo PATH=\"$PATH\" env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register 'tests/**/*.ts'",
     "test:full": "npm run build && npm run test",

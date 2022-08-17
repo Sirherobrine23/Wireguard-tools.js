@@ -55,15 +55,3 @@ export async function keygen(genPreshared: boolean = false): Promise<keyObject|k
     public: key.publicKey
   };
 }
-
-export function pubKey(privKey: string): string {
-  const pub = crypto.createPublicKey({
-    key: privKey,
-    format: "der",
-    type: "pkcs1"
-  });
-  return pub.export({
-    type: "spki",
-    format: "der"
-  }).subarray(16).toString("base64");
-}

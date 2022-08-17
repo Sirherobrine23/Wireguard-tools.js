@@ -3,25 +3,17 @@ import * as Bridge from "../src/bridge";
 import * as utils from "../src/utils/index";
 const interfaceName = "sh23Test1235555";
 
-// Show
-describe("Show", () => {
-  it("All", () => {
-    Bridge.showAll();
-  });
-});
-
 describe("Create interface", async () => {
   it(`Create interface ('${interfaceName}')`, async () => {
     const serverKeys = await utils.keygen(false);
     // Make base config
-    const deviceConfig: Bridge.wireguardInterface & {name: string} = {
-      name: interfaceName,
+    const deviceConfig: Bridge.wireguardInterface = {
       portListen: 51880,
       privateKey: serverKeys.private,
       Address: [],
       peers: {}
     };
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < 3; i++) {
       const peerKey = await utils.keygen(true);
       const ips = [
         utils.nodeCidr4.randomIp("192.168.15.1/24"),
@@ -38,7 +30,8 @@ describe("Create interface", async () => {
     }
     // remove duplicates
     if (deviceConfig.Address) deviceConfig.Address.push(...deviceConfig.Address.map(utils.nodeCidr6.FourToSix));
-    return Bridge.addDevice(deviceConfig);
+    // console.log("New device config: '%o'", deviceConfig);
+    return Bridge.addDevice(interfaceName, deviceConfig);
   });
   it("Convert wireguardInterface to config utils", () => {
     const wireguardInterface = Bridge.showAll()[interfaceName];
@@ -46,8 +39,12 @@ describe("Create interface", async () => {
     return expect(config.interface.private).equal(wireguardInterface.privateKey);
   });
   after(async () => {
-    describe("Cleaning test interface", ()=>{
-      it(`Remove interface ${interfaceName}`, () => Bridge.delDevice(interfaceName));
-    });
+    const deviceConfig = Bridge.showAll()[interfaceName];
+    if (!!deviceConfig) {
+      describe("Cleaning test interface", ()=>{
+        // console.log("Device: '%o'", deviceConfig);
+        it(`Remove interface ${interfaceName}`, () => Bridge.delDevice(interfaceName));
+      });
+    }
   });
 });
