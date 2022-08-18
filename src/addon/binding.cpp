@@ -5,6 +5,7 @@
 #include <string>
 #include "parse_device.cc"
 #include "add_device.cpp"
+#include "key_gen.cpp"
 
 Napi::Value delDevice(const Napi::CallbackInfo& info) {
   return Napi::Number::New(info.Env(), wg_del_device(info[0].As<Napi::String>().Utf8Value().c_str()));
@@ -46,6 +47,11 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
   exports.Set("setupInterface", Napi::Function::New(env, setupInterface));
   exports.Set("getDevices", Napi::Function::New(env, getDevices));
   exports.Set("getDevice", Napi::Function::New(env, getDevice));
+  const Napi::Object keyGen = Napi::Object::New(env);
+    keyGen.Set("presharedKey", Napi::Function::New(env, presharedKey));
+    keyGen.Set("genPrivateKey", Napi::Function::New(env, privateKey));
+    keyGen.Set("getPublicKey", Napi::Function::New(env, publicKey));
+  exports.Set("keyGen", keyGen);
   return exports;
 }
 NODE_API_MODULE(addon, Init)

@@ -8,13 +8,13 @@ const wg1 = fs.readFileSync(__dirname+"/../configsExamples/wg1.ini", "utf8");
 
 // Key Generation
 describe("Key Gen", () => {
-  it("Without Preshared key", async () => {
-    const withOut = await utils.keygen();
+  it("Without Preshared key", () => {
+    const withOut = utils.keygen();
     if (!withOut["preshared"]) return;
     throw new Error("Keygen failed");
   });
-  it("with Preshared key", async () => {
-    const withPre = await utils.keygen(true);
+  it("with Preshared key", () => {
+    const withPre = utils.keygen(true);
     if (withPre["preshared"]) return;
     throw new Error("Keygen failed");
   });

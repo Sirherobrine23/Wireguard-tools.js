@@ -1,57 +1,67 @@
-import * as crypto from "node:crypto";
-
-async function cryptoCreateKey() {
-  return new Promise<{privateKey: string, publicKey: string}>((res, rej) => {
-    return crypto.generateKeyPair("x25519", {publicKeyEncoding: {format: "der", type: "spki"}, privateKeyEncoding: {format: "der", type: "pkcs8"}}, (err: Error, publicKey: Buffer, privateKey: Buffer) => {
-      if (err) rej(err);
-      else res({
-        privateKey: Buffer.from(privateKey.subarray(16)).toString("base64"),
-        publicKey: Buffer.from(publicKey.subarray(12)).toString("base64")
-      });
-    });
-  });
-}
-
+const addonKeyGen = ((require("node-gyp-build"))(__dirname+"/../../")).keyGen;
 export type keyObject = {private: string, public: string};
 export type keyObjectPreshered = keyObject & {preshared: string};
 
 /**
- * Generate Wireguard keys withou preshared key
+ * Create a pre-shared key quickly by returning a string with the base64 of the key.
  *
- * @param genPreshared - In object includes Preshared key, defaults is `false`
+*/
+export function genPresharedKey(): string {
+  return addonKeyGen.presharedKey();
+}
+
+/**
+ * Create a Private key returning its base64.
+ *
+*/
+export function genPrivateKey(): string {
+  return addonKeyGen.genPrivateKey();
+}
+
+/**
+ * Create your public key from a private key.
+ *
+*/
+export function genPublicKey(privateKey: string): string {
+  if (typeof privateKey !== "string") throw new Error("privateKey must be a string");
+  else if (privateKey.length > 44||44 > privateKey.length) throw new Error(`Invalid private key length (44), you length: (${privateKey.length})`);
+  return addonKeyGen.getPublicKey(privateKey);
+}
+
+/**
+ * Generate Wireguard keys withou preshared key
  */
-export function keygen(): Promise<keyObject>;
+export function keygen(): keyObject;
 
 /**
  * Generate Wireguard keys withou preshared key
  *
  * @param genPreshared - In object includes Preshared key, defaults is `false`
  */
-export function keygen(genPreshared: false): Promise<keyObject>;
+export function keygen(genPreshared: false): keyObject;
 
 /**
  * Generate Wireguard keys with pershared key.
  *
  * @param genPreshared - In object includes Preshared key, defaults is `false`
  */
-export function keygen(genPreshared: true): Promise<keyObjectPreshered>;
+export function keygen(genPreshared: true): keyObjectPreshered;
 
 /**
  * Generate Wireguard keys without preshared key
  *
  * @param genPreshared - In object includes Preshared key, defaults is `false`
  */
-export async function keygen(genPreshared: boolean = false): Promise<keyObject|keyObjectPreshered> {
-  const key = await cryptoCreateKey();
-  if (genPreshared) {
-    return {
-      private: key.privateKey,
-      public: key.publicKey,
-      preshared: (await cryptoCreateKey()).privateKey
-    };
-  }
+export function keygen(genPreshared: boolean = false): keyObject|keyObjectPreshered {
+  const privateKey = genPrivateKey();
+  const publicKey = genPublicKey(privateKey);
+  if (!genPreshared) return {
+    private: privateKey,
+    public: publicKey
+  };
   return {
-    private: key.privateKey,
-    public: key.publicKey
+    private: privateKey,
+    public: publicKey,
+    preshared: genPresharedKey()
   };
 }
