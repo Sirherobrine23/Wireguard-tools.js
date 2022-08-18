@@ -1,5 +1,4 @@
-const Bridge = require("node-gyp-build")(__dirname+"/..");
-
+const wg_binding = require("node-gyp-build")(__dirname+"/..");
 export type peerConfig = {
   presharedKey?: string,
   endpoint?: string,
@@ -46,7 +45,7 @@ export type wireguardInterface = {
   ```
  */
 export function showAll(): {[interfaceName: string]: wireguardInterface} {
-  const devices = Bridge.getDevices() as {[interfaceName: string]: wireguardInterface};
+  const devices = wg_binding.getDevices() as {[interfaceName: string]: wireguardInterface};
   return devices;
 }
 
@@ -55,7 +54,7 @@ export function showAll(): {[interfaceName: string]: wireguardInterface} {
  *
 */
 export function show(wgName: string): wireguardInterface {
-  const InterfaceInfo = Bridge.getDevice(wgName) as wireguardInterface;
+  const InterfaceInfo = wg_binding.getDevice(wgName) as wireguardInterface;
   if (typeof InterfaceInfo === "string") throw new Error(InterfaceInfo);
   return InterfaceInfo;
 }
@@ -73,11 +72,10 @@ export function addDevice(interfaceName: string, interfaceConfig: wireguardInter
   if (!interfaceName) throw new Error("interface name is required");
   if (interfaceName.length >= 16) throw new Error("interface name is too long");
   if (!/^[a-zA-Z0-9_]+$/.test(interfaceName)) throw new Error("interface name is invalid");
-
-  Bridge.addDevice(interfaceName);
+  wg_binding.addDevice(interfaceName);
 
   // Add interface
-  const res = Bridge.setupInterface(interfaceName, interfaceConfig);
+  const res = wg_binding.setupInterface(interfaceName, interfaceConfig);
   if (res === 0) return show(interfaceName);
   else if (res === -1) throw new Error("Unable to add device");
   else if (res === -2) throw new Error("Unable to set device");
@@ -89,7 +87,7 @@ export function delDevice(interfacename: string): void {
   if (interfacename.length > 15) throw new Error("interface name is too long");
   if (!/^[a-zA-Z0-9_]+$/.test(interfacename)) throw new Error("interface name is invalid");
   if (!showAll()[interfacename]) return;
-  const res = Bridge.delDevice(interfacename);
+  const res = wg_binding.delDevice(interfacename);
   if (res !== 0) throw new Error("Deleteinterface failed, return code: " + res);
   return;
 }

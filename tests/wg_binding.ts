@@ -1,6 +1,7 @@
 import { expect } from "chai";
-import * as Bridge from "../src/bridge";
+import * as Bridge from "../src/wg_binding";
 import * as utils from "../src/utils/index";
+import { writeFileSync } from "fs";
 const interfaceName = "sh23Test1235555";
 
 describe("Create interface", async () => {
@@ -42,9 +43,9 @@ describe("Create interface", async () => {
     const deviceConfig = Bridge.showAll()[interfaceName];
     if (!!deviceConfig) {
       describe("Cleaning test interface", ()=>{
-        // console.log("Device: '%o'", deviceConfig);
         it(`Remove interface ${interfaceName}`, () => Bridge.delDevice(interfaceName));
       });
+      writeFileSync(`${__dirname}/../${interfaceName}.addrs.json`, JSON.stringify(deviceConfig, null, 2));
     }
   });
 });

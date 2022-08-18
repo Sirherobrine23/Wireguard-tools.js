@@ -1,7 +1,7 @@
 import * as fs from "node:fs/promises";
 import * as fsOld from "node:fs";
 import * as path from "node:path";
-import type { wireguardInterface } from "../bridge";
+import type { wireguardInterface } from "../wg_binding";
 
 export type ipObject = {ip: string, subnet: number};
 type base = {

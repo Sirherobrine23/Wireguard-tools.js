@@ -107,6 +107,7 @@ Napi::Value parseWgDevice(const Napi::CallbackInfo& info, wg_device *device, con
         memset(buf, 0, INET6_ADDRSTRLEN + 1);
         if (allowedip->family == AF_INET) inet_ntop(AF_INET, &allowedip->ip4, buf, INET6_ADDRSTRLEN);
         else if (allowedip->family == AF_INET6) inet_ntop(AF_INET6, &allowedip->ip6, buf, INET6_ADDRSTRLEN);
+        snprintf(buf + strlen(buf), INET6_ADDRSTRLEN - strlen(buf), "/%d", allowedip->cidr);
         AllowedIPs.Set(AllowedIPs.Length(), Napi::String::New(info.Env(), buf));
       }
       PeerObj.Set(Napi::String::New(info.Env(), "allowedIPs"), AllowedIPs);

@@ -16,7 +16,5 @@ build/**/*
 
 # Project
 configsExamples/
-
-# libnl
-libnl/**/*
-libnlSource/**/*
+.vscode-ctags*
+*.addrs.json
