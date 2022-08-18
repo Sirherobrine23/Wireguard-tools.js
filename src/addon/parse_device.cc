@@ -1,5 +1,6 @@
 // N-API
 #include <napi.h>
+using namespace Napi;
 #include <time.h>
 #include <arpa/inet.h>
 #include <stdlib.h>
@@ -16,11 +17,35 @@
 #include <linux/if_ether.h>
 #include <linux/if_arp.h>
 #include <sys/ioctl.h>
-using namespace Napi;
+#include <cerrno>
+#include <ifaddrs.h>
+#include <string>
+#include <sysexits.h>
+#include <sys/types.h>
 
 // Wireguard embedded library.
 extern "C" {
   #include "wgEmbed/wireguard.h"
+}
+
+const char* getHostAddress(bool addPort, const sockaddr* addr) {
+  char host[4096 + 1], service[512 + 1];
+  static char buf[sizeof(host) + sizeof(service) + 4];
+  memset(buf, 0, sizeof(buf));
+  int ret;
+  socklen_t addr_len = 0;
+  if (addr->sa_family == AF_INET) addr_len = sizeof(struct sockaddr_in);
+  else if (addr->sa_family == AF_INET6) addr_len = sizeof(struct sockaddr_in6);
+
+  ret = getnameinfo(addr, addr_len, host, sizeof(host), service, sizeof(service), NI_DGRAM | NI_NUMERICSERV | NI_NUMERICHOST);
+  if (ret) {
+    strncpy(buf, gai_strerror(ret), sizeof(buf) - 1);
+    buf[sizeof(buf) - 1] = '\0';
+  } else {
+    if (addPort) snprintf(buf, sizeof(buf), (addr->sa_family == AF_INET6 && strchr(host, ':')) ? "[%s]:%s" : "%s:%s", host, service);
+    else snprintf(buf, sizeof(buf), "%s", host);
+  }
+  return buf;
 }
 
 Napi::Value parseWgDevice(const Napi::CallbackInfo& info, wg_device *device, const char *interfaceName) {
@@ -46,22 +71,15 @@ Napi::Value parseWgDevice(const Napi::CallbackInfo& info, wg_device *device, con
 
   // Set Address array and get interface ip addresses
   DeviceObj.Set(Napi::String::New(info.Env(), "Address"), Napi::Array::New(info.Env()));
-  int fd;
-  if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) > 0) {
-    struct ifreq ifr;
-    memset(&ifr, 0, sizeof(ifr));
-    strncpy(ifr.ifr_name, interfaceName, sizeof(ifr.ifr_name) - 1);
-    if (ioctl(fd, SIOCGIFADDR, &ifr) == 0) {
-      socklen_t addr_len = 0;
-      char host[4096 + 1], service[512 + 1];
-      static char buf[sizeof(host) + sizeof(service) + 4];
-      memset(buf, 0, sizeof(buf));
-      if (ifr.ifr_addr.sa_family == AF_INET) addr_len = sizeof(struct sockaddr_in);
-      else if (ifr.ifr_addr.sa_family == AF_INET6) addr_len = sizeof(struct sockaddr_in6);
-      if (getnameinfo(&ifr.ifr_addr, addr_len, host, sizeof(host), service, sizeof(service), NI_DGRAM|NI_NUMERICSERV|NI_NUMERICHOST) >= 0) DeviceObj["Address"].As<Napi::Array>().Set(DeviceObj["Address"].As<Napi::Array>().Length(), Napi::String::New(info.Env(), host));
-    }
-    close(fd);
+  ifaddrs* ptr_ifaddrs = nullptr;
+  if(getifaddrs(&ptr_ifaddrs) < 0) return Napi::String::New(info.Env(), "Error getting interface addresses");
+  for (ifaddrs* ptr_entry = ptr_ifaddrs; ptr_entry != nullptr; ptr_entry = ptr_entry->ifa_next) {
+    if (ptr_entry->ifa_addr == nullptr) continue;
+    if (strcmp(ptr_entry->ifa_name, interfaceName) != 0) continue;
+    if (ptr_entry->ifa_addr->sa_family == AF_INET) DeviceObj.Get(Napi::String::New(info.Env(), "Address")).As<Napi::Array>().Set(DeviceObj.Get(Napi::String::New(info.Env(), "Address")).As<Napi::Array>().Length(), Napi::String::New(info.Env(), getHostAddress(false, ptr_entry->ifa_addr)));
+    else if (ptr_entry->ifa_addr->sa_family == AF_INET6) DeviceObj.Get(Napi::String::New(info.Env(), "Address")).As<Napi::Array>().Set(DeviceObj.Get(Napi::String::New(info.Env(), "Address")).As<Napi::Array>().Length(), Napi::String::New(info.Env(), getHostAddress(false, ptr_entry->ifa_addr)));
   }
+  freeifaddrs(ptr_ifaddrs);
 
   // Peers
   Napi::Object PeerRoot = Napi::Object::New(info.Env());
@@ -78,27 +96,7 @@ Napi::Value parseWgDevice(const Napi::CallbackInfo& info, wg_device *device, con
     if (peer->flags & WGPEER_HAS_PERSISTENT_KEEPALIVE_INTERVAL) PeerObj.Set(Napi::String::New(info.Env(), "keepInterval"), Napi::Number::New(info.Env(), peer->persistent_keepalive_interval));
 
     // Endoints
-    if (peer->endpoint.addr.sa_family == AF_INET||peer->endpoint.addr.sa_family == AF_INET6) {
-      const struct sockaddr *addr = &peer->endpoint.addr;
-      char host[4096 + 1];
-      char service[512 + 1];
-      static char buf[sizeof(host) + sizeof(service) + 4];
-      int ret;
-      socklen_t addr_len = 0;
-
-      memset(buf, 0, sizeof(buf));
-      if (addr->sa_family == AF_INET)
-        addr_len = sizeof(struct sockaddr_in);
-      else if (addr->sa_family == AF_INET6)
-        addr_len = sizeof(struct sockaddr_in6);
-
-      ret = getnameinfo(addr, addr_len, host, sizeof(host), service, sizeof(service), NI_DGRAM | NI_NUMERICSERV | NI_NUMERICHOST);
-      if (ret) {
-        strncpy(buf, gai_strerror(ret), sizeof(buf) - 1);
-        buf[sizeof(buf) - 1] = '\0';
-      } else snprintf(buf, sizeof(buf), (addr->sa_family == AF_INET6 && strchr(host, ':')) ? "[%s]:%s" : "%s:%s", host, service);
-      PeerObj.Set(Napi::String::New(info.Env(), "endpoint"), Napi::String::New(info.Env(), buf));
-    }
+    if (peer->endpoint.addr.sa_family == AF_INET||peer->endpoint.addr.sa_family == AF_INET6) PeerObj.Set(Napi::String::New(info.Env(), "endpoint"), Napi::String::New(info.Env(), getHostAddress(true, &peer->endpoint.addr)));
 
     // Allowed IPs
     Napi::Array AllowedIPs = Napi::Array::New(info.Env());
