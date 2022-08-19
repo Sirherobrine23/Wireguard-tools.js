@@ -227,15 +227,18 @@ export async function readConfig(interfaceName: string) {
   return parseConfig(await fs.readFile(path.join("/etc/wireguard", `${interfaceName}.conf`), "utf8"));
 }
 
-const ipRaw = (ip: string): {ip: string, subnet: number} => ({
-  ip: ip.split("/")[0],
-  subnet: parseInt(ip.split("/")[1]||/:/.test(ip) ? "128" : "32")
-});
+const ipRaw = (ip: string): {ip: string, subnet: number} => {
+  const [ipAddress, subnet] = ip.split("/");
+  return {
+    ip: ipAddress?.trim(),
+    subnet: !!subnet?.trim() ? parseInt(subnet) : /\:\:/.test(ipAddress?.trim()) ? 128 : 32
+  }
+};
 
 /**
  *
  */
-export function Convert_wireguardInterface_to_config_utils(wgConfig: wireguardInterface): clientConfig|serverConfig {
+export function prettyConfig(wgConfig: wireguardInterface): clientConfig|serverConfig {
   if (!!wgConfig.Address && !!wgConfig.portListen) {
     const serverConfig: serverConfig = {
       interface: {

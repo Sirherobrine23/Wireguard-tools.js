@@ -228,6 +228,10 @@ Napi::Value setupInterface(const CallbackInfo& info) {
     deviceStruct->flags = (wg_device_flags)(deviceStruct->flags|WGDEVICE_HAS_LISTEN_PORT);
   }
 
+  // Replace Peers
+  const Napi::Boolean replacePeers = deviceConfig["replacePeers"].As<Napi::Boolean>();
+  if (replacePeers.IsBoolean() && replacePeers.Value()) deviceStruct->flags = (wg_device_flags)(deviceStruct->flags|WGDEVICE_REPLACE_PEERS);
+
   // Peers Mount
   for (unsigned int peerIndex = 0; peerIndex < Keys.Length(); peerIndex++) {
     const Napi::Object peerConfig = Peers.Get(Keys[peerIndex]).As<Napi::Object>();
@@ -237,33 +241,40 @@ Napi::Value setupInterface(const CallbackInfo& info) {
     wg_key_from_base64(peerStruct->public_key, peerPubKey.Utf8Value().c_str());
     peerStruct->flags = (wg_peer_flags)WGPEER_HAS_PUBLIC_KEY;
 
-    // Set preshared key if present
-    if (peerConfig["presharedKey"].IsString()) {
-      Napi::String PresharedKey = peerConfig["presharedKey"].As<Napi::String>();
-      wg_key_from_base64(peerStruct->preshared_key, PresharedKey.Utf8Value().c_str());
-      peerStruct->flags = (wg_peer_flags)(peerStruct->flags|WGPEER_HAS_PRESHARED_KEY);
+    // Remove Peer
+    const Napi::Boolean removeMe = peerConfig["removeMe"].As<Napi::Boolean>();
+    if (removeMe.IsBoolean() && removeMe.Value()) peerStruct->flags = (wg_peer_flags)(peerStruct->flags|WGPEER_REMOVE_ME);
+    else {
+      // Set preshared key if present
+      if (peerConfig["presharedKey"].IsString()) {
+        Napi::String PresharedKey = peerConfig["presharedKey"].As<Napi::String>();
+        wg_key_from_base64(peerStruct->preshared_key, PresharedKey.Utf8Value().c_str());
+        peerStruct->flags = (wg_peer_flags)(peerStruct->flags|WGPEER_HAS_PRESHARED_KEY);
+      }
+
+      // Set Keepalive
+      const Napi::Number keepInterval = peerConfig["keepInterval"].As<Napi::Number>();
+      if (keepInterval.IsNumber() && keepInterval.Int32Value() > 0) {
+        peerStruct->persistent_keepalive_interval = (uint16_t)keepInterval.Int32Value();
+        peerStruct->flags = (wg_peer_flags)(peerStruct->flags|WGPEER_HAS_PERSISTENT_KEEPALIVE_INTERVAL);
+      }
+
+      // Set endpoint
+      const Napi::String EndpointString = peerConfig["endpoint"].As<Napi::String>();
+      if (EndpointString.IsString()) {
+        const Napi::Value Endpoint = addEndpoint(peerStruct, info.Env(), EndpointString);
+        if (Endpoint.IsString()) return Endpoint;
+      }
+
+      // Set allowed IPs
+      Napi::Array allowedIPs = peerConfig["allowedIPs"].As<Napi::Array>();
+      if (allowedIPs.IsArray() && allowedIPs.Length() > 0) {
+        peerStruct->flags = (wg_peer_flags)(peerStruct->flags|WGPEER_REPLACE_ALLOWEDIPS);
+        const Napi::Value AllowedIPs = mountAllowedIps(peerStruct, info.Env(), allowedIPs);
+        if (AllowedIPs.IsString()) return AllowedIPs;
+      }
     }
 
-    // Set Keepalive
-    const Napi::Number keepInterval = peerConfig["keepInterval"].As<Napi::Number>();
-    if (keepInterval.IsNumber() && keepInterval.Int32Value() > 0) {
-      peerStruct->persistent_keepalive_interval = (uint16_t)keepInterval.Int32Value();
-      peerStruct->flags = (wg_peer_flags)(peerStruct->flags|WGPEER_HAS_PERSISTENT_KEEPALIVE_INTERVAL);
-    }
-
-    // Set endpoint
-    const Napi::String EndpointString = peerConfig["endpoint"].As<Napi::String>();
-    if (EndpointString.IsString()) {
-      const Napi::Value Endpoint = addEndpoint(peerStruct, info.Env(), EndpointString);
-      if (Endpoint.IsString()) return Endpoint;
-    }
-
-    // Set allowed IPs
-    Napi::Array allowedIPs = peerConfig["allowedIPs"].As<Napi::Array>();
-    if (allowedIPs.IsArray() && allowedIPs.Length() > 0) {
-      const Napi::Value AllowedIPs = mountAllowedIps(peerStruct, info.Env(), allowedIPs);
-      if (AllowedIPs.IsString()) return AllowedIPs;
-    }
 
     // Add to Peer struct
     if (peerIndex > 0) peerStruct->next_peer = deviceStruct->first_peer;
