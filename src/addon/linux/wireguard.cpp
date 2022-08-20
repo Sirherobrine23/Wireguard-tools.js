@@ -1,2 +1,0 @@
-namespace netlink {}
-namespace wireguard {}
