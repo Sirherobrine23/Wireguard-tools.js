@@ -104,18 +104,18 @@ enum mnl_attr_data_type {
 
 #define mnl_attr_for_each(attr, nlh, offset) \
 	for ((attr) = mnl_nlmsg_get_payload_offset((nlh), (offset)); \
-		mnl_attr_ok((attr), (char *)mnl_nlmsg_get_payload_tail(nlh) - (char *)(attr)); \
-		(attr) = mnl_attr_next(attr))
+	     mnl_attr_ok((attr), (char *)mnl_nlmsg_get_payload_tail(nlh) - (char *)(attr)); \
+	     (attr) = mnl_attr_next(attr))
 
 #define mnl_attr_for_each_nested(attr, nest) \
 	for ((attr) = mnl_attr_get_payload(nest); \
-		mnl_attr_ok((attr), (char *)mnl_attr_get_payload(nest) + mnl_attr_get_payload_len(nest) - (char *)(attr)); \
-		(attr) = mnl_attr_next(attr))
+	     mnl_attr_ok((attr), (char *)mnl_attr_get_payload(nest) + mnl_attr_get_payload_len(nest) - (char *)(attr)); \
+	     (attr) = mnl_attr_next(attr))
 
 #define mnl_attr_for_each_payload(payload, payload_size) \
 	for ((attr) = (payload); \
-		mnl_attr_ok((attr), (char *)(payload) + payload_size - (char *)(attr)); \
-		(attr) = mnl_attr_next(attr))
+	     mnl_attr_ok((attr), (char *)(payload) + payload_size - (char *)(attr)); \
+	     (attr) = mnl_attr_next(attr))
 
 #define MNL_CB_ERROR	-1
 #define MNL_CB_STOP	0
@@ -132,9 +132,11 @@ static size_t mnl_ideal_socket_buffer_size(void)
 {
 	static size_t size = 0;
 
-	if (size) return size;
-	size = (size_t) sysconf(_SC_PAGESIZE);
-	if (size > 8192) size = 8192;
+	if (size)
+		return size;
+	size = (size_t)sysconf(_SC_PAGESIZE);
+	if (size > 8192)
+		size = 8192;
 	return size;
 }
 
@@ -143,7 +145,7 @@ static size_t mnl_nlmsg_size(size_t len)
 	return len + MNL_NLMSG_HDRLEN;
 }
 
-static struct nlmsghdr *mnl_nlmsg_put_header(struct nlmsghdr *buf)
+static struct nlmsghdr *mnl_nlmsg_put_header(void *buf)
 {
 	int len = MNL_ALIGN(sizeof(struct nlmsghdr));
 	struct nlmsghdr *nlh = buf;
@@ -174,7 +176,9 @@ static void *mnl_nlmsg_get_payload_offset(const struct nlmsghdr *nlh, size_t off
 
 static bool mnl_nlmsg_ok(const struct nlmsghdr *nlh, int len)
 {
-	return len >= (int)sizeof(struct nlmsghdr) && nlh->nlmsg_len >= sizeof(struct nlmsghdr) && (int)nlh->nlmsg_len <= len;
+	return len >= (int)sizeof(struct nlmsghdr) &&
+	       nlh->nlmsg_len >= sizeof(struct nlmsghdr) &&
+	       (int)nlh->nlmsg_len <= len;
 }
 
 static struct nlmsghdr *mnl_nlmsg_next(const struct nlmsghdr *nlh, int *len)
@@ -215,7 +219,9 @@ static void *mnl_attr_get_payload(const struct nlattr *attr)
 
 static bool mnl_attr_ok(const struct nlattr *attr, int len)
 {
-	return len >= (int)sizeof(struct nlattr) && attr->nla_len >= sizeof(struct nlattr) && (int)attr->nla_len <= len;
+	return len >= (int)sizeof(struct nlattr) &&
+	       attr->nla_len >= sizeof(struct nlattr) &&
+	       (int)attr->nla_len <= len;
 }
 
 static struct nlattr *mnl_attr_next(const struct nlattr *attr)
@@ -232,7 +238,8 @@ static int mnl_attr_type_valid(const struct nlattr *attr, uint16_t max)
 	return 1;
 }
 
-static int __mnl_attr_validate(const struct nlattr *attr, enum mnl_attr_data_type type, size_t exp_len)
+static int __mnl_attr_validate(const struct nlattr *attr,
+			       enum mnl_attr_data_type type, size_t exp_len)
 {
 	uint16_t attr_len = mnl_attr_get_payload_len(attr);
 	const char *attr_data = mnl_attr_get_payload(attr);
@@ -317,13 +324,15 @@ static int mnl_attr_parse(const struct nlmsghdr *nlh, unsigned int offset,
 	return ret;
 }
 
-static int mnl_attr_parse_nested(const struct nlattr *nested, mnl_attr_cb_t cb, void *data)
+static int mnl_attr_parse_nested(const struct nlattr *nested, mnl_attr_cb_t cb,
+				 void *data)
 {
 	int ret = MNL_CB_OK;
 	const struct nlattr *attr;
 
 	mnl_attr_for_each_nested(attr, nested)
-	if ((ret = cb(attr, data)) <= MNL_CB_STOP) return ret;
+		if ((ret = cb(attr, data)) <= MNL_CB_STOP)
+			return ret;
 	return ret;
 }
 
@@ -354,7 +363,8 @@ static const char *mnl_attr_get_str(const struct nlattr *attr)
 	return mnl_attr_get_payload(attr);
 }
 
-static void mnl_attr_put(struct nlmsghdr *nlh, uint16_t type, size_t len, const void *data)
+static void mnl_attr_put(struct nlmsghdr *nlh, uint16_t type, size_t len,
+			 const void *data)
 {
 	struct nlattr *attr = mnl_nlmsg_get_payload_tail(nlh);
 	uint16_t payload_len = MNL_ALIGN(sizeof(struct nlattr)) + len;
@@ -365,7 +375,8 @@ static void mnl_attr_put(struct nlmsghdr *nlh, uint16_t type, size_t len, const 
 	memcpy(mnl_attr_get_payload(attr), data, len);
 	nlh->nlmsg_len += MNL_ALIGN(payload_len);
 	pad = MNL_ALIGN(len) - len;
-	if (pad > 0) memset(mnl_attr_get_payload(attr) + len, 0, pad);
+	if (pad > 0)
+		memset(mnl_attr_get_payload(attr) + len, 0, pad);
 }
 
 static void mnl_attr_put_u16(struct nlmsghdr *nlh, uint16_t type, uint16_t data)
@@ -392,7 +403,8 @@ static struct nlattr *mnl_attr_nest_start(struct nlmsghdr *nlh, uint16_t type)
 	return start;
 }
 
-static bool mnl_attr_put_check(struct nlmsghdr *nlh, size_t buflen, uint16_t type, size_t len, const void *data)
+static bool mnl_attr_put_check(struct nlmsghdr *nlh, size_t buflen,
+			       uint16_t type, size_t len, const void *data)
 {
 	if (nlh->nlmsg_len + MNL_ATTR_HDRLEN + MNL_ALIGN(len) > buflen)
 		return false;
@@ -400,22 +412,26 @@ static bool mnl_attr_put_check(struct nlmsghdr *nlh, size_t buflen, uint16_t typ
 	return true;
 }
 
-static bool mnl_attr_put_u8_check(struct nlmsghdr *nlh, size_t buflen, uint16_t type, uint8_t data)
+static bool mnl_attr_put_u8_check(struct nlmsghdr *nlh, size_t buflen,
+				  uint16_t type, uint8_t data)
 {
 	return mnl_attr_put_check(nlh, buflen, type, sizeof(uint8_t), &data);
 }
 
-static bool mnl_attr_put_u16_check(struct nlmsghdr *nlh, size_t buflen, uint16_t type, uint16_t data)
+static bool mnl_attr_put_u16_check(struct nlmsghdr *nlh, size_t buflen,
+				   uint16_t type, uint16_t data)
 {
 	return mnl_attr_put_check(nlh, buflen, type, sizeof(uint16_t), &data);
 }
 
-static bool mnl_attr_put_u32_check(struct nlmsghdr *nlh, size_t buflen, uint16_t type, uint32_t data)
+static bool mnl_attr_put_u32_check(struct nlmsghdr *nlh, size_t buflen,
+				   uint16_t type, uint32_t data)
 {
 	return mnl_attr_put_check(nlh, buflen, type, sizeof(uint32_t), &data);
 }
 
-static struct nlattr *mnl_attr_nest_start_check(struct nlmsghdr *nlh, size_t buflen, uint16_t type)
+static struct nlattr *mnl_attr_nest_start_check(struct nlmsghdr *nlh, size_t buflen,
+						uint16_t type)
 {
 	if (nlh->nlmsg_len + MNL_ATTR_HDRLEN > buflen)
 		return NULL;
@@ -466,7 +482,11 @@ static const mnl_cb_t default_cb_array[NLMSG_MIN_TYPE] = {
 	[NLMSG_OVERRUN]	= mnl_cb_noop,
 };
 
-static int __mnl_cb_run(const void *buf, size_t numbytes, unsigned int seq, unsigned int portid, mnl_cb_t cb_data, void *data, const mnl_cb_t *cb_ctl_array, unsigned int cb_ctl_array_len)
+static int __mnl_cb_run(const void *buf, size_t numbytes,
+			unsigned int seq, unsigned int portid,
+			mnl_cb_t cb_data, void *data,
+			const mnl_cb_t *cb_ctl_array,
+			unsigned int cb_ctl_array_len)
 {
 	int ret = MNL_CB_OK, len = numbytes;
 	const struct nlmsghdr *nlh = buf;
@@ -511,12 +531,16 @@ out:
 	return ret;
 }
 
-static int mnl_cb_run2(const void *buf, size_t numbytes, unsigned int seq, unsigned int portid, mnl_cb_t cb_data, void *data, const mnl_cb_t *cb_ctl_array, unsigned int cb_ctl_array_len)
+static int mnl_cb_run2(const void *buf, size_t numbytes, unsigned int seq,
+		       unsigned int portid, mnl_cb_t cb_data, void *data,
+		       const mnl_cb_t *cb_ctl_array, unsigned int cb_ctl_array_len)
 {
-	return __mnl_cb_run(buf, numbytes, seq, portid, cb_data, data, cb_ctl_array, cb_ctl_array_len);
+	return __mnl_cb_run(buf, numbytes, seq, portid, cb_data, data,
+			    cb_ctl_array, cb_ctl_array_len);
 }
 
-static int mnl_cb_run(const void *buf, size_t numbytes, unsigned int seq, unsigned int portid, mnl_cb_t cb_data, void *data)
+static int mnl_cb_run(const void *buf, size_t numbytes, unsigned int seq,
+		      unsigned int portid, mnl_cb_t cb_data, void *data)
 {
 	return __mnl_cb_run(buf, numbytes, seq, portid, cb_data, data, NULL, 0);
 }
@@ -582,15 +606,18 @@ static int mnl_socket_bind(struct mnl_socket *nl, unsigned int groups, pid_t pid
 	return 0;
 }
 
-static ssize_t mnl_socket_sendto(const struct mnl_socket *nl, const void *buf, size_t len)
+static ssize_t mnl_socket_sendto(const struct mnl_socket *nl, const void *buf,
+				 size_t len)
 {
 	static const struct sockaddr_nl snl = {
 		.nl_family = AF_NETLINK
 	};
-	return sendto(nl->fd, buf, len, 0, (struct sockaddr *) &snl, sizeof(snl));
+	return sendto(nl->fd, buf, len, 0,
+		      (struct sockaddr *) &snl, sizeof(snl));
 }
 
-static ssize_t mnl_socket_recvfrom(const struct mnl_socket *nl, void *buf, size_t bufsiz)
+static ssize_t mnl_socket_recvfrom(const struct mnl_socket *nl, void *buf,
+				   size_t bufsiz)
 {
 	ssize_t ret;
 	struct sockaddr_nl addr;
@@ -640,7 +667,9 @@ struct mnlg_socket {
 	unsigned int portid;
 };
 
-static struct nlmsghdr *__mnlg_msg_prepare(struct mnlg_socket *nlg, uint8_t cmd, uint16_t flags, uint16_t id, uint8_t version)
+static struct nlmsghdr *__mnlg_msg_prepare(struct mnlg_socket *nlg, uint8_t cmd,
+					   uint16_t flags, uint16_t id,
+					   uint8_t version)
 {
 	struct nlmsghdr *nlh;
 	struct genlmsghdr *genl;
@@ -658,7 +687,8 @@ static struct nlmsghdr *__mnlg_msg_prepare(struct mnlg_socket *nlg, uint8_t cmd,
 	return nlh;
 }
 
-static struct nlmsghdr *mnlg_msg_prepare(struct mnlg_socket *nlg, uint8_t cmd, uint16_t flags)
+static struct nlmsghdr *mnlg_msg_prepare(struct mnlg_socket *nlg, uint8_t cmd,
+					 uint16_t flags)
 {
 	return __mnlg_msg_prepare(nlg, cmd, flags, nlg->id, nlg->version);
 }
@@ -721,10 +751,12 @@ static int mnlg_socket_recv_run(struct mnlg_socket *nlg, mnl_cb_t data_cb, void 
 	int err;
 
 	do {
-		err = mnl_socket_recvfrom(nlg->nl, nlg->buf, mnl_ideal_socket_buffer_size());
+		err = mnl_socket_recvfrom(nlg->nl, nlg->buf,
+					  mnl_ideal_socket_buffer_size());
 		if (err <= 0)
 			break;
-		err = mnl_cb_run2(nlg->buf, err, nlg->seq, nlg->portid, data_cb, data, mnlg_cb_array, MNL_ARRAY_SIZE(mnlg_cb_array));
+		err = mnl_cb_run2(nlg->buf, err, nlg->seq, nlg->portid,
+				  data_cb, data, mnlg_cb_array, MNL_ARRAY_SIZE(mnlg_cb_array));
 	} while (err > 0);
 
 	return err;
@@ -738,7 +770,8 @@ static int get_family_id_attr_cb(const struct nlattr *attr, void *data)
 	if (mnl_attr_type_valid(attr, CTRL_ATTR_MAX) < 0)
 		return MNL_CB_ERROR;
 
-	if (type == CTRL_ATTR_FAMILY_ID && mnl_attr_validate(attr, MNL_TYPE_U16) < 0)
+	if (type == CTRL_ATTR_FAMILY_ID &&
+	    mnl_attr_validate(attr, MNL_TYPE_U16) < 0)
 		return MNL_CB_ERROR;
 	tb[type] = attr;
 	return MNL_CB_OK;
@@ -785,7 +818,8 @@ static struct mnlg_socket *mnlg_socket_open(const char *family_name, uint8_t ver
 
 	nlg->portid = mnl_socket_get_portid(nlg->nl);
 
-	nlh = __mnlg_msg_prepare(nlg, CTRL_CMD_GETFAMILY, NLM_F_REQUEST | NLM_F_ACK, GENL_ID_CTRL, 1);
+	nlh = __mnlg_msg_prepare(nlg, CTRL_CMD_GETFAMILY,
+				 NLM_F_REQUEST | NLM_F_ACK, GENL_ID_CTRL, 1);
 	mnl_attr_put_strz(nlh, CTRL_ATTR_FAMILY_NAME, family_name);
 
 	if (mnlg_socket_send(nlg, nlh) < 0) {
@@ -1456,30 +1490,44 @@ void wg_free_device(wg_device *dev)
 	free(dev);
 }
 
-static void encode_base64(char dest[4], const uint8_t src[3])
+static void encode_base64(char dest[static 4], const uint8_t src[static 3])
 {
 	const uint8_t input[] = { (src[0] >> 2) & 63, ((src[0] << 4) | (src[1] >> 4)) & 63, ((src[1] << 2) | (src[2] >> 6)) & 63, src[2] & 63 };
 	unsigned int i;
 
-	for (i = 0; i < 4; ++i) dest[i] = input[i] + 'A' + (((25 - input[i]) >> 8) & 6) - (((51 - input[i]) >> 8) & 75) - (((61 - input[i]) >> 8) & 15) + (((62 - input[i]) >> 8) & 3);
+	for (i = 0; i < 4; ++i)
+		dest[i] = input[i] + 'A'
+			  + (((25 - input[i]) >> 8) & 6)
+			  - (((51 - input[i]) >> 8) & 75)
+			  - (((61 - input[i]) >> 8) & 15)
+			  + (((62 - input[i]) >> 8) & 3);
+
 }
 
 void wg_key_to_base64(wg_key_b64_string base64, const wg_key key)
 {
 	unsigned int i;
 
-	for (i = 0; i < 32 / 3; ++i) encode_base64(&base64[i * 4], &key[i * 3]);
+	for (i = 0; i < 32 / 3; ++i)
+		encode_base64(&base64[i * 4], &key[i * 3]);
 	encode_base64(&base64[i * 4], (const uint8_t[]){ key[i * 3 + 0], key[i * 3 + 1], 0 });
 	base64[sizeof(wg_key_b64_string) - 2] = '=';
 	base64[sizeof(wg_key_b64_string) - 1] = '\0';
 }
 
-static int decode_base64(const char src[4])
+static int decode_base64(const char src[static 4])
 {
 	int val = 0;
 	unsigned int i;
 
-	for (i = 0; i < 4; ++i) val |= (-1 + ((((('A' - 1) - src[i]) & (src[i] - ('Z' + 1))) >> 8) & (src[i] - 64)) + ((((('a' - 1) - src[i]) & (src[i] - ('z' + 1))) >> 8) & (src[i] - 70)) + ((((('0' - 1) - src[i]) & (src[i] - ('9' + 1))) >> 8) & (src[i] + 5)) + ((((('+' - 1) - src[i]) & (src[i] - ('+' + 1))) >> 8) & 63) + ((((('/' - 1) - src[i]) & (src[i] - ('/' + 1))) >> 8) & 64)) << (18 - 6 * i);
+	for (i = 0; i < 4; ++i)
+		val |= (-1
+			    + ((((('A' - 1) - src[i]) & (src[i] - ('Z' + 1))) >> 8) & (src[i] - 64))
+			    + ((((('a' - 1) - src[i]) & (src[i] - ('z' + 1))) >> 8) & (src[i] - 70))
+			    + ((((('0' - 1) - src[i]) & (src[i] - ('9' + 1))) >> 8) & (src[i] + 5))
+			    + ((((('+' - 1) - src[i]) & (src[i] - ('+' + 1))) >> 8) & 63)
+			    + ((((('/' - 1) - src[i]) & (src[i] - ('/' + 1))) >> 8) & 64)
+			) << (18 - 6 * i);
 	return val;
 }
 
@@ -1501,9 +1549,7 @@ int wg_key_from_base64(wg_key key, const wg_key_b64_string base64)
 		key[i * 3 + 1] = (val >> 8) & 0xff;
 		key[i * 3 + 2] = val & 0xff;
 	}
-	val = decode_base64((const char[]) {
-		base64[i * 4 + 0], base64[i * 4 + 1], base64[i * 4 + 2], 'A'
-	});
+	val = decode_base64((const char[]){ base64[i * 4 + 0], base64[i * 4 + 1], base64[i * 4 + 2], 'A' });
 	ret |= ((uint32_t)val >> 31) | (val & 0xff);
 	key[i * 3 + 0] = (val >> 16) & 0xff;
 	key[i * 3 + 1] = (val >> 8) & 0xff;

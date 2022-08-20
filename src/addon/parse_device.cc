@@ -22,10 +22,8 @@ using namespace Napi;
 #include <string>
 #include <sysexits.h>
 #include <sys/types.h>
-
-// Wireguard embedded library.
 extern "C" {
-  #include "wgEmbed/wireguard.h"
+  #include "linux/wireguard.h"
 }
 
 const char* getHostAddress(bool addPort, const sockaddr* addr) {

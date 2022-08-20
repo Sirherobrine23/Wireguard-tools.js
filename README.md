@@ -2,24 +2,38 @@
 
 A quick way to use Wireguard with Node.js without having to run the Wireguard tools. We've included some `wg` command patterns to avoid confusion and to maintain a base between the tools.
 
-In addition to having some basic utilities already integrated:
-
-- Keygen: Generate private and public keys and also a pre-shared key.
-- Config file: You can generate files for Wireguard directly from here and you can transform a configuration file into a JSON.
-
-To manage Wireguard interfaces:
-
-- Create a new Wireguard network interface and configure it with the provided information.
-- Delete Interface.
-- Get the peers along with the interface and peer information.
-
 > **Note**
 >
-> This module needs `make` and `gcc/g++` or `clang`. this module needs some tools to compile `embbeded-wireguard`.
+> we have pre-copied files for linux arm64(aarch64) and linux x86_64, any other architecture will be copied the addons for the same one, in which case you will have to have `gcc` or `clang` installed to compile.
+
+With this module it is possible to:
+
+- Add/Remove a Wireguard interface.
+- Add/Remove/Modify `peers` for an interface.
+- Add IPs to the interface.
+- Create `pre-shared`, `private` and `public` keys.
+- Write the Wireguard configuration file and convert it to JSON format.
+
+## External LGPL Licence
+
+This project works because with of [Wireguard embeddable library](https://github.com/WireGuard/wireguard-tools/tree/master/contrib/embeddable-wg-library).
 
 ## Example
 
-Parse wireguard configuration file:
+> **Note**
+>
+> To manage the Wireguard interfaces, root access is required.
+
+### Get Current peers and Statistics
+
+```ts
+import { show } from "wireguard-tools.js";
+const wireguardInterfaces = show("wg0");
+// Wg0 is the interface name.
+console.log("Wg0:\n%o", wireguardInterfaces);
+```
+
+### Parse wireguard configuration file
 
 ```ts
 import { readFileSync } from "node:fs";
@@ -29,7 +43,7 @@ const configJson = utils.config.parseConfig(configFile);
 console.log("Config file JSON:\n%o", configJson.data);
 ```
 
-Create Config:
+### Create Config
 
 ```ts
 import { utils } from "wireguard-tools.js";
@@ -55,44 +69,4 @@ const wireguardConfig = utils.config.writeConfig({
   }
 });
 console.log("Config file:\n%s", wireguardConfig);
-```
-
-or
-
-> **Note**
->
-> To save to wireguard's default directory (`/etc/wireguard`), it is necessary to have root access or a user with write permissions on the directory.
-
-```ts
-import { utils } from "wireguard-tools.js";
-utils.config.writeConfig({
-  interface: {
-    private: "CEOntDE9saQaHLhD/WzZuYky3+elOfnBUCXoSveD3kc=",
-    public: "xaZtpi3VCkBMhSTKM6jl/YjPJ370iYpBlLYwSyZ3W08=",
-    address: [
-      {
-        ip: "10.0.0.5",
-        subnet: 24
-      }
-    ]
-  },
-  peer: {
-    "tF4YxTqLIJdNQcqvz1jtIF993zSk79hP+zdBxQlaowA=": {
-      Keepalive: 25,
-      Endpoint: {
-        host: "wireguard.example.com",
-        port: 51820
-      },
-    }
-  }
-}, "wg0");
-```
-
-Get Current peers and Statistics:
-
-```ts
-import { show } from "wireguard-tools.js";
-const wireguardInterfaces = show("wg0");
-// Wg0 is the interface name.
-console.log("Wg0:\n%o", wireguardInterfaces);
 ```

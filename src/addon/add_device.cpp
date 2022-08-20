@@ -9,10 +9,8 @@ using namespace Napi;
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <linux/rtnetlink.h>
-
-// Wireguard embedded library
 extern "C" {
-  #include "wgEmbed/wireguard.h"
+  #include "linux/wireguard.h"
 }
 
 auto setAddrAndUp(const char *devName, Napi::Array Address) {
