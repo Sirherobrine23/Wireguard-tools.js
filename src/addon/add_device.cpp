@@ -7,76 +7,94 @@ using namespace Napi;
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <netinet/in.h>
-#include <arpa/inet.h>
+#include <net/if.h>
 #include <linux/rtnetlink.h>
 extern "C" {
   #include "linux/wireguard.h"
 }
 
-auto setAddrAndUp(const char *devName, Napi::Array Address) {
-  int rootFlags = IFF_UP|IFF_RUNNING|IFF_POINTOPOINT|IFF_NOARP;
-  for (int i = 0; i < Address.Length(); i++) {
-    const Napi::String ipaddr = Address.Get(i).As<Napi::String>();
-    bool is_ipv6 = false;
-    if (strchr(ipaddr.Utf8Value().c_str(), ':')) is_ipv6 = true;
-    struct sockaddr_nl addr;
-    memset(&addr, 0, sizeof(addr));
-    addr.nl_family = AF_NETLINK;
-    addr.nl_groups = RTMGRP_LINK | is_ipv6 ? RTMGRP_IPV6_IFADDR|RTMGRP_IPV6_ROUTE:RTMGRP_IPV4_IFADDR|RTMGRP_IPV4_ROUTE;
-    addr.nl_pid = getpid();
-    struct {
-      struct nlmsghdr nlh;
-      struct ifaddrmsg ifa;
-      char buf[256];
-    } req;
-    memset(&req, 0, sizeof(req));
-    rtattr *rta_addr = (rtattr *)req.buf;
-    req.nlh.nlmsg_len = sizeof(req);
-    req.nlh.nlmsg_type = RTM_NEWADDR;
-    req.nlh.nlmsg_flags = NLM_F_REQUEST|NLM_F_CREATE|NLM_F_EXCL|rootFlags;
-    req.ifa.ifa_scope = RT_SCOPE_LINK;
-    req.nlh.nlmsg_pid = getpid();
-    req.ifa.ifa_index = if_nametoindex(devName);
-    if (req.ifa.ifa_index == 0) return "Unable to find interface";
+#include <net/ethernet.h>
+#include <net/route.h>
+#include <sys/types.h>        // needed for socket(), uint8_t, uint16_t
+#include <sys/socket.h>       // needed for socket()
+#include <netinet/ip.h>       // IP_MAXPACKET (which is 65535)
+#include <sys/ioctl.h>        // macro ioctl is defined
+#include <bits/ioctls.h>      // defines values for argument "request" of ioctl.
+#include <linux/if_ether.h>   // ETH_P_ARP = 0x0806
+#include <linux/if_packet.h>  // struct sockaddr_ll (see man 7 packet)
 
-    req.ifa.ifa_family = is_ipv6 ? AF_INET6:AF_INET;
-    req.ifa.ifa_prefixlen = req.ifa.ifa_family == AF_INET6 ? 128:32;
-    rta_addr->rta_type = IFA_LOCAL;
-    rta_addr->rta_len = RTA_LENGTH(16);
-    inet_pton(req.ifa.ifa_family, ipaddr.Utf8Value().c_str(), RTA_DATA(rta_addr));
+struct setAddress {
+  struct nlmsghdr nlh;
+  struct ifaddrmsg ifa;
+  char buf[256];
+};
 
-    // set broadcast address
-    rtattr *rta_broadcast = (rtattr *)(((char *)rta_addr) + RTA_ALIGN(rta_addr->rta_len));
-    rta_broadcast->rta_type = is_ipv6 ? IFA_ADDRESS:IFA_BROADCAST;
-    rta_broadcast->rta_len = rta_addr->rta_len;
-    inet_pton(req.ifa.ifa_family, ipaddr.Utf8Value().c_str(), RTA_DATA(rta_broadcast));
+int setInterfaceAddress(const char *devName, const Napi::String ipaddr, int flags = 0) {
+  bool is_ipv6 = false;
+  if (strchr(ipaddr.Utf8Value().c_str(), ':')) is_ipv6 = true;
 
-    // set destination address
-    rtattr *rta_dstaddr = (rtattr *)(((char *)rta_broadcast) + RTA_ALIGN(rta_broadcast->rta_len));
-    rta_dstaddr->rta_type = is_ipv6 ? IFA_ADDRESS:IFA_BROADCAST;
-    rta_dstaddr->rta_len = rta_addr->rta_len;
-    inet_pton(req.ifa.ifa_family, ipaddr.Utf8Value().c_str(), RTA_DATA(rta_dstaddr));
-
-    // Set route to interface
-    rtattr *rta_dst = (rtattr *)(((char *)rta_dstaddr) + RTA_ALIGN(rta_dstaddr->rta_len));
-    rta_dst->rta_type = is_ipv6 ? IFA_ADDRESS:IFA_BROADCAST;
-    rta_dst->rta_len = rta_addr->rta_len;
-    inet_pton(req.ifa.ifa_family, ipaddr.Utf8Value().c_str(), RTA_DATA(rta_dst));
-
-    int fd;
-    if ((fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE)) < 0) return "Unable to create socket";
-    if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-      close(fd);
-      return "Unable to bind socket";
-    }
-    // send request
-    if (send(fd, &req, req.nlh.nlmsg_len, 0) < 0) {
-      close(fd);
-      return "Unable to send request";
-    }
-    close(fd);
+  setAddress req;
+  req.nlh.nlmsg_pid = getpid();
+  req.ifa.ifa_index = if_nametoindex(devName);
+  if (req.ifa.ifa_index == 0) return -1;
+  req.nlh.nlmsg_len = sizeof(req);
+  req.nlh.nlmsg_type = RTM_NEWADDR;
+  req.nlh.nlmsg_flags = NLM_F_REQUEST|NLM_F_CREATE|NLM_F_EXCL|flags;
+  req.ifa.ifa_scope = RT_SCOPE_LINK;
+  req.ifa.ifa_family = AF_INET;
+  req.ifa.ifa_prefixlen = 32;
+  if (is_ipv6) {
+    req.ifa.ifa_family = AF_INET6;
+    req.ifa.ifa_prefixlen = 128;
   }
 
+  sockaddr_nl addr;
+  addr.nl_pid = getpid();
+  addr.nl_family = AF_NETLINK;
+  addr.nl_groups = RTMGRP_LINK;
+  if (is_ipv6) addr.nl_groups != RTMGRP_IPV6_IFADDR|RTMGRP_IPV6_ROUTE;
+  else addr.nl_groups |= RTMGRP_IPV4_IFADDR|RTMGRP_IPV4_ROUTE;
+
+  rtattr *rta_addr = (rtattr *)req.buf;
+  rta_addr->rta_type = IFA_LOCAL;
+  rta_addr->rta_len = RTA_LENGTH(16);
+  inet_pton(req.ifa.ifa_family, ipaddr.Utf8Value().c_str(), RTA_DATA(rta_addr));
+
+  int fd;
+  if ((fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE)) < 0) return -2;
+  if (bind(fd, (sockaddr *)&addr, sizeof(addr)) < 0) {
+    close(fd);
+    return -3;
+  }
+
+  // send request
+  if (send(fd, &req, req.nlh.nlmsg_len, 0) < 0) {
+    close(fd);
+    return -3;
+  }
+  close(fd);
+  return 0;
+}
+
+auto setAddrAndUp(const char *devName, Napi::Array Address) {
+  int rootFlags = IFF_UP|IFF_RUNNING|IFF_POINTOPOINT|IFF_NOARP;
+  int fd;
+  int res;
+  ifreq ifr;
+  ifr.ifr_flags = rootFlags;
+  strncpy(ifr.ifr_name, devName, IFNAMSIZ);
+  if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) return "Cannot open socket";
+  if ((res = ioctl(fd, SIOCSIFFLAGS, &ifr)) < 0) return "";
+  close(fd);
+
+  // Set Address
+  for (int i = 0; i < Address.Length(); i++) {
+    const Napi::String ipaddr = Address.Get(i).As<Napi::String>();
+    int res = setInterfaceAddress(devName, ipaddr);
+    if (res == -1) return "Unable to find interface";
+    else if (res == -2) return "Unable to bind socket";
+    else if (res == -3) return "Unable to send request";
+  }
   return "";
 }
 
