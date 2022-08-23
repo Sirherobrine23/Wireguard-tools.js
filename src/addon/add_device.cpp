@@ -15,13 +15,12 @@ extern "C" {
 
 #include <net/ethernet.h>
 #include <net/route.h>
-#include <sys/types.h>        // needed for socket(), uint8_t, uint16_t
-#include <sys/socket.h>       // needed for socket()
-#include <netinet/ip.h>       // IP_MAXPACKET (which is 65535)
-#include <sys/ioctl.h>        // macro ioctl is defined
-#include <bits/ioctls.h>      // defines values for argument "request" of ioctl.
-#include <linux/if_ether.h>   // ETH_P_ARP = 0x0806
-#include <linux/if_packet.h>  // struct sockaddr_ll (see man 7 packet)
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/ip.h>
+#include <sys/ioctl.h>
+#include <linux/if_ether.h>
+#include <linux/if_packet.h>
 
 struct setAddress {
   struct nlmsghdr nlh;
@@ -190,22 +189,25 @@ int setInterfaceAddress(const char *devName, const Napi::String ipaddr, int flag
 }
 
 auto setRoute(const char *devName, const Napi::String ipaddr) {
+  bool is_ipv6 = false;
+  if (strchr(ipaddr.Utf8Value().c_str(), ':')) is_ipv6 = true;
   rtentry rt;
   rt.rt_flags = RTF_UP | RTF_GATEWAY;
-  printf("Copy name\n");
   rt.rt_dev = strdup(devName);
-  printf("Copy name end\n");
 
   sockaddr_in *sockinfo = (sockaddr_in *)&rt.rt_gateway;
   sockinfo->sin_family = AF_INET;
+  if (is_ipv6) sockinfo->sin_family = AF_INET6;
   sockinfo->sin_addr.s_addr = inet_addr(ipaddr.Utf8Value().c_str());
 
   sockinfo = (sockaddr_in *)&rt.rt_dst;
   sockinfo->sin_family = AF_INET;
+  if (is_ipv6) sockinfo->sin_family = AF_INET6;
   sockinfo->sin_addr.s_addr = INADDR_ANY;
 
   sockinfo = (sockaddr_in *)&rt.rt_genmask;
   sockinfo->sin_family = AF_INET;
+  if (is_ipv6) sockinfo->sin_family = AF_INET6;
   sockinfo->sin_addr.s_addr = INADDR_ANY;
 
   int sockfd;
