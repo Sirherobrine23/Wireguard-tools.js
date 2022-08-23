@@ -1,6 +1,6 @@
 {
   "name": "wireguard-tools.js",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "Control your wireguard interface from node.js, not a wireguard-tools wrapper!",
   "main": "dist/index.js",
   "types": "./dist/index.d.ts",
