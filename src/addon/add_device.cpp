@@ -242,11 +242,11 @@ auto setAddrAndUp(const char *devName, Napi::Array Address) {
     else if (res == -3) return "Unable to send request";
   }
   if (!setUp(devName, rootFlags)) return "Cannot set up";
-  for (int i = 0; i < Address.Length(); i++) {
+  /*for (int i = 0; i < Address.Length(); i++) {
     const Napi::String ipaddr = Address.Get(i).As<Napi::String>();
     printf("Settings route: %s\n", ipaddr.Utf8Value().c_str());
     setRoute(devName, ipaddr);
-  }
+  }*/
   return "";
 }
 
