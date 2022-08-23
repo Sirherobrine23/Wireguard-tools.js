@@ -211,8 +211,7 @@ auto setRoute(const char *devName, const Napi::String ipaddr) {
   sockinfo->sin_addr.s_addr = INADDR_ANY;
 
   int sockfd;
-  sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-  if (sockfd == -1) {
+  if ((sockfd = socket(sockinfo->sin_family, SOCK_DGRAM, 0)) < 0) {
     perror("socket creation failed\n");
     return;
   }

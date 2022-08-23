@@ -34,6 +34,11 @@ jobs:
     - run: bash -c "$(cat package.json | jq -r '.scripts.test')"
       name: Test
 
+    - name: Print route and address
+      run: |
+        ip addr show
+        ip route show all
+
   analyze:
     name: Analyze
     runs-on: ubuntu-latest

@@ -21,10 +21,7 @@ for (let i = 0; i < 20; i++) {
     allowedIPs: [...ips, ...ips.map(utils.nodeCidr6.FourToSix)],
     removeMe: Math.random() > 0.7,
   };
-  if (i%2 === 0) {
-    deviceConfig.peers[peerKey.public].endpoint = utils.nodeCidr4.randomIp("20.0.0.1/24")+":51880";
-    deviceConfig.peers[peerKey.public].presharedKey = peerKey.preshared;
-  }
+  if (i%2 === 0) deviceConfig.peers[peerKey.public].presharedKey = peerKey.preshared;
   ips.map(utils.nodeCidr4.fistIp).forEach(ip => {if (deviceConfig.Address) {if (!deviceConfig.Address.find(ips => ip === ips)) deviceConfig.Address.push(ip);}});
 }
 
