@@ -12,9 +12,11 @@ typedef int64_t fe[16];
 
 namespace keyUtils {
 	static void encode_base64(char dest[4], const uint8_t src[3]) {
-		const uint8_t input[] = { (src[0] >> 2) & 63, ((src[0] << 4) | (src[1] >> 4)) & 63, ((src[1] << 2) | (src[2] >> 6)) & 63, src[2] & 63 };
+		const uint8_t input[] = {
+			(src[0] >> 2) & 63, ((src[0] << 4) | (src[1] >> 4)) & 63,
+			((src[1] << 2) | (src[2] >> 6)) & 63, src[2] & 63
+		};
 		unsigned int i;
-
 		for (i = 0; i < 4; ++i) dest[i] = input[i] + 'A' + (((25 - input[i]) >> 8) & 6) - (((51 - input[i]) >> 8) & 75) - (((61 - input[i]) >> 8) & 15) + (((62 - input[i]) >> 8) & 3);
 	}
 

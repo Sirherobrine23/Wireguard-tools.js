@@ -1,0 +1,15 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Mocha test",
+      "preLaunchTask": {
+        "script": "test:full",
+        "type": "npm"
+      },
+      "program": "node"
+    }
+  ]
+}

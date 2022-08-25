@@ -4,6 +4,7 @@
 using namespace Napi;
 
 // Networking
+#include <sys/ioctl.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <netinet/in.h>
@@ -13,242 +14,109 @@ extern "C" {
   #include "linux/wireguard.h"
 }
 
-#include <net/ethernet.h>
-#include <net/route.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/ip.h>
-#include <sys/ioctl.h>
-#include <linux/if_ether.h>
-#include <linux/if_packet.h>
-
-struct setAddress {
-  struct nlmsghdr nlh;
-  struct ifaddrmsg ifa;
-  char buf[256];
-};
 
 /*
 [#] ip link add wg0 type wireguard
 [#] wg setconf wg0 /dev/fd/63
 
 [#] ip -4 address add 10.240.0.1/32 dev wg0
-[#] ip -4 address add 10.16.0.1/32 dev wg0
-[#] ip -4 address add 10.80.0.1/32 dev wg0
-[#] ip -4 address add 192.160.0.1/32 dev wg0
-[#] ip -4 address add 10.48.0.1/32 dev wg0
-[#] ip -4 address add 10.192.0.1/32 dev wg0
-[#] ip -4 address add 10.96.0.1/32 dev wg0
-[#] ip -4 address add 10.208.0.1/32 dev wg0
-[#] ip -4 address add 10.144.0.1/32 dev wg0
-[#] ip -4 address add 10.112.0.1/32 dev wg0
-[#] ip -4 address add 10.224.0.1/32 dev wg0
-[#] ip -4 address add 10.64.0.1/32 dev wg0
 [#] ip -6 address add 2002:0AF0:0001::/128 dev wg0
-[#] ip -6 address add 2002:0A10:0001::/128 dev wg0
-[#] ip -6 address add 2002:0A50:0001::/128 dev wg0
-[#] ip -6 address add 2002:C0A0:0001::/128 dev wg0
-[#] ip -6 address add 2002:0A30:0001::/128 dev wg0
-[#] ip -6 address add 2002:0AC0:0001::/128 dev wg0
-[#] ip -6 address add 2002:0A60:0001::/128 dev wg0
-[#] ip -6 address add 2002:0AD0:0001::/128 dev wg0
-[#] ip -6 address add 2002:0A90:0001::/128 dev wg0
-[#] ip -6 address add 2002:0A70:0001::/128 dev wg0
-[#] ip -6 address add 2002:0AE0:0001::/128 dev wg0
-[#] ip -6 address add 2002:0A40:0001::/128 dev wg0
 
 [#] ip link set mtu 1420 up dev wg0
 
-[#] ip -6 route add 2002:c0a8:feb::/128 dev wg0
-[#] ip -6 route add 2002:c0a8:fd7::/128 dev wg0
-[#] ip -6 route add 2002:c0a8:fcf::/128 dev wg0
-[#] ip -6 route add 2002:c0a8:f9f::/128 dev wg0
-[#] ip -6 route add 2002:c0a8:f9e::/128 dev wg0
-[#] ip -6 route add 2002:c0a8:f9c::/128 dev wg0
-[#] ip -6 route add 2002:c0a8:f80::/128 dev wg0
-[#] ip -6 route add 2002:c0a8:f70::/128 dev wg0
-[#] ip -6 route add 2002:c0a8:f6e::/128 dev wg0
-[#] ip -6 route add 2002:c0a8:f58::/128 dev wg0
-[#] ip -6 route add 2002:c0a8:f22::/128 dev wg0
-[#] ip -6 route add 2002:c0a8:f1c::/128 dev wg0
-[#] ip -6 route add 2002:c0a8:f1a::/128 dev wg0
-[#] ip -6 route add 2002:c0a8:f0d::/128 dev wg0
-[#] ip -6 route add 2002:afa:8431::/128 dev wg0
-[#] ip -6 route add 2002:af8:e711::/128 dev wg0
-[#] ip -6 route add 2002:af8:b54::/128 dev wg0
-[#] ip -6 route add 2002:af7:7571::/128 dev wg0
-[#] ip -6 route add 2002:af5:9ccc::/128 dev wg0
-[#] ip -6 route add 2002:aec:bb27::/128 dev wg0
-[#] ip -6 route add 2002:adb:8aab::/128 dev wg0
-[#] ip -6 route add 2002:ad1:c1cb::/128 dev wg0
-[#] ip -6 route add 2002:acb:194f::/128 dev wg0
-[#] ip -6 route add 2002:aca:9ab2::/128 dev wg0
-[#] ip -6 route add 2002:a9e:b54b::/128 dev wg0
-[#] ip -6 route add 2002:a72:be6f::/128 dev wg0
-[#] ip -6 route add 2002:a6f:a726::/128 dev wg0
-[#] ip -6 route add 2002:a6c:20f1::/128 dev wg0
-[#] ip -6 route add 2002:a58:c7::/128 dev wg0
-[#] ip -6 route add 2002:a57:409::/128 dev wg0
-[#] ip -6 route add 2002:a56:4ad6::/128 dev wg0
-[#] ip -6 route add 2002:a51:1302::/128 dev wg0
-[#] ip -6 route add 2002:a44:301e::/128 dev wg0
-[#] ip -6 route add 2002:a43:2eb7::/128 dev wg0
-[#] ip -6 route add 2002:a3b:5847::/128 dev wg0
-[#] ip -6 route add 2002:a3a:8569::/128 dev wg0
-[#] ip -6 route add 2002:a1c:d4aa::/128 dev wg0
-[#] ip -6 route add 2002:a1a:f929::/128 dev wg0
-[#] ip -6 route add 2002:a16:42e1::/128 dev wg0
 [#] ip -4 route add 192.168.15.88/32 dev wg0
-[#] ip -4 route add 192.168.15.34/32 dev wg0
-[#] ip -4 route add 192.168.15.28/32 dev wg0
-[#] ip -4 route add 192.168.15.26/32 dev wg0
-[#] ip -4 route add 192.168.15.235/32 dev wg0
-[#] ip -4 route add 192.168.15.215/32 dev wg0
-[#] ip -4 route add 192.168.15.207/32 dev wg0
-[#] ip -4 route add 192.168.15.159/32 dev wg0
-[#] ip -4 route add 192.168.15.158/32 dev wg0
-[#] ip -4 route add 192.168.15.156/32 dev wg0
-[#] ip -4 route add 192.168.15.13/32 dev wg0
-[#] ip -4 route add 192.168.15.128/32 dev wg0
-[#] ip -4 route add 192.168.15.112/32 dev wg0
-[#] ip -4 route add 192.168.15.110/32 dev wg0
-[#] ip -4 route add 10.88.0.199/32 dev wg0
-[#] ip -4 route add 10.87.4.9/32 dev wg0
-[#] ip -4 route add 10.86.74.214/32 dev wg0
-[#] ip -4 route add 10.81.19.2/32 dev wg0
-[#] ip -4 route add 10.68.48.30/32 dev wg0
-[#] ip -4 route add 10.67.46.183/32 dev wg0
-[#] ip -4 route add 10.59.88.71/32 dev wg0
-[#] ip -4 route add 10.58.133.105/32 dev wg0
-[#] ip -4 route add 10.28.212.170/32 dev wg0
-[#] ip -4 route add 10.26.249.41/32 dev wg0
-[#] ip -4 route add 10.250.132.49/32 dev wg0
-[#] ip -4 route add 10.248.231.17/32 dev wg0
-[#] ip -4 route add 10.248.11.84/32 dev wg0
-[#] ip -4 route add 10.247.117.113/32 dev wg0
-[#] ip -4 route add 10.245.156.204/32 dev wg0
-[#] ip -4 route add 10.236.187.39/32 dev wg0
-[#] ip -4 route add 10.22.66.225/32 dev wg0
-[#] ip -4 route add 10.219.138.171/32 dev wg0
-[#] ip -4 route add 10.209.193.203/32 dev wg0
-[#] ip -4 route add 10.203.25.79/32 dev wg0
-[#] ip -4 route add 10.202.154.178/32 dev wg0
-[#] ip -4 route add 10.158.181.75/32 dev wg0
-[#] ip -4 route add 10.114.190.111/32 dev wg0
-[#] ip -4 route add 10.111.167.38/32 dev wg0
-[#] ip -4 route add 10.108.32.241/32 dev wg0
+[#] ip -6 route add 2002:c0a8:feb::/128 dev wg0
 */
 
-int setInterfaceAddress(const char *devName, const Napi::String ipaddr, int flags = 0) {
-  int res = 0;
-  bool is_ipv6 = false;
-  if (strchr(ipaddr.Utf8Value().c_str(), ':')) is_ipv6 = true;
-
-  setAddress req;
-  req.nlh.nlmsg_pid = getpid();
-  req.ifa.ifa_index = if_nametoindex(devName);
-  if (req.ifa.ifa_index == 0) return -1;
-  req.nlh.nlmsg_len = sizeof(req);
-  req.nlh.nlmsg_type = RTM_NEWADDR;
-  req.nlh.nlmsg_flags = NLM_F_REQUEST|NLM_F_CREATE|NLM_F_EXCL|flags;
-  req.ifa.ifa_scope = RT_SCOPE_LINK;
-  req.ifa.ifa_family = AF_INET;
-  req.ifa.ifa_prefixlen = 32;
-  if (is_ipv6) {
-    req.ifa.ifa_family = AF_INET6;
-    req.ifa.ifa_prefixlen = 128;
+namespace ipAddress {
+  const char* sucessMessage = "Sucess";
+  struct setAddress {
+    struct nlmsghdr nlh;
+    struct ifaddrmsg ifa;
+    char buf[256];
+  };
+  bool setUp(const char *devName, int rootFlags = IFF_UP) {
+    int fd;
+    int res;
+    ifreq ifr;
+    ifr.ifr_flags = rootFlags;
+    strncpy(ifr.ifr_name, devName, IFNAMSIZ);
+    if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) return false;
+    if ((res = ioctl(fd, SIOCSIFFLAGS, &ifr)) < 0) return false;
+    close(fd);
+    return true;
   }
+  const char* setInterfaceAddress(const char *devName, const Napi::String ipaddr, int flags = 0) {
+    int res = 0;
+    bool is_ipv6 = false;
+    if (strchr(ipaddr.Utf8Value().c_str(), ':')) is_ipv6 = true;
 
-  sockaddr_nl addr;
-  addr.nl_pid = getpid();
-  addr.nl_family = AF_NETLINK;
-  addr.nl_groups = RTMGRP_LINK;
-  if (is_ipv6) addr.nl_groups != RTMGRP_IPV6_IFADDR|RTMGRP_IPV6_ROUTE;
-  else addr.nl_groups |= RTMGRP_IPV4_IFADDR|RTMGRP_IPV4_ROUTE;
+    setAddress req;
+    req.nlh.nlmsg_pid = getpid();
+    req.ifa.ifa_index = if_nametoindex(devName);
+    req.nlh.nlmsg_len = sizeof(req);
+    req.nlh.nlmsg_type = RTM_NEWADDR;
+    req.nlh.nlmsg_flags = NLM_F_REQUEST|NLM_F_CREATE|NLM_F_EXCL|flags;
+    req.ifa.ifa_scope = RT_SCOPE_LINK;
+    req.ifa.ifa_family = AF_INET;
+    req.ifa.ifa_prefixlen = 32;
+    if (is_ipv6) {
+      req.ifa.ifa_family = AF_INET6;
+      req.ifa.ifa_prefixlen = 128;
+    }
 
-  rtattr *rta_addr = (rtattr *)req.buf;
-  rta_addr->rta_len = RTA_LENGTH(req.ifa.ifa_prefixlen);
-  rta_addr->rta_type = IFA_LOCAL;
-  inet_pton(req.ifa.ifa_family, ipaddr.Utf8Value().c_str(), RTA_DATA(rta_addr));
+    sockaddr_nl addr;
+    addr.nl_pid = getpid();
+    addr.nl_family = AF_NETLINK;
+    addr.nl_groups = RTMGRP_LINK;
+    if (is_ipv6) addr.nl_groups != RTMGRP_IPV6_IFADDR|RTMGRP_IPV6_ROUTE;
+    else addr.nl_groups |= RTMGRP_IPV4_IFADDR|RTMGRP_IPV4_ROUTE;
 
-  int fd;
-  if ((fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE)) < 0) return -2;
-  if (bind(fd, (sockaddr *)&addr, sizeof(addr)) < 0) {
-    res = -3;
-    goto out;
-  }
+    rtattr* rta_addr = (rtattr *)req.buf;
+    rta_addr->rta_len = RTA_LENGTH(req.ifa.ifa_prefixlen);
+    rta_addr->rta_type = IFA_LOCAL;
+    inet_pton(req.ifa.ifa_family, ipaddr.Utf8Value().c_str(), RTA_DATA(rta_addr));
 
-  // send request
-  if (send(fd, &req, req.nlh.nlmsg_len, 0) < 0) {
-    res = -4;
-    goto out;
-  }
+    if (req.ifa.ifa_index == 0) {
+      res = -1;
+      goto out;
+    }
+    int fd;
+    if ((fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE)) < 0) {
+      res = -2;
+      goto out;
+    }
+    if (bind(fd, (sockaddr *)&addr, sizeof(addr)) < 0) {
+      res = -3;
+      goto out;
+    }
+
+    // send request
+    if (send(fd, &req, req.nlh.nlmsg_len, 0) < 0) {
+      res = -4;
+      goto out;
+    }
   out:
     close(fd);
-    return res;
-}
-
-auto setRoute(const char *devName, const Napi::String ipaddr) {
-  bool is_ipv6 = false;
-  if (strchr(ipaddr.Utf8Value().c_str(), ':')) is_ipv6 = true;
-  rtentry rt;
-  rt.rt_flags = RTF_UP | RTF_GATEWAY;
-  rt.rt_dev = strdup(devName);
-
-  sockaddr_in *sockinfo = (sockaddr_in *)&rt.rt_gateway;
-  sockinfo->sin_family = AF_INET;
-  if (is_ipv6) sockinfo->sin_family = AF_INET6;
-  sockinfo->sin_addr.s_addr = inet_addr(ipaddr.Utf8Value().c_str());
-
-  sockinfo = (sockaddr_in *)&rt.rt_dst;
-  sockinfo->sin_family = AF_INET;
-  if (is_ipv6) sockinfo->sin_family = AF_INET6;
-  sockinfo->sin_addr.s_addr = INADDR_ANY;
-
-  sockinfo = (sockaddr_in *)&rt.rt_genmask;
-  sockinfo->sin_family = AF_INET;
-  if (is_ipv6) sockinfo->sin_family = AF_INET6;
-  sockinfo->sin_addr.s_addr = INADDR_ANY;
-
-  int sockfd;
-  if ((sockfd = socket(sockinfo->sin_family, SOCK_DGRAM, 0)) < 0) {
-    perror("socket creation failed\n");
-    return;
-  }
-  if(ioctl(sockfd, SIOCADDRT, &rt) < 0) perror("ioctl");
-  return;
-}
-
-bool setUp(const char *devName, int rootFlags = IFF_UP) {
-  int fd;
-  int res;
-  ifreq ifr;
-  ifr.ifr_flags = rootFlags;
-  strncpy(ifr.ifr_name, devName, IFNAMSIZ);
-  if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) return false;
-  if ((res = ioctl(fd, SIOCSIFFLAGS, &ifr)) < 0) return false;
-  close(fd);
-  return true;
-}
-
-auto setAddrAndUp(const char *devName, Napi::Array Address) {
-  int rootFlags = IFF_UP|IFF_RUNNING|IFF_POINTOPOINT|IFF_NOARP;
-  // Set Address
-  for (int i = 0; i < Address.Length(); i++) {
-    const Napi::String ipaddr = Address.Get(i).As<Napi::String>();
-    int res = setInterfaceAddress(devName, ipaddr, IFF_UP);
-    if (res == -1) return "Unable to find interface";
+    if (res == 0) return sucessMessage;
+    else if (res == -1) return "Unable to find interface";
     else if (res == -2) return "Unable to bind socket";
     else if (res == -3) return "Unable to send request";
+    return "unknown error";
   }
-  if (!setUp(devName, rootFlags)) return "Cannot set up";
-  /*for (int i = 0; i < Address.Length(); i++) {
-    const Napi::String ipaddr = Address.Get(i).As<Napi::String>();
-    printf("Settings route: %s\n", ipaddr.Utf8Value().c_str());
-    setRoute(devName, ipaddr);
-  }*/
-  return "";
+  const char* config(const char *devName, Napi::Array Address) {
+    int rootFlags = IFF_UP|IFF_RUNNING|IFF_POINTOPOINT|IFF_NOARP;
+    // Set Address
+    for (int i = 0; i < Address.Length(); i++) {
+      const Napi::String ipaddr = Address.Get(i).As<Napi::String>();
+      const char* err;
+      if ((err = setInterfaceAddress(devName, ipaddr, IFF_UP)) != sucessMessage) return err;
+    }
+    if (!setUp(devName, rootFlags)) return "Cannot set up";
+    return NULL;
+  }
 }
+
 
 Napi::Number registerInterface(const CallbackInfo& info) {
   return Napi::Number::New(info.Env(), wg_add_device(info[0].As<Napi::String>().Utf8Value().c_str()));
@@ -362,8 +230,8 @@ Napi::Value setupInterface(const CallbackInfo& info) {
   // Set ip addreses
   const Napi::Array ipAddresses = deviceConfig.Get("Address").As<Napi::Array>();
   if (ipAddresses.Length() > 0) {
-    const char *error = setAddrAndUp(interfaceName.Utf8Value().c_str(), ipAddresses);
-    if (error[0] != '\0') return Napi::String::New(info.Env(), error);
+    const char *error;
+    if ((error = ipAddress::config(interfaceName.Utf8Value().c_str(), ipAddresses)) != NULL) return Napi::String::New(info.Env(), error);
   }
 
   // Peers config
@@ -443,7 +311,6 @@ Napi::Value setupInterface(const CallbackInfo& info) {
       }
     }
 
-
     // Add to Peer struct
     if (peerIndex > 0) peerStruct->next_peer = deviceStruct->first_peer;
     deviceStruct->first_peer = peerStruct;
@@ -458,5 +325,6 @@ Napi::Value setupInterface(const CallbackInfo& info) {
     printf("Error code: %d\n", setDevice);
     return Napi::String::New(info.Env(), "Unknown error");
   }
+
   return Napi::Number::New(info.Env(), 0);
 }

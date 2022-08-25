@@ -1,0 +1,19 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "npm",
+			"script": "test:full",
+			"problemMatcher": [],
+			"label": "npm: test:full",
+			"detail": "npm run build && npm run test"
+		},
+		{
+			"type": "npm",
+			"script": "build",
+			"problemMatcher": [],
+			"label": "npm: build",
+			"detail": "npm run build"
+		}
+	]
+}

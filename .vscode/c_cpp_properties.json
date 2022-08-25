@@ -1,18 +1,35 @@
 {
-    "version": 4,
-    "configurations": [
-        {
-            "name": "Linux",
-            "includePath": [
-                "/usr/include/node",
-                "${workspaceFolder}/**",
-                "${workspaceFolder}/node_modules/**"
-            ],
-            "defines": [],
-            "compilerPath": "/usr/bin/gcc",
-            "cStandard": "gnu17",
-            "cppStandard": "gnu++17",
-            "intelliSenseMode": "linux-gcc-x64"
-        }
-    ]
+	"version": 4,
+	"configurations": [
+		{
+			"name": "Linux",
+			"includePath": [
+				"${workspaceFolder}/node_modules/node-addon-api/**",
+				"${workspaceFolder}/node_modules/**",
+				"${workspaceFolder}/**",
+				"/usr/include/node"
+			],
+			"defines": [
+
+			],
+			"compilerPath": "/usr/bin/clang",
+			"cStandard": "c99",
+			"cppStandard": "c++20",
+			"intelliSenseMode": "linux-clang-x64",
+			"compilerArgs": [
+					"-I/usr/include/node",
+					"-I${workspaceFolder}/node_modules/node-addon-api",
+					"-fdiagnostics-color=always",
+					"-fno-rtti",
+					"-fno-exceptions",
+					"-std=c++20",
+					"-fpermissive",
+					"-fno-exceptions",
+					"-w",
+					"-fpermissive",
+					"-fPIC",
+					"-static"
+			]
+		}
+	]
 }
