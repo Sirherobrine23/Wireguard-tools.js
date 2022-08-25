@@ -10,8 +10,9 @@ jobs:
     strategy:
       matrix:
         node-version: [14.x, 16.x, 18.x]
-    runs-on: ubuntu-latest
-    name: "Node: ${{ matrix.node-version }}"
+        os: [ubuntu]
+    runs-on: "${{ matrix.os }}-latest"
+    name: "Node: ${{ matrix.node-version }}, System: ${{ matrix.os }}"
     steps:
     - uses: actions/checkout@v3
       name: Code checkout
@@ -23,21 +24,23 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
 
-    - run: sudo npm install -g ts-node typescript mocha
-      name: Install typescript and ts-node
-
     # Install depenecies and build addon and typescript
-    - run: npm ci
-    - run: npm run nodegyp
+    - name: Install node depencies and install globaly typescript, mocha and ts-node
+      run: |
+        ${{ matrix.os != 'windows' && 'sudo ' || '' }}npm install -g ts-node typescript mocha
+        npm ci
+        npm run build
 
-    # Run root test and add actions summary
-    - run: bash -c "$(cat package.json | jq -r '.scripts.test')"
-      name: Test
+    # Run tests
+    - name: Test
+      run: npm run test${{ matrix.os == 'windows' && ':win' || '' }}
 
     - name: Print route and address
+      if: matrix.os != 'windows'
+      continue-on-error: true
       run: |
-        ip addr show
-        ip route show all
+        ip addr show sh23Test1235555
+        ip route show all | grep sh23Test1235555
 
   analyze:
     name: Analyze

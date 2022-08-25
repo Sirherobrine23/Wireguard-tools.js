@@ -29,11 +29,6 @@
   "publishConfig": {
     "access": "public"
   },
-  "os": [
-    "linux",
-    "android",
-    "freebsd"
-  ],
   "engines": {
     "node": ">=14.0.0"
   },
@@ -44,6 +39,7 @@
     "nodegyp": "npm run clean && node-gyp rebuild --silent",
     "build": "npm run nodegyp && tsc",
     "test": "sudo PATH=\"$PATH\" env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register 'tests/**/*.ts'",
+    "test:win": "mocha -r ts-node/register 'tests/**/*.ts'",
     "test:full": "npm run build && npm run test",
     "install": "node-gyp-build",
     "prepack": "npm run clean && tsc && npm run prebuildify:linux && rm -rf build"

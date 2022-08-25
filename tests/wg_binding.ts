@@ -28,26 +28,22 @@ for (let i = 0; i < 20; i++) {
 // Add IPv6 addresses
 if (deviceConfig.Address) deviceConfig.Address.push(...deviceConfig.Address.map(utils.nodeCidr6.FourToSix));
 
-describe("Create interface", async () => {
-  it("Create interface", async () => {
-    return Bridge.addDevice(interfaceName, deviceConfig);
-    // Invert options
-    // Object.keys(deviceConfig.peers).forEach(key => {
-    //   deviceConfig.peers[key].removeMe = !deviceConfig.peers[key].removeMe;
-    // });
-    // Bridge.addDevice(interfaceName, deviceConfig);
+describe("Wireguard interface", () => {
+  it("Pretty wireguard interface config", () => {
+    const config = utils.config.prettyConfig(deviceConfig);
+    return expect(config.interface.private).equal(deviceConfig.privateKey);
   });
-  it("Convert wireguardInterface to config utils", () => {
-    const wireguardInterface = Bridge.showAll()[interfaceName];
-    const config = utils.config.prettyConfig(wireguardInterface);
-    return expect(config.interface.private).equal(wireguardInterface.privateKey);
-  });
-  after(async () => {
-    const showConfig = Bridge.showAll()[interfaceName];
-    if (!!showConfig) writeFileSync(`${__dirname}/../${interfaceName}.addrs.json`, JSON.stringify({
-      prettyConfig: utils.config.prettyConfig(showConfig),
-      originalConfig: deviceConfig,
-      fromKernel: showConfig,
-    }, null, 2));
-  });
+  if (process.platform === "linux") {
+    it("Create interface", async () => {
+      return Bridge.addDevice(interfaceName, deviceConfig);
+    });
+    after(async () => {
+      const showConfig = Bridge.showAll()[interfaceName];
+      if (!!showConfig) writeFileSync(`${__dirname}/../${interfaceName}.addrs.json`, JSON.stringify({
+        prettyConfig: utils.config.prettyConfig(showConfig),
+        originalConfig: deviceConfig,
+        fromKernel: showConfig,
+      }, null, 2));
+    });
+  }
 });
