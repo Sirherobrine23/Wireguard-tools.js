@@ -4,7 +4,6 @@
 using namespace Napi;
 
 // Networking
-#include <sys/ioctl.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <netinet/in.h>
@@ -13,110 +12,6 @@ using namespace Napi;
 extern "C" {
   #include "linux/wireguard.h"
 }
-
-
-/*
-[#] ip link add wg0 type wireguard
-[#] wg setconf wg0 /dev/fd/63
-
-[#] ip -4 address add 10.240.0.1/32 dev wg0
-[#] ip -6 address add 2002:0AF0:0001::/128 dev wg0
-
-[#] ip link set mtu 1420 up dev wg0
-
-[#] ip -4 route add 192.168.15.88/32 dev wg0
-[#] ip -6 route add 2002:c0a8:feb::/128 dev wg0
-*/
-
-namespace ipAddress {
-  const char* sucessMessage = "Sucess";
-  struct setAddress {
-    struct nlmsghdr nlh;
-    struct ifaddrmsg ifa;
-    char buf[256];
-  };
-  bool setUp(const char *devName, int rootFlags = IFF_UP) {
-    int fd;
-    int res;
-    ifreq ifr;
-    ifr.ifr_flags = rootFlags;
-    strncpy(ifr.ifr_name, devName, IFNAMSIZ);
-    if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) return false;
-    if ((res = ioctl(fd, SIOCSIFFLAGS, &ifr)) < 0) return false;
-    close(fd);
-    return true;
-  }
-  const char* setInterfaceAddress(const char *devName, const Napi::String ipaddr, int flags = 0) {
-    int res = 0;
-    bool is_ipv6 = false;
-    if (strchr(ipaddr.Utf8Value().c_str(), ':')) is_ipv6 = true;
-
-    setAddress req;
-    req.nlh.nlmsg_pid = getpid();
-    req.ifa.ifa_index = if_nametoindex(devName);
-    req.nlh.nlmsg_len = sizeof(req);
-    req.nlh.nlmsg_type = RTM_NEWADDR;
-    req.nlh.nlmsg_flags = NLM_F_REQUEST|NLM_F_CREATE|NLM_F_EXCL|flags;
-    req.ifa.ifa_scope = RT_SCOPE_LINK;
-    req.ifa.ifa_family = AF_INET;
-    req.ifa.ifa_prefixlen = 32;
-    if (is_ipv6) {
-      req.ifa.ifa_family = AF_INET6;
-      req.ifa.ifa_prefixlen = 128;
-    }
-
-    sockaddr_nl addr;
-    addr.nl_pid = getpid();
-    addr.nl_family = AF_NETLINK;
-    addr.nl_groups = RTMGRP_LINK;
-    if (is_ipv6) addr.nl_groups != RTMGRP_IPV6_IFADDR|RTMGRP_IPV6_ROUTE;
-    else addr.nl_groups |= RTMGRP_IPV4_IFADDR|RTMGRP_IPV4_ROUTE;
-
-    rtattr* rta_addr = (rtattr *)req.buf;
-    rta_addr->rta_len = RTA_LENGTH(req.ifa.ifa_prefixlen);
-    rta_addr->rta_type = IFA_LOCAL;
-    inet_pton(req.ifa.ifa_family, ipaddr.Utf8Value().c_str(), RTA_DATA(rta_addr));
-
-    if (req.ifa.ifa_index == 0) {
-      res = -1;
-      goto out;
-    }
-    int fd;
-    if ((fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE)) < 0) {
-      res = -2;
-      goto out;
-    }
-    if (bind(fd, (sockaddr *)&addr, sizeof(addr)) < 0) {
-      res = -3;
-      goto out;
-    }
-
-    // send request
-    if (send(fd, &req, req.nlh.nlmsg_len, 0) < 0) {
-      res = -4;
-      goto out;
-    }
-  out:
-    close(fd);
-    if (res == 0) return sucessMessage;
-    else if (res == -1) return "Unable to find interface";
-    else if (res == -2) return "Unable to bind socket";
-    else if (res == -3) return "Unable to send request";
-    return "unknown error";
-  }
-  const char* config(const char *devName, Napi::Array Address) {
-    int rootFlags = IFF_UP|IFF_RUNNING|IFF_POINTOPOINT|IFF_NOARP;
-    // Set Address
-    for (int i = 0; i < Address.Length(); i++) {
-      const Napi::String ipaddr = Address.Get(i).As<Napi::String>();
-      const char* err;
-      if ((err = setInterfaceAddress(devName, ipaddr, IFF_UP)) != sucessMessage) return err;
-    }
-    if (!setUp(devName, rootFlags)) return "Cannot set up";
-    return NULL;
-  }
-}
-
 
 Napi::Number registerInterface(const CallbackInfo& info) {
   return Napi::Number::New(info.Env(), wg_add_device(info[0].As<Napi::String>().Utf8Value().c_str()));
@@ -226,13 +121,6 @@ Napi::Value setupInterface(const CallbackInfo& info) {
   else if (!interfaceName.IsString()) return Napi::String::New(info.Env(), "Interface name is not a string");
   // Device config
   const Napi::Object deviceConfig = info[1].As<Napi::Object>();
-
-  // Set ip addreses
-  const Napi::Array ipAddresses = deviceConfig.Get("Address").As<Napi::Array>();
-  if (ipAddresses.Length() > 0) {
-    const char *error;
-    if ((error = ipAddress::config(interfaceName.Utf8Value().c_str(), ipAddresses)) != NULL) return Napi::String::New(info.Env(), error);
-  }
 
   // Peers config
   const Napi::Object Peers = deviceConfig["peers"].As<Napi::Object>();
