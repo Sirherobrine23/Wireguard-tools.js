@@ -280,5 +280,5 @@ Napi::Object initKeyGen(Napi::Env env) {
     keyGen.Set("presharedKey", Napi::Function::New(env, gereneate_Keys::presharedKey));
     keyGen.Set("genPrivateKey", Napi::Function::New(env, gereneate_Keys::privateKey));
     keyGen.Set("getPublicKey", Napi::Function::New(env, gereneate_Keys::publicKey));
-  return keyGenkeyGen
+  return keyGenkeyGen;
 }
