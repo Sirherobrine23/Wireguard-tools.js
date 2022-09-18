@@ -46,11 +46,7 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
   exports.Set("setupInterface", Napi::Function::New(env, setupInterface));
   exports.Set("getDevices", Napi::Function::New(env, getDevices));
   exports.Set("getDevice", Napi::Function::New(env, getDevice));
-  const Napi::Object keyGen = Napi::Object::New(env);
-    keyGen.Set("presharedKey", Napi::Function::New(env, gereneate_Keys::presharedKey));
-    keyGen.Set("genPrivateKey", Napi::Function::New(env, gereneate_Keys::privateKey));
-    keyGen.Set("getPublicKey", Napi::Function::New(env, gereneate_Keys::publicKey));
-  exports.Set("keyGen", keyGen);
+  exports.Set("keyGen", initKeyGen(env));
   return exports;
 }
 NODE_API_MODULE(addon, Init)

@@ -1,10 +1,10 @@
 // Base
 #include <napi.h>
-using namespace Napi;
 #include <errno.h>
 #include <assert.h>
 #include <unistd.h>
 #include <fcntl.h>
+using namespace Napi;
 
 typedef uint8_t wg_key[32];
 typedef char wg_key_b64_string[((sizeof(wg_key) + 2) / 3) * 4 + 1];
@@ -273,4 +273,12 @@ namespace gereneate_Keys {
     // Return public key
     return Napi::String::New(info.Env(), pubString);
   }
+}
+
+Napi::Object initKeyGen(Napi::Env env) {
+  const Napi::Object keyGen = Napi::Object::New(env);
+    keyGen.Set("presharedKey", Napi::Function::New(env, gereneate_Keys::presharedKey));
+    keyGen.Set("genPrivateKey", Napi::Function::New(env, gereneate_Keys::privateKey));
+    keyGen.Set("getPublicKey", Napi::Function::New(env, gereneate_Keys::publicKey));
+  return keyGenkeyGen
 }

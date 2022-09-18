@@ -9,6 +9,8 @@ using namespace Napi;
 #include <netinet/in.h>
 #include <net/if.h>
 #include <linux/rtnetlink.h>
+
+// Wireguard (not) library
 extern "C" {
   #include "linux/wireguard.h"
 }
