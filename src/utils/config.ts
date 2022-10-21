@@ -88,14 +88,15 @@ export function writeConfig(configbject: clientConfig|serverConfig): string {
     if (configbject.peer[peerPub].preshared) wireguardConfigString += `PresharedKey = ${configbject.peer[peerPub].preshared}\n`;
     if (isClient(configbject)) {
       wireguardConfigString += `Endpoint = ${configbject.peer[peerPub].Endpoint.host}:${configbject.peer[peerPub].Endpoint.port}\n`;
-      if (configbject.peer[peerPub].Keepalive) wireguardConfigString += `Keepalive = ${configbject.peer[peerPub].Keepalive}\n`;
+      if (configbject.peer[peerPub].PersistentKeepalive && !configbject.peer[peerPub].Keepalive) wireguardConfigString += `PersistentKeepalive = ${configbject.peer[peerPub].PersistentKeepalive}\n`;
+      if (configbject.peer[peerPub].Keepalive && configbject.peer[peerPub].PersistentKeepalive) wireguardConfigString += `Keepalive = ${configbject.peer[peerPub].Keepalive}\n`;
     }
   }
   return wireguardConfigString;
 }
 
 // Line matchs
-const configRegex = /^(\[(Interface|Peer)\])|((PresharedKey|PublicKey|PrivateKey|AllowedIPs|Endpoint|PersistentKeepalive|Keepalive|DNS|ListenPort|Address|PreDown|PostDown|PreUp|PostUp)\s?\=\s?(.*))/gm;
+const configRegex = /^(\[(Interface|Peer)\])|((PresharedKey|PublicKey|PrivateKey|AllowedIPs|Endpoint|PersistentKeepalive|Keepalive|DNS|ListenPort|Address|PreDown|PostDown|PreUp|PostUp)\s?\=\s?(.*))/;
 
 function filterStringConfig(config: string): string {
   return config.split(/\r?\n/).filter(line => {
@@ -107,8 +108,9 @@ function filterStringConfig(config: string): string {
 function parseKeys(env: string): {[key: string]: string} {
   const keys: {[key: string]: string} = {};
   for (const line of env.split(/\r?\n/)) {
-    const [,,,, key, value] = line.match(configRegex)||[];
-    if (undefined === key && undefined === value) {
+    const data = line.match(configRegex)||[];
+    const [,,,, key, value] = data;
+    if (!!key && !!value) {
       if (!keys[key?.trim()]) keys[key?.trim()] = value.trim();
       else keys[key?.trim()] = `${keys[key?.trim()]}, ${value.trim()}`;
     }
@@ -134,7 +136,7 @@ export function parseConfig(configString: string): {type: "client"|"server", dat
   configString = filterStringConfig(configString);
   let arrayIndex = -1;
   const objectValue = [];
-  for (let line of configString.split(process.platform === "win32" ? /\r?\n/ : /\n/)) {
+  for (let line of configString.split(/\r?\n/)) {
     if (/\[Interface|Peer\]/.test(line)) {
       arrayIndex++
       objectValue[arrayIndex] = [];
