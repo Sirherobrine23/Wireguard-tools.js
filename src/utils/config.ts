@@ -276,6 +276,7 @@ export function prettyConfig(wgConfig: wireguardInterface): clientConfig|serverC
     clientConfig.peer[peerPublicKey] = {
       preshared: wgConfig.peers[peerPublicKey].presharedKey,
       Keepalive: wgConfig.peers[peerPublicKey].keepInterval,
+      PersistentKeepalive: wgConfig.peers[peerPublicKey].keepInterval,
       Endpoint: {host: "", port: 0},
       allowIp: []
     };
