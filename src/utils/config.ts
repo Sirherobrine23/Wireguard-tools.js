@@ -32,7 +32,9 @@ export type clientConfig = base & {
       /** Target host and port to peer connect */
       Endpoint: {host: string, port: number},
       /** Time to send a packet to maintain connection */
-      Keepalive?: number
+      Keepalive?: number,
+      /** Time to send a packet to maintain connection */
+      PersistentKeepalive?: number,
     }
   }
 };
@@ -92,21 +94,23 @@ export function writeConfig(configbject: clientConfig|serverConfig): string {
   return wireguardConfigString;
 }
 
+// Line matchs
+const configRegex = /^(\[(Interface|Peer)\])|((PresharedKey|PublicKey|PrivateKey|AllowedIPs|Endpoint|PersistentKeepalive|Keepalive|DNS|ListenPort|Address|PreDown|PostDown|PreUp|PostUp)\s?\=\s?(.*))/gm;
+
 function filterStringConfig(config: string): string {
-  const lineMath = /^(\[(Interface|Peer)\])|((PresharedKey|PublicKey|PrivateKey|AllowedIPs|Endpoint|Keepalive|DNS|ListenPort|Address|PreDown|PostDown|PreUp|PostUp)\s?\=\s?.*)/;
   return config.split(/\r?\n/).filter(line => {
     // if (!lineMath.test(line)) console.log("Result: %o, Line: '%s'", lineMath.test(line), line);
-    return lineMath.test(line);
-  }).join("\n");
+    return configRegex.test(line);
+  }).map(line => line.trim()).join("\n");
 }
 
 function parseKeys(env: string): {[key: string]: string} {
   const keys: {[key: string]: string} = {};
   for (const line of env.split(/\r?\n/)) {
-    const [key, value] = (line.match(/(PresharedKey|PublicKey|PrivateKey|AllowedIPs|Endpoint|Keepalive|DNS|ListenPort|Address|PreDown|PostDown|PreUp|PostUp)\s?\=\s?(.*)/)||[]).slice(1);
-    if (!!key) {
-      if (!keys[key.trim()]) keys[key.trim()] = value.trim();
-      else keys[key.trim()] = `${keys[key.trim()]}, ${value.trim()}`;
+    const [,,,, key, value] = line.match(configRegex)||[];
+    if (undefined === key && undefined === value) {
+      if (!keys[key?.trim()]) keys[key?.trim()] = value.trim();
+      else keys[key?.trim()] = `${keys[key?.trim()]}, ${value.trim()}`;
     }
   }
   return keys;
