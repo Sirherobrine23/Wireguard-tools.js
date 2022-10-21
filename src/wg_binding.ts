@@ -1,6 +1,5 @@
 let wg_binding;
 try {wg_binding = require("node-gyp-build")(__dirname+"/..");} catch (_){}
-const errorNoWg = new Error("");
 
 export type peerConfig = {
   /** Mark this peer to be removed, any changes remove this option */
@@ -54,7 +53,7 @@ export type wireguardInterface = {
   ```
  */
 export function showAll(): {[interfaceName: string]: wireguardInterface} {
-  if (!wg_binding) throw errorNoWg
+  if (!wg_binding) throw new Error("No node addon builds");
   const devices = wg_binding.getDevices() as {[interfaceName: string]: wireguardInterface};
   return devices;
 }
@@ -64,7 +63,7 @@ export function showAll(): {[interfaceName: string]: wireguardInterface} {
  *
 */
 export function show(wgName: string): wireguardInterface {
-  if (!wg_binding) throw errorNoWg
+  if (!wg_binding) throw new Error("No node addon builds");
   const InterfaceInfo = wg_binding.getDevice(wgName) as wireguardInterface;
   if (typeof InterfaceInfo === "string") throw new Error(InterfaceInfo);
   return InterfaceInfo;
@@ -76,7 +75,7 @@ export function show(wgName: string): wireguardInterface {
 export function getDeviceName() {return Object.keys(showAll());}
 
 export function removeInterface(interfaceName: string): void {
-  if (!wg_binding) throw errorNoWg
+  if (!wg_binding) throw new Error("No node addon builds");
   // Check interface name
   if (!interfaceName) throw new Error("interface name is required");
   if (interfaceName.length >= 16) throw new Error("interface name is too long");
@@ -91,7 +90,7 @@ export function removeInterface(interfaceName: string): void {
  * Create Wireguard interface and return its name
  */
 export function addDevice(interfaceName: string, interfaceConfig: wireguardInterface): wireguardInterface {
-  if (!wg_binding) throw errorNoWg
+  if (!wg_binding) throw new Error("No node addon builds");
   // Check interface name
   if (!interfaceName) throw new Error("interface name is required");
   if (interfaceName.length >= 16) throw new Error("interface name is too long");
@@ -118,7 +117,7 @@ export function addDevice(interfaceName: string, interfaceConfig: wireguardInter
 }
 
 export function peerOperation(interfaceName: string, operation: "delete"|"add"|"replace", publicKey: string, config: peerConfig) {
-  if (!wg_binding) throw errorNoWg
+  if (!wg_binding) throw new Error("No node addon builds");
   const currentConfig = show(interfaceName);
   if (operation === "delete") {
     if (!currentConfig.peers[publicKey]) throw new Error("Peer not found");
