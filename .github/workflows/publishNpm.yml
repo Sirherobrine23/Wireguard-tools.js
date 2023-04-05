@@ -54,7 +54,7 @@ jobs:
         NODE_AUTH_TOKEN: ${{ secrets.MPM_PUBLISH_TOKEN }}
 
     # Create pull request to update version in main branch
-    - uses: peter-evans/create-pull-request@v4
+    - uses: peter-evans/create-pull-request@v5
       name: Create Pull Request
       continue-on-error: true
       with:
