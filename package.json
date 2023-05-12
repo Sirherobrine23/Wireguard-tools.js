@@ -42,7 +42,7 @@
     "test:win": "mocha 'tests/**/*.ts'",
     "test:full": "npm run build && npm run test",
     "install": "node-gyp-build",
-    "prepack": "npm run clean && tsc && npm run prebuildify:linux && rm -rf build"
+    "prepack": "npm run clean && tsc --build --clean && tsc --build && npm run prebuildify:linux && rm -rf build"
   },
   "devDependencies": {
     "@types/chai": "^4.3.5",
