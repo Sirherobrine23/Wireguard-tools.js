@@ -1,85 +1,43 @@
 name: Test
 on:
   push:
-    branches: [ "main" ]
+    branches:
+    - main
   pull_request:
-    branches: [ "main" ]
+    branches:
+    - main
 
 jobs:
   build:
     strategy:
       matrix:
-        node-version: [14.x, 16.x, 18.x]
-        os: [ubuntu]
-    runs-on: "${{ matrix.os }}-latest"
-    name: "Node: ${{ matrix.node-version }}, System: ${{ matrix.os }}"
+        node_version:
+          - 14.x
+          - 16.x
+          - 18.x
+          - latest
+        os:
+          - ubuntu
+          - windows
+    runs-on: ${{ matrix.os }}-latest
     steps:
-    - uses: actions/checkout@v3
-      name: Code checkout
-      with:
-        submodules: true
+      - uses: actions/checkout@v3
+        name: Checkout
 
-    - uses: actions/setup-node@v3
-      name: "Setup node.js, version: ${{ matrix.node-version }}"
-      with:
-        node-version: ${{ matrix.node-version }}
+      - uses: actions/setup-node@v3
+        name: Setup Node.js
+        with:
+          node-version: ${{ matrix.node_version }}
 
-    # Install depenecies and build addon and typescript
-    - name: Install node depencies and install globaly typescript, mocha and ts-node
-      run: |
-        ${{ matrix.os != 'windows' && 'sudo ' || '' }}npm install -g ts-node typescript mocha
-        npm ci
-        npm run build
+      - name: Install dependencies
+        run: npm install --no-save && ${{ matrix.os == 'ubuntu' && 'sudo ' || '' }}npm install -g ts-node typescript mocha && npm run build
 
-    # Run tests
-    - name: Test
-      run: npm run test${{ matrix.os == 'windows' && ':win' || '' }}
+      - name: Test
+        run: npm run test${{ matrix.os == 'windows' && ':win' || '' }}
 
-    - name: Print route and address
-      if: matrix.os != 'windows'
-      continue-on-error: true
-      run: |
-        ip addr show sh23Test1235555
-        ip route show all | grep sh23Test1235555
-
-  analyze:
-    name: Analyze
-    runs-on: ubuntu-latest
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
-
-    # Initializes the CodeQL tools for scanning.
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@v2
-      with:
-        languages: javascript
-        # If you wish to specify custom queries, you can do so here or in a config file.
-        # By default, queries listed here will override any specified in a config file.
-        # Prefix the list here with "+" to use these queries and those in the config file.
-
-        # Details on CodeQL's query packs refer to : https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#using-queries-in-ql-packs
-        # queries: security-extended,security-and-quality
-
-
-    # Autobuild attempts to build any compiled languages  (C/C++, C#, or Java).
-    # If this step fails, then you should remove it and run the build manually (see below)
-    - name: Autobuild
-      uses: github/codeql-action/autobuild@v2
-
-    # ℹ️ Command-line programs to run using the OS shell.
-    # 📚 See https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idstepsrun
-
-    #   If the Autobuild fails above, remove it and uncomment the following three lines.
-    #   modify them (or add more) to build your code if your project, please refer to the EXAMPLE below for guidance.
-
-    # - run: |
-    #   echo "Run, Build Application using script"
-    #   ./location_of_script_within_repo/buildscript.sh
-
-    - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v2
+      - name: Print route and address
+        if: matrix.os == 'ubuntu'
+        continue-on-error: true
+        run: |
+          sudo ip route show all | grep sh23Test1235555
+          sudo ip addr show sh23Test1235555
