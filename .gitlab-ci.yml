@@ -1,0 +1,10 @@
+image: node:latest
+test:
+  only:
+    - main
+  stage: test
+  script:
+    - npm i -g typescript ts-node
+    - npm install --no-save && npm i -g mocha
+    - npm run build
+    - mocha 'tests/**/*.ts'

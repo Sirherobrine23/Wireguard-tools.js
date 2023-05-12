@@ -1,0 +1,8 @@
+exit: true
+colors: true
+full-trace: true
+recursive: true
+parallel: true
+timeout: 0
+node-option:
+  - "loader=ts-node/register"

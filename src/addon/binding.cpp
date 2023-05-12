@@ -1,10 +1,9 @@
-#define NAPI_DISABLE_CPP_EXCEPTIONS
 #include <napi.h>
-#include <unistd.h>
 #include <string>
+#include "key_gen.cpp"
+#if __linux__
 #include "parse_device.cc"
 #include "add_device.cpp"
-#include "key_gen.cpp"
 
 Napi::Value delDevice(const Napi::CallbackInfo& info) {
   return Napi::Number::New(info.Env(), wg_del_device(info[0].As<Napi::String>().Utf8Value().c_str()));
@@ -39,13 +38,16 @@ Napi::Value getDevices(const Napi::CallbackInfo& info) {
   free(device_names);
   return wgRootObject;
 }
+#endif
 
 Napi::Object Init(Napi::Env env, Napi::Object exports) {
+  #if __linux__
   exports.Set("removeInterface", Napi::Function::New(env, delDevice));
   exports.Set("addInterface", Napi::Function::New(env, addDevice));
   exports.Set("setupInterface", Napi::Function::New(env, setupInterface));
   exports.Set("getDevices", Napi::Function::New(env, getDevices));
   exports.Set("getDevice", Napi::Function::New(env, getDevice));
+  #endif
   exports.Set("keyGen", initKeyGen(env));
   return exports;
 }

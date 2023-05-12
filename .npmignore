@@ -1,11 +1,15 @@
+# node modules
+node_modules/
+/*.tgz
+
 # vscode
 .devcontainer/
 .vscode/
 .vscode-ctags
 
-# node modules
-node_modules/
-/*.tgz
+# Typescript
+src/**/*.ts
+!src/**/*.d.ts
 
 # Github and Git
 .github/
