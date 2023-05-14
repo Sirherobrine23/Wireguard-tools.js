@@ -1,7 +1,7 @@
+import { writeFileSync } from "fs";
 import { expect } from "chai";
 import * as Bridge from "../src/wg_binding";
 import * as utils from "../src/utils/index";
-import { writeFileSync } from "fs";
 const interfaceName = "sh23Test1235555";
 
 // Make base config
@@ -34,16 +34,16 @@ describe("Wireguard interface", () => {
     return expect(config.interface.private).equal(deviceConfig.privateKey);
   });
   if (process.platform === "linux") {
-    it("Create interface", async () => {
-      return Bridge.addDevice(interfaceName, deviceConfig);
-    });
-    after(async () => {
-      const showConfig = Bridge.showAll()[interfaceName];
-      if (!!showConfig) writeFileSync(`${__dirname}/../${interfaceName}.addrs.json`, JSON.stringify({
-        prettyConfig: utils.config.prettyConfig(showConfig),
-        originalConfig: deviceConfig,
-        fromKernel: showConfig,
+    it("Maneger", () => {
+      Bridge.addDevice(interfaceName, deviceConfig);
+      if (!(Bridge.listDevices().includes(interfaceName))) throw new Error("Invalid list devices");
+      const raw = Bridge.parseWgDevice(interfaceName);
+      writeFileSync(`${__dirname}/../${interfaceName}.addrs.json`, JSON.stringify({
+        deviceConfig,
+        raw,
+        get: utils.config.prettyConfig(raw)
       }, null, 2));
+      Bridge.removeInterface(interfaceName);
     });
   }
 });

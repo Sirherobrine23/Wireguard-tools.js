@@ -23,7 +23,6 @@ int getentropy(void *buf, size_t len) {
 }
 #endif
 
-
 typedef uint8_t wg_key[32];
 typedef char wg_key_b64_string[((sizeof(wg_key) + 2) / 3) * 4 + 1];
 typedef int64_t fe[16];

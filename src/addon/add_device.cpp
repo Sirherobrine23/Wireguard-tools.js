@@ -1,7 +1,6 @@
 // Base
 #include <unistd.h>
 #include <napi.h>
-using namespace Napi;
 
 // Networking
 #include <arpa/inet.h>
@@ -15,7 +14,7 @@ extern "C" {
   #include "linux/wireguard.h"
 }
 
-Napi::Number registerInterface(const CallbackInfo& info) {
+Napi::Number registerInterface(const Napi::CallbackInfo& info) {
   return Napi::Number::New(info.Env(), wg_add_device(info[0].As<Napi::String>().Utf8Value().c_str()));
 }
 
@@ -29,19 +28,19 @@ Napi::Value addEndpoint(wg_peer *peerStruct, Napi::Env env, Napi::String Endpoin
     end = strchr(Endpoint, ']');
     if (!end) {
       free(Endpoint);
-      return Napi::String::New(env, "Unable to find matching brace of endpoint");
+      return Napi::Error::New(env, "Unable to find matching brace of endpoint").Value();
     }
     *end++ = '\0';
     if (*end++ != ':' || !*end) {
       free(Endpoint);
-      return Napi::String::New(env, "Unable to find port of endpoint");
+      return Napi::Error::New(env, "Unable to find port of endpoint").Value();
     }
   } else {
     begin = Endpoint;
     end = strrchr(Endpoint, ':');
     if (!end || !*(end + 1)) {
       free(Endpoint);
-      return Napi::String::New(env, "Unable to find port of endpoint");
+      return Napi::Error::New(env, "Unable to find port of endpoint").Value();
     }
     *end++ = '\0';
   }
@@ -62,7 +61,7 @@ Napi::Value addEndpoint(wg_peer *peerStruct, Napi::Env env, Napi::String Endpoin
         (retries >= 0 && !retries--)) {
       free(Endpoint);
       fprintf(stderr, "%s: `%s'\n", ret == EAI_SYSTEM ? strerror(errno) : gai_strerror(ret), EndpointString.Utf8Value().c_str());
-      return Napi::String::New(env, "Unable to resolve endpoint");
+      return Napi::Error::New(env, "Unable to resolve endpoint").Value();
     }
     fprintf(stderr, "%s: `%s'. Trying again in %.2f seconds...\n", ret == EAI_SYSTEM ? strerror(errno) : gai_strerror(ret), EndpointString.Utf8Value().c_str(), timeout / 1000000.0);
     usleep(timeout);
@@ -82,11 +81,11 @@ Napi::Value addEndpoint(wg_peer *peerStruct, Napi::Env env, Napi::String Endpoin
   } else {
     freeaddrinfo(resolved);
     free(Endpoint);
-    return Napi::String::New(env, "Neither IPv4 nor IPv6 address found");
+    return Napi::Error::New(env, "Neither IPv4 nor IPv6 address found").Value();
   }
   freeaddrinfo(resolved);
   free(Endpoint);
-  return Napi::Number::New(env, 0);
+  return env.Undefined();
 }
 
 Napi::Value mountAllowedIps(wg_peer *peerStruct, Napi::Env env, const Napi::Array allowedIPs) {
@@ -113,31 +112,44 @@ Napi::Value mountAllowedIps(wg_peer *peerStruct, Napi::Env env, const Napi::Arra
     if (allowIndex > 0) newAllowedIP->next_allowedip = peerStruct->first_allowedip;
     peerStruct->first_allowedip = newAllowedIP;
   }
-  return Napi::Number::New(env, 0);
+  return env.Undefined();
 }
 
-Napi::Value setupInterface(const CallbackInfo& info) {
+Napi::Value setupInterface(const Napi::CallbackInfo& info) {
+  const Napi::Env env = info.Env();
   const Napi::String interfaceName = info[0].As<Napi::String>();
-  // Check if interface already exists
-  if (interfaceName.IsEmpty()) return Napi::String::New(info.Env(), "Interface name is empty");
-  else if (!interfaceName.IsString()) return Napi::String::New(info.Env(), "Interface name is not a string");
-  // Device config
+  if (!(info[0].IsString())) {
+    Napi::Error::New(env, "Require interface name!").ThrowAsJavaScriptException();
+    return env.Undefined();
+  } else if (interfaceName.Utf8Value().length() > IFNAMSIZ) {
+    Napi::Error::New(env, "Interface name long!").ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
   const Napi::Object deviceConfig = info[1].As<Napi::Object>();
+  if (!(info[1].IsObject())) {
+    Napi::Error::New(env, "Require interface config!").ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
 
   // Peers config
   const Napi::Object Peers = deviceConfig["peers"].As<Napi::Object>();
+  if (!(Peers.IsObject())) {
+    Napi::Error::New(env, "Require peers object!").ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
   const Napi::Array Keys = Peers.GetPropertyNames();
 
   // Set device struct
   wg_device *deviceStruct = new wg_device({});
-  // Set device name
-  if (interfaceName.Utf8Value().length() > sizeof(deviceStruct->name) >= interfaceName.Utf8Value().length()) return Napi::String::New(info.Env(), "Interface name is too long");
   strncpy(deviceStruct->name, interfaceName.Utf8Value().c_str(), interfaceName.Utf8Value().length());
 
   // Set private key if set
   const Napi::String privateKey = deviceConfig["privateKey"].As<Napi::String>();
-  if (privateKey.IsEmpty()) return Napi::String::New(info.Env(), "Private key is empty");
-  wg_key_from_base64(deviceStruct->private_key, privateKey.Utf8Value().c_str());
+  if (!(privateKey.IsString())) {
+    Napi::Error::New(env, "Private key is empty").ThrowAsJavaScriptException();
+    return env.Undefined();
+  } else wg_key_from_base64(deviceStruct->private_key, privateKey.Utf8Value().c_str());
   deviceStruct->flags = (wg_device_flags)WGDEVICE_HAS_PRIVATE_KEY;
 
   // Set public key if set
@@ -149,7 +161,7 @@ Napi::Value setupInterface(const CallbackInfo& info) {
 
   // Port listenings
   const Napi::Number portListen = deviceConfig["portListen"].As<Napi::Number>();
-  if (deviceConfig["portListen"].IsNumber() && portListen.Int32Value() > 0) {
+  if (portListen.IsNumber() && (portListen.Int32Value() > 0 && 25565 < portListen.Int32Value())) {
     deviceStruct->listen_port = (uint16_t)portListen.Int32Value();
     deviceStruct->flags = (wg_device_flags)(deviceStruct->flags|WGDEVICE_HAS_LISTEN_PORT);
   }
@@ -189,7 +201,10 @@ Napi::Value setupInterface(const CallbackInfo& info) {
       const Napi::String EndpointString = peerConfig["endpoint"].As<Napi::String>();
       if (EndpointString.IsString()) {
         const Napi::Value Endpoint = addEndpoint(peerStruct, info.Env(), EndpointString);
-        if (Endpoint.IsString()) return Endpoint;
+        if (!(Endpoint.IsUndefined())) {
+          Endpoint.As<Napi::Error>().ThrowAsJavaScriptException();
+          return env.Undefined();
+        }
       }
 
       // Set allowed IPs
@@ -197,7 +212,10 @@ Napi::Value setupInterface(const CallbackInfo& info) {
       if (allowedIPs.IsArray() && allowedIPs.Length() > 0) {
         peerStruct->flags = (wg_peer_flags)(peerStruct->flags|WGPEER_REPLACE_ALLOWEDIPS);
         const Napi::Value AllowedIPs = mountAllowedIps(peerStruct, info.Env(), allowedIPs);
-        if (AllowedIPs.IsString()) return AllowedIPs;
+        if (!(AllowedIPs.IsUndefined())) {
+          AllowedIPs.As<Napi::Error>().ThrowAsJavaScriptException();
+          return env.Undefined();
+        }
       }
     }
 
@@ -207,14 +225,14 @@ Napi::Value setupInterface(const CallbackInfo& info) {
   }
 
   // Deploy device
-  int setDevice = 0;
+  int setDevice;
   if ((setDevice = wg_set_device(deviceStruct)) < 0) {
-    if (setDevice == -ENODEV) return Napi::String::New(info.Env(), "No such device");
-    else if (setDevice == -EINVAL) return Napi::String::New(info.Env(), "Invalid argument");
-    else if (setDevice == -ENOSPC) return Napi::String::New(info.Env(), "No space left on device");
-    printf("Error code: %d\n", setDevice);
-    return Napi::String::New(info.Env(), "Unknown error");
+    if (setDevice == -ENODEV) Napi::Error::New(env, "No such device").ThrowAsJavaScriptException();
+    else if (setDevice == -EINVAL) Napi::Error::New(env, "Invalid argument").ThrowAsJavaScriptException();
+    else if (setDevice == -ENOSPC) Napi::Error::New(env, "No space left on device").ThrowAsJavaScriptException();
+    else Napi::Error::New(env, "Unknown error").ThrowAsJavaScriptException();
+    return env.Undefined();
   }
 
-  return Napi::Number::New(info.Env(), 0);
+  return env.Null();
 }

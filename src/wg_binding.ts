@@ -14,6 +14,7 @@ export type peerConfig = {
   txBytes?: number,
   lastHandshake?: Date,
 };
+
 export type wireguardInterface = {
   publicKey?: string,
   privateKey?: string,
@@ -27,107 +28,39 @@ export type wireguardInterface = {
 };
 
 /**
- * Get All Wireguard Interfaces with their Peers
- *
- * example:
- * ```json
-  {
-    "wg0": {
-      "publicKey": "...",
-      "privateKey": "...",
-      "portListen": 51820,
-      "peers": {
-        "...": {
-          "presharedKey": "...",
-          "endpoint": "0.0.0.0:8888",
-          "rxBytes": 1,
-          "txBytes": 1,
-          "lastHandshake": "2022-07-29T00:34:30.000Z"
-        },
-        "...2": {
-          "presharedKey": "..."
-        }
-      }
-    }
-  }
-  ```
+ * List all Wireguard interfaces
+ * @returns Interfaces array
  */
-export function showAll(): {[interfaceName: string]: wireguardInterface} {
-  if (!wg_binding.getDevices) throw new Error("No node addon builds");
-  const devices = wg_binding.getDevices() as {[interfaceName: string]: wireguardInterface};
-  return devices;
+export function listDevices(): string[] {
+  if (typeof wg_binding.listDevices !== "function") throw new Error("Cannot list wireguard devices, check if avaible to current system!");
+  return wg_binding.listDevices();
 }
 
 /**
- * Get one Wireguard Interface with its Peers
- *
-*/
-export function show(wgName: string): wireguardInterface {
-  if (!wg_binding.getDevice) throw new Error("No node addon builds");
-  const InterfaceInfo = wg_binding.getDevice(wgName) as wireguardInterface;
-  if (typeof InterfaceInfo === "string") throw new Error(InterfaceInfo);
-  return InterfaceInfo;
+ * Get interface config.
+ * @param deviceName - Wireguard interface name.
+ * @returns
+ */
+export function parseWgDevice(deviceName: string): wireguardInterface {
+  if (typeof wg_binding.parseWgDeviceV2 !== "function") throw new Error("Cannot get device configs, check if wireguard is avaible to the system!");
+  return wg_binding.parseWgDeviceV2(deviceName);
 }
 
 /**
- * Get only interfaces names
+ * Set Wireguard interface config.
+ * @param deviceName - Wireguard interface name.
+ * @param interfaceConfig - Peers and Interface config.
  */
-export function getDeviceName() {return Object.keys(showAll());}
-
-export function removeInterface(interfaceName: string): void {
-  if (!wg_binding.removeInterface) throw new Error("No node addon builds");
-  // Check interface name
-  if (!interfaceName) throw new Error("interface name is required");
-  if (interfaceName.length >= 16) throw new Error("interface name is too long");
-  if (!/^[a-zA-Z0-9_]+$/.test(interfaceName)) throw new Error("interface name is invalid");
-  if (!showAll()[interfaceName]) return;
-  const res = wg_binding.removeInterface(interfaceName);
-  if (res !== 0) throw new Error("Delete interface failed, return code: " + res);
-  return;
+export function addDevice(deviceName: string, interfaceConfig: wireguardInterface): void {
+  if (typeof deviceName !== "string" || deviceName.length > 16 || deviceName.length <= 0) throw new Error("Check interface name!");
+  if (!((listDevices()).includes(deviceName))) {
+    // Create interface
+    wg_binding.addInterface(deviceName);
+  }
+  wg_binding.setupInterface(deviceName, interfaceConfig);
 }
 
-/**
- * Create Wireguard interface and return its name
- */
-export function addDevice(interfaceName: string, interfaceConfig: wireguardInterface): wireguardInterface {
-  if (!wg_binding.addInterface) throw new Error("No node addon builds");
-  // Check interface name
-  if (!interfaceName) throw new Error("interface name is required");
-  if (interfaceName.length >= 16) throw new Error("interface name is too long");
-  if (!/^[a-zA-Z0-9_]+$/.test(interfaceName)) throw new Error("interface name is invalid");
-  const addInterfaceResult = wg_binding.addInterface(interfaceName);
-  if (addInterfaceResult === -17) {
-    if (interfaceConfig.replacePeers === undefined) {
-      console.info("Replacing peers to %s.", interfaceName);
-      interfaceConfig.replacePeers = true;
-    }
-  } else if (addInterfaceResult !== 0) throw new Error("Create interface failed, return code: " + addInterfaceResult);
-
-  // Remove peers with removeMe option
-  if (interfaceConfig.replacePeers === true) {
-    for (const peerPublicKey in interfaceConfig.peers) {
-      if (interfaceConfig.peers[peerPublicKey].removeMe === true) delete interfaceConfig.peers[peerPublicKey];
-    }
-  }
-
-  // Add interface
-  const res = wg_binding.setupInterface(interfaceName, interfaceConfig);
-  if (res === 0) return show(interfaceName);
-  throw new Error("Add device error: "+res);
-}
-
-export function peerOperation(interfaceName: string, operation: "delete"|"add"|"replace", publicKey: string, config: peerConfig) {
-  if (!wg_binding) throw new Error("No node addon builds");
-  const currentConfig = show(interfaceName);
-  if (operation === "delete") {
-    if (!currentConfig.peers[publicKey]) throw new Error("Peer not found");
-    currentConfig.peers[publicKey].removeMe = true;
-  } else if (operation === "add") {
-    if (currentConfig.peers[publicKey]) throw new Error("Peer already exists");
-    currentConfig.peers[publicKey] = config;
-  } else if (operation === "replace") {
-    if (!currentConfig.peers[publicKey]) throw new Error("Peer not found");
-    currentConfig.peers[publicKey] = config;
-  }
-  return addDevice(interfaceName, currentConfig);
+export function removeInterface(deviceName: string) {
+  if (!((listDevices()).includes(deviceName))) throw new Error("Device not exists");
+  wg_binding.removeInterface(deviceName);
 }
