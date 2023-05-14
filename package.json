@@ -30,33 +30,24 @@
     "access": "public"
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=16.0.0"
   },
   "scripts": {
-    "clean": "rm -rf build prebuilds dist",
-    "prebuildify": "prebuildify --napi",
-    "prebuildify:linux": "for Arch in 'arm64' 'x64'; do npm run prebuildify -- --platform=linux --arch=$Arch; done",
-    "nodegyp": "npm run clean && node-gyp rebuild --silent",
-    "build": "npm run nodegyp && tsc",
-    "test": "sudo PATH=\"$PATH\" env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha 'tests/**/*.ts'",
-    "test:win": "mocha 'tests/**/*.ts'",
-    "test:full": "npm run build && npm run test",
-    "install": "node-gyp-build",
-    "prepack": "npm run clean && tsc --build --clean && tsc --build && npm run prebuildify:linux && rm -rf build"
+    "install": "node scripts/build.mjs",
+    "prebuildify": "node scripts/build.mjs build --auto",
+    "prepack": "tsc --build --clean && tsc --build && npm run prebuildify",
+    "postpack": "tsc --build --clean && node-gyp clean"
   },
   "devDependencies": {
     "@types/chai": "^4.3.5",
     "@types/mocha": "^10.0.1",
     "@types/node": "^20.1.3",
-    "chai": "^4.3.7",
     "mocha": "^10.2.0",
     "node-gyp": "^9.3.1",
-    "prebuildify": "^5.0.1",
     "ts-node": "^10.9.1",
     "typescript": "^5.0.4"
   },
   "dependencies": {
-    "node-addon-api": "^6.1.0",
-    "node-gyp-build": "^4.6.0"
+    "node-addon-api": "^6.1.0"
   }
 }

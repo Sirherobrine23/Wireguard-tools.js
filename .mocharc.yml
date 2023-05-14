@@ -2,7 +2,7 @@ exit: true
 colors: true
 full-trace: true
 recursive: true
-parallel: true
+parallel: false
 timeout: 0
 node-option:
   - "loader=ts-node/register"

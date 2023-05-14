@@ -302,8 +302,13 @@ namespace gereneate_Keys {
 
 Napi::Object initKeyGen(Napi::Env env) {
   const Napi::Object keyGen = Napi::Object::New(env);
-    keyGen.Set("presharedKey", Napi::Function::New(env, gereneate_Keys::presharedKey));
-    keyGen.Set("genPrivateKey", Napi::Function::New(env, gereneate_Keys::privateKey));
-    keyGen.Set("getPublicKey", Napi::Function::New(env, gereneate_Keys::publicKey));
   return keyGen;
 }
+
+Napi::Object Init(Napi::Env env, Napi::Object exports) {
+  exports.Set("presharedKey", Napi::Function::New(env, gereneate_Keys::presharedKey));
+  exports.Set("genPrivateKey", Napi::Function::New(env, gereneate_Keys::privateKey));
+  exports.Set("getPublicKey", Napi::Function::New(env, gereneate_Keys::publicKey));
+  return exports;
+}
+NODE_API_MODULE(addon, Init);

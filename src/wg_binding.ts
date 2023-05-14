@@ -1,5 +1,4 @@
-let wg_binding: {[key: string]: any} = {};
-try {wg_binding = require("node-gyp-build")(__dirname+"/..");} catch {}
+const wg_binding = require("../libs/prebuildifyLoad.cjs")(__dirname+"/..", "wireguard_bridge");
 
 export type peerConfig = {
   /** Mark this peer to be removed, any changes remove this option */
@@ -55,12 +54,12 @@ export function addDevice(deviceName: string, interfaceConfig: wireguardInterfac
   if (typeof deviceName !== "string" || deviceName.length > 16 || deviceName.length <= 0) throw new Error("Check interface name!");
   if (!((listDevices()).includes(deviceName))) {
     // Create interface
-    wg_binding.addInterface(deviceName);
+    wg_binding.registerInterface(deviceName, true);
   }
   wg_binding.setupInterface(deviceName, interfaceConfig);
 }
 
-export function removeInterface(deviceName: string) {
+export function removeInterface(deviceName: string): void {
   if (!((listDevices()).includes(deviceName))) throw new Error("Device not exists");
-  wg_binding.removeInterface(deviceName);
+  wg_binding.registerInterface(deviceName, false);
 }

@@ -1,4 +1,4 @@
-const addonKeyGen = ((require("node-gyp-build"))(__dirname+"/../../")).keyGen;
+const addonKeyGen = (require("../../libs/prebuildifyLoad.cjs"))(__dirname+"/../../", "keygen");
 export type keyObject = {private: string, public: string};
 export type keyObjectPreshered = keyObject & {preshared: string};
 

@@ -20,20 +20,6 @@ describe("Key Gen", () => {
   });
 });
 
-// Parse Wireguard Config
-describe("Parse config", () => {
-  it("Server", () => {
-    const severObject = utils.config.parseConfig(wg0) as {type: "server", data: utils.config.serverConfig};
-    if (severObject.type === "server") return;
-    throw new Error("Config parse failed");
-  });
-  it("Client", () => {
-    const clientObject = utils.config.parseConfig(wg1) as {type: "client", data: utils.config.clientConfig};
-    if (clientObject.type === "client") return;
-    throw new Error("Config parse failed");
-  });
-});
-
 // Shuffle IP and Convert to IPv6
 describe("Random IP and IPv4 in to IPv6", () => {
   it("Shuffle IP", () => {

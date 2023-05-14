@@ -12,10 +12,9 @@ jobs:
     strategy:
       matrix:
         node_version:
-          - 14.x
           - 16.x
           - 18.x
-          - latest
+          # - latest
         os:
           - ubuntu
           - windows
@@ -30,14 +29,24 @@ jobs:
           node-version: ${{ matrix.node_version }}
 
       - name: Install dependencies
-        run: npm install --no-save && ${{ matrix.os == 'ubuntu' && 'sudo ' || '' }}npm install -g ts-node typescript mocha && npm run build
+        run: |
+          npm install --no-save
+          ${{ matrix.os == 'ubuntu' && 'sudo' || '' }} npm install -g ts-node typescript mocha
+
+      - name: Ubuntu dependecies
+        if: matrix.os == 'ubuntu'
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          sudo apt install -y binutils-multiarch gcc-*aarch64-linux-gnu gcc-*aarch64-linux-gnu-base g++-*aarch64-linux-gnu libc6-arm64-cross
 
       - name: Test
-        run: npm run test${{ matrix.os == 'windows' && ':win' || '' }}
+        run: |
+          npm run prepack
+          ${{ matrix.os == 'ubuntu' && 'sudo' || '' }} mocha 'tests/**'
 
       - name: Print route and address
-        if: matrix.os == 'ubuntu'
         continue-on-error: true
+        if: matrix.os == 'ubuntu'
         run: |
-          sudo ip route show all | grep sh23Test1235555
-          sudo ip addr show sh23Test1235555
+          sudo ip route show all
+          sudo ip addr show

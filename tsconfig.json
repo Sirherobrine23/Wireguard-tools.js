@@ -16,8 +16,14 @@
     ]
   },
   "exclude": [
+    "**/test*/",
     "src/addon/tools/contrib/**",
     "node_modules/",
-    "**/test*/"
-  ]
+    "scripts/**",
+    "libs/**"
+  ],
+  "ts-node": {
+    "files": true,
+    "transpileOnly": true
+  }
 }
