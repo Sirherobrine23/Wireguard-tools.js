@@ -3,24 +3,10 @@
 #include <errno.h>
 #include <assert.h>
 #include <fcntl.h>
+#include <iostream>
 #ifdef __linux__
 #include <sys/socket.h>
 #include <unistd.h>
-#elif _WIN32
-// Sets getentropy in windows
-#include <windows.h>
-#include <wincrypt.h>
-int getentropy(void *buf, size_t len) {
-  HCRYPTPROV prov;
-  if (CryptAcquireContext(&prov, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT)) {
-    CryptGenRandom(prov, len, (BYTE*)&buf);
-    CryptReleaseContext(prov, 0);
-    return true;
-  }
-  errno = EIO;
-  return errno;
-  //throw std::runtime_error("getentropy failed");
-}
 #endif
 
 typedef uint8_t wg_key[32];
@@ -181,18 +167,17 @@ static void invert(fe o, const fe i) {
   memzero_explicit(c, sizeof(c));
 }
 
-
 void generatePreshared(wg_key preshared_key) {
-  size_t ret;
-  size_t i;
-  int fd;
   #if defined(__OpenBSD__) || (defined(__APPLE__) && MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_12) || (defined(__GLIBC__) && (__GLIBC__ > 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 25)))
   if (!getentropy(preshared_key, sizeof(wg_key))) return;
   #elif defined(__NR_getrandom) && defined(__linux__)
   if (syscall(__NR_getrandom, preshared_key, sizeof(wg_key), 0) == sizeof(wg_key)) return;
   #elif _WIN32
-  if (!getentropy(preshared_key, sizeof(wg_key))) return;
+  for(size_t i = 0; i < sizeof(wg_key); i++) preshared_key[i] = rand();
+  return;
   #elif defined(open)
+  size_t ret, i;
+  int fd;
   fd = open("/dev/urandom", O_RDONLY);
   assert(fd >= 0);
   for (i = 0; i < sizeof(wg_key); i += ret) {
