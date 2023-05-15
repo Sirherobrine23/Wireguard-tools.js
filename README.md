@@ -4,7 +4,7 @@ A quick way to use Wireguard with Node.js without having to run the Wireguard to
 
 > **Note**
 >
-> we have pre-copied files for linux arm64(aarch64) and linux x86_64, any other architecture will be copied the addons for the same one, in which case you will have to have `gcc` or `clang` installed to compile.
+> we have pre-copied files for Windows, MacOS (x64/intel) and Linux (arm64, x86_64), else require `gcc` or `clang` installed to compile Node addon.
 
 With this module it is possible to:
 
@@ -27,8 +27,39 @@ This project works because with of [Wireguard embeddable library](https://github
 ### Get Current peers and Statistics
 
 ```ts
-import { show } from "wireguard-tools.js";
-const wireguardInterfaces = show("wg0");
+import { parseWgDevice } from "wireguard-tools.js";
+const wireguardInterfaces = parseWgDevice("wg0");
+// Wg0 is the interface name.
+console.log("Wg0:\n%o", wireguardInterfaces);
+```
+
+# Add/Update Wireguard interface
+
+```ts
+import { addDevice, parseWgDevice } from "wireguard-tools.js";
+addDevice("wg0", {
+  publicKey: "string",
+  privateKey: "string",
+  portListen: 27301,
+  Address: [
+    "1.1.1.1/32",
+    "8.8.8.8/32"/** Mark this peer to be removed, any changes remove this option */
+  ],
+  replacePeers: true,
+  peers: {
+    "publicKeyPeer": {
+      removeMe: false,
+      presharedKey: "string",
+      keepInterval: 5,
+      endpoint: "google.com:27301",
+      allowedIPs: [
+        "8.8.8.8",
+        "8.8.4.4."
+      ]
+    }
+  }
+});
+const wireguardInterfaces = parseWgDevice("wg0");
 // Wg0 is the interface name.
 console.log("Wg0:\n%o", wireguardInterfaces);
 ```
