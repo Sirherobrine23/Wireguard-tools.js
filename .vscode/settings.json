@@ -1,0 +1,6 @@
+{
+  "files.associations": {
+    "*.dsc": "ini",
+    "random": "cpp"
+  }
+}

@@ -11,13 +11,13 @@ jobs:
   build:
     strategy:
       matrix:
-        node_version:
-          - 16.x
-          - 18.x
-          # - latest
         os:
           - ubuntu
           - windows
+          - macos
+        node_version:
+          - 16.x
+          - 18.x
     runs-on: ${{ matrix.os }}-latest
     steps:
       - uses: actions/checkout@v3
@@ -33,20 +33,12 @@ jobs:
           npm install --no-save
           ${{ matrix.os == 'ubuntu' && 'sudo' || '' }} npm install -g ts-node typescript mocha
 
-      - name: Ubuntu dependecies
-        if: matrix.os == 'ubuntu'
-        run: |
-          export DEBIAN_FRONTEND=noninteractive
-          sudo apt install -y binutils-multiarch gcc-*aarch64-linux-gnu gcc-*aarch64-linux-gnu-base g++-*aarch64-linux-gnu libc6-arm64-cross
-
       - name: Test
-        run: |
-          npm run prepack
-          ${{ matrix.os == 'ubuntu' && 'sudo' || '' }} mocha 'tests/**'
+        run: ${{ matrix.os == 'ubuntu' && 'sudo' || '' }} mocha 'tests/**'
 
-      - name: Print route and address
-        continue-on-error: true
+      - name: Upload generate interface
         if: matrix.os == 'ubuntu'
-        run: |
-          sudo ip route show all
-          sudo ip addr show
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.os }}_${{ matrix.node_version }}
+          path: "*.addrs.json"

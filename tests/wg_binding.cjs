@@ -1,6 +1,6 @@
-import { writeFileSync } from "fs";
-import * as Bridge from "../src/wg_binding";
-import * as utils from "../src/utils/index";
+const { writeFileSync } = require("fs");
+const Bridge = require("../src/wg_binding");
+const utils = require("../src/utils/index");
 const interfaceName = "sh23Test1235555";
 
 // Make base config

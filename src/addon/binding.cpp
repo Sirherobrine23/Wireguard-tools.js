@@ -2,12 +2,6 @@
 #include <string>
 #if __linux__
 #include "wginterface.cpp"
-Napi::Value delDevice(const Napi::CallbackInfo& info) {
-  return Napi::Number::New(info.Env(), wg_del_device(info[0].As<Napi::String>().Utf8Value().c_str()));
-};
-Napi::Value addDevice(const Napi::CallbackInfo& info) {
-  return Napi::Number::New(info.Env(), wg_add_device(info[0].As<Napi::String>().Utf8Value().c_str()));
-};
 #else
 Napi::Value registerInterface(const Napi::CallbackInfo& info) {
   const Napi::Env env = info.Env();

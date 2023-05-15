@@ -7,6 +7,10 @@
 #ifdef __linux__
 #include <sys/socket.h>
 #include <unistd.h>
+#elif _WIN32 || defined(__CYGWIN__)
+#include <windows.h>
+#else
+#include <random>
 #endif
 
 typedef uint8_t wg_key[32];
@@ -168,14 +172,27 @@ static void invert(fe o, const fe i) {
 }
 
 void generatePreshared(wg_key preshared_key) {
-  #if defined(__OpenBSD__) || (defined(__APPLE__) && MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_12) || (defined(__GLIBC__) && (__GLIBC__ > 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 25)))
+  #if _WIN32 || defined(__CYGWIN__)
+  HCRYPTPROV hCryptProv;
+  if (!CryptAcquireContext(&hCryptProv, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT)) {
+    std::cerr << "CryptAcquireContext failed: " << GetLastError() << "\n";
+    return;
+  }
+  if (!CryptGenRandom(hCryptProv, sizeof(wg_key), (BYTE*)preshared_key)) {
+    std::cerr << "CryptGenRandom failed: " << GetLastError() << "\n";
+    CryptReleaseContext(hCryptProv, 0);
+    return;
+  }
+  CryptReleaseContext(hCryptProv, 0);
+  return;
+
+  #elif defined(__OpenBSD__) || (defined(__APPLE__) && MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_12) || (defined(__GLIBC__) && (__GLIBC__ > 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 25)))
   if (!getentropy(preshared_key, sizeof(wg_key))) return;
+
   #elif defined(__NR_getrandom) && defined(__linux__)
   if (syscall(__NR_getrandom, preshared_key, sizeof(wg_key), 0) == sizeof(wg_key)) return;
-  #elif _WIN32
-  for(size_t i = 0; i < sizeof(wg_key); i++) preshared_key[i] = rand();
-  return;
-  #elif defined(open)
+
+  #elif __linux__
   size_t ret, i;
   int fd;
   fd = open("/dev/urandom", O_RDONLY);
@@ -185,6 +202,14 @@ void generatePreshared(wg_key preshared_key) {
     assert(ret > 0);
   }
   close(fd);
+  #else
+  for (uint8_t i = 0; i < sizeof(wg_key); ++i) {
+    std::random_device rd;
+    std::mt19937 mt(rd());
+    std::uniform_int_distribution<int> dist(1, 10L);
+    preshared_key[i] = dist(mt);
+  }
+  return;
   #endif
 }
 

@@ -6,7 +6,48 @@ on:
       - released
 
 jobs:
+  build:
+    strategy:
+      matrix:
+        os:
+          - ubuntu
+          - windows
+          - macos
+    runs-on: ${{ matrix.os }}-latest
+    steps:
+    - uses: actions/checkout@v3
+      name: Code checkout
+      with:
+        persist-credentials: true
+        ref: main
+        fetch-depth: 2
+        submodules: true
+
+    # Install basic tools
+    - uses: actions/setup-node@v3
+      name: Setup node.js
+      with:
+        node-version: 18.x
+        registry-url: https://registry.npmjs.org/
+
+    - name: Ubuntu dependecies
+      if: matrix.os == 'ubuntu'
+      run: |
+        export DEBIAN_FRONTEND=noninteractive
+        sudo apt install -y binutils-multiarch gcc-*aarch64-linux-gnu gcc-*aarch64-linux-gnu-base g++-*aarch64-linux-gnu libc6-arm64-cross
+
+    - run: npm install --no-save --ignore-scripts
+    - run: node scripts/build.mjs build --auto -v
+
+    - name: Upload generate interface
+      uses: actions/upload-artifact@v3
+      continue-on-error: true
+      with:
+        name: ${{ matrix.os }}
+        path: "prebuilds"
+
   publishpackage:
+    needs: build
     runs-on: ubuntu-latest
     name: Publish
     permissions:
@@ -30,6 +71,11 @@ jobs:
       with:
         node-version: 18.x
         registry-url: https://registry.npmjs.org/
+
+    - name: Download all artefacts
+      uses: actions/download-artifact@v3
+      with:
+        path: ./
 
     - name: Edit version and install depencies
       run: |
