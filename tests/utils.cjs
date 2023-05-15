@@ -26,6 +26,14 @@ describe("Key Gen", () => {
       keyMap.add(key);
     }
   });
+  it(format("Generate %f private keys", randomGen), () => {
+    const keyMap = new Set();
+    for (let i = 0; i < randomGen; i++) {
+      const key = utils.genPrivateKey();
+      if (keyMap.has(key)) throw new Error(format("Keygen failed, generate %f at time", keyMap.size));
+      keyMap.add(key);
+    }
+  });
 });
 
 // Shuffle IP and Convert to IPv6

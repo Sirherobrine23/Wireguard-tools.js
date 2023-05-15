@@ -8,7 +8,7 @@ on:
     - main
 
 jobs:
-  build:
+  test:
     strategy:
       matrix:
         os:
@@ -20,25 +20,98 @@ jobs:
           - 18.x
     runs-on: ${{ matrix.os }}-latest
     steps:
-      - uses: actions/checkout@v3
-        name: Checkout
+    - uses: actions/checkout@v3
+      name: Checkout
+      with:
+        submodules: true
 
-      - uses: actions/setup-node@v3
-        name: Setup Node.js
-        with:
-          node-version: ${{ matrix.node_version }}
+    - uses: actions/setup-node@v3
+      name: Setup Node.js
+      with:
+        node-version: ${{ matrix.node_version }}
 
-      - name: Install dependencies
-        run: |
-          npm install --no-save
-          ${{ matrix.os == 'ubuntu' && 'sudo' || '' }} npm install -g ts-node typescript mocha
+    - name: Install dependencies
+      run: |
+        npm install --no-save
+        ${{ matrix.os == 'ubuntu' && 'sudo' || '' }} npm install -g ts-node typescript mocha
 
-      - name: Test
-        run: ${{ matrix.os == 'ubuntu' && 'sudo' || '' }} mocha 'tests/**'
+    - name: Test
+      run: |
+        tsc --build --clean
+        tsc --build
+        ${{ matrix.os == 'ubuntu' && 'sudo' || '' }} mocha 'tests/**'
 
-      - name: Upload generate interface
-        if: matrix.os == 'ubuntu'
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ matrix.os }}_${{ matrix.node_version }}
-          path: "*.addrs.json"
+    - name: Upload generate interface
+      if: matrix.os == 'ubuntu'
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ matrix.os }}_${{ matrix.node_version }}
+        path: "*.addrs.json"
+
+  build:
+    needs: test
+    strategy:
+      matrix:
+        os:
+          - windows
+          - macos
+    runs-on: ${{ matrix.os }}-latest
+    steps:
+    - uses: actions/checkout@v3
+      name: Code checkout
+      with:
+        submodules: true
+
+    # Install basic tools
+    - uses: actions/setup-node@v3
+      name: Setup node.js
+      with:
+        node-version: 18.x
+        registry-url: https://registry.npmjs.org/
+
+    - run: npm install --no-save --ignore-scripts
+    - run: node scripts/build.mjs build --auto -v
+
+    - name: Upload generate interface
+      uses: actions/upload-artifact@v3
+      with:
+        name: prebuilds_${{ matrix.os }}
+        path: "prebuilds/**"
+
+  pack_package:
+    needs: build
+    runs-on: ubuntu-latest
+    name: Pack npm package
+    env:
+      PACKAGE_VERSION: ${{ github.ref }}
+    steps:
+    - uses: actions/checkout@v3
+      name: Code checkout
+      with:
+        submodules: true
+
+    - name: Ubuntu dependecies
+      run: |
+        export DEBIAN_FRONTEND=noninteractive
+        sudo apt install -y binutils-multiarch gcc-*aarch64-linux-gnu gcc-*aarch64-linux-gnu-base g++-*aarch64-linux-gnu libc6-arm64-cross
+
+    # Install basic tools
+    - uses: actions/setup-node@v3
+      name: Setup node.js
+      with:
+        node-version: 18.x
+        registry-url: https://registry.npmjs.org/
+
+    - name: Download all artefacts
+      uses: actions/download-artifact@v3
+      with:
+        path: ./prebuilds
+
+    - run: npm install --no-save
+    - run: npm pack
+
+    - name: Upload npm package
+      uses: actions/upload-artifact@v3
+      with:
+        name: Package_Pack
+        path: "*.tgz"

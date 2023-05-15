@@ -4,13 +4,12 @@
 #include <assert.h>
 #include <fcntl.h>
 #include <iostream>
+#include <random>
 #ifdef __linux__
 #include <sys/socket.h>
 #include <unistd.h>
 #elif _WIN32 || defined(__CYGWIN__)
 #include <windows.h>
-#else
-#include <random>
 #endif
 
 typedef uint8_t wg_key[32];
@@ -174,17 +173,12 @@ static void invert(fe o, const fe i) {
 void generatePreshared(wg_key preshared_key) {
   #if _WIN32 || defined(__CYGWIN__)
   HCRYPTPROV hCryptProv;
-  if (!CryptAcquireContext(&hCryptProv, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT)) {
-    std::cerr << "CryptAcquireContext failed: " << GetLastError() << "\n";
-    return;
-  }
-  if (!CryptGenRandom(hCryptProv, sizeof(wg_key), (BYTE*)preshared_key)) {
-    std::cerr << "CryptGenRandom failed: " << GetLastError() << "\n";
-    CryptReleaseContext(hCryptProv, 0);
-    return;
+  BOOL winStatus;
+  if ((winStatus = CryptAcquireContext(&hCryptProv, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT))) {
+    winStatus = CryptGenRandom(hCryptProv, sizeof(wg_key), (BYTE*)preshared_key);
   }
   CryptReleaseContext(hCryptProv, 0);
-  return;
+  if (winStatus) return;
 
   #elif defined(__OpenBSD__) || (defined(__APPLE__) && MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_12) || (defined(__GLIBC__) && (__GLIBC__ > 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 25)))
   if (!getentropy(preshared_key, sizeof(wg_key))) return;
@@ -192,7 +186,7 @@ void generatePreshared(wg_key preshared_key) {
   #elif defined(__NR_getrandom) && defined(__linux__)
   if (syscall(__NR_getrandom, preshared_key, sizeof(wg_key), 0) == sizeof(wg_key)) return;
 
-  #elif __linux__
+  #elif __linux__ || _ANDROID__ || __termux__
   size_t ret, i;
   int fd;
   fd = open("/dev/urandom", O_RDONLY);
@@ -202,15 +196,16 @@ void generatePreshared(wg_key preshared_key) {
     assert(ret > 0);
   }
   close(fd);
-  #else
-  for (uint8_t i = 0; i < sizeof(wg_key); ++i) {
-    std::random_device rd;
-    std::mt19937 mt(rd());
-    std::uniform_int_distribution<int> dist(1, 10L);
-    preshared_key[i] = dist(mt);
-  }
   return;
   #endif
+
+  std::random_device rd;
+  for (uint8_t i = 0; i < sizeof(wg_key); ++i) {
+    std::mt19937 mt(rd());
+    std::uniform_int_distribution<int> dist(1, 429496729);
+    preshared_key[i] = dist(mt) * rand();
+  }
+  return;
 }
 
 static void clamp_key(uint8_t *z) {
