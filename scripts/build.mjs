@@ -25,6 +25,21 @@ async function exist(path) {
   return fs.open(path).then(() => true).catch(() => false);
 }
 
+if (await exist(prebuilds)) {
+  const prebuildsFolder = (await fs.readdir(prebuilds)).filter(file => file.startsWith("prebuilds_"));
+  for (const folder of prebuildsFolder) {
+    for (const ff of await fs.readdir(path.join(prebuilds, folder))) {
+      const folderNewPath = path.resolve(prebuilds, folder, "..", ff);
+      if (await exist(folderNewPath)) await fs.rm(folderNewPath, {recursive: true, force: true});
+      await fs.mkdir(folderNewPath);
+      for (const file of await fs.readdir(path.join(prebuilds, folder, ff))) {
+        await fs.rename(path.join(prebuilds, folder, ff, file), path.join(folderNewPath, file));
+      }
+    }
+    await fs.rm(path.join(prebuilds, folder), {recursive: true, force: true});
+  }
+}
+
 if (process.argv.slice(2).at(0) === "build") {
   let archs = [];
   if (process.argv.includes("--auto")) {
