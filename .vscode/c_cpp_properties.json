@@ -45,7 +45,8 @@
         "-fpermissive"
       ],
       "defines": [
-        "NAPI_DISABLE_CPP_EXCEPTIONS"
+        "NAPI_DISABLE_CPP_EXCEPTIONS",
+        "RUNSTATEDIR=\"/var/run\""
       ],
       "includePath": [
         "/usr/local/include/node",

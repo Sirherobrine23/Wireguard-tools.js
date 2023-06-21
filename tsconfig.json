@@ -20,7 +20,8 @@
     "src/addon/tools/contrib/**",
     "node_modules/",
     "scripts/**",
-    "libs/**"
+    "libs/**",
+    "src/addon/wg/**"
   ],
   "ts-node": {
     "files": true,

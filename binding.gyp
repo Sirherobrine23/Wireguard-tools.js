@@ -33,17 +33,10 @@
     {
       "target_name": "wireguard_bridge",
       "sources": [
-        "src/addon/wg/src/config.c",
         "src/addon/wg/src/curve25519.c",
-        "src/addon/wg/src/encoding.c",
-        "src/addon/wg/src/genkey.c",
+        "src/addon/wg/src/config.c",
         "src/addon/wg/src/ipc.c",
-        "src/addon/wg/src/pubkey.c",
-        "src/addon/wg/src/set.c",
-        "src/addon/wg/src/setconf.c",
-        "src/addon/wg/src/show.c",
-        "src/addon/wg/src/showconf.c",
-        "src/addon/wg/src/terminal.c",
+        "src/addon/wg/src/encoding.c",
         "src/addon/wg_interface.cpp"
       ],
       "conditions": [
@@ -61,6 +54,11 @@
             ],
             "include_dirs": [
               "src/addon/wg/src/wincompat/include"
+            ],
+            "sources": [
+                "src/addon/wg/src/wincompat/loader.c",
+                "src/addon/wg/src/wincompat/init.c",
+                "src/addon/wg/src/wincompat/libc.c"
             ]
           }
         ],
@@ -80,6 +78,7 @@
               "RUNSTATEDIR=\"/var/run\""
             ],
             "cflags": [
+              "-O3",
               "-Wall",
               "-Wextra",
               "-MMD",

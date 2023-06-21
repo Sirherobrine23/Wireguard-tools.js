@@ -1,9 +1,6 @@
 # System
 .DS_Store
 
-# Module
-src/addon/wg
-
 # Ignore node
 /*.tgz
 node_modules/

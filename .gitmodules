@@ -1,3 +1,0 @@
-[submodule "src/addon/wg"]
-	path = src/addon/wg
-	url = https://github.com/WireGuard/wireguard-tools

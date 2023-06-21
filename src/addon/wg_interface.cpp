@@ -1,8 +1,10 @@
 #include <napi.h>
 #include "wg/src/ipc.h"
-#include "wg/src/config.c"
+#include "wg/src/config.h"
 #include "wg/src/encoding.h"
 #include "wg/src/containers.h"
+
+const char *PROG_NAME;
 
 Napi::Value listDevices(const Napi::CallbackInfo& info) {
   return Napi::String::New(info.Env(), ipc_list_devices());
@@ -154,9 +156,14 @@ Napi::Value setupInterface(const Napi::CallbackInfo& info) {
   return env.Undefined();
 }
 
-Napi::Value parseWgDevice(const Napi::CallbackInfo& info) {}
+Napi::Value parseWgDevice(const Napi::CallbackInfo& info) {
+  const Napi::Env env = info.Env();
+
+  return env.Undefined();
+}
 
 Napi::Object Init(Napi::Env env, Napi::Object exports) {
+  PROG_NAME = "nodeaddon";
   exports.Set("setupInterface", Napi::Function::New(env, setupInterface));
   exports.Set("listDevices", Napi::Function::New(env, listDevices));
   exports.Set("parseWgDevice", Napi::Function::New(env, parseWgDevice));
