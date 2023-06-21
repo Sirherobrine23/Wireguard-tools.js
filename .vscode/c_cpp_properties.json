@@ -28,10 +28,30 @@
         "NAPI_DISABLE_CPP_EXCEPTIONS"
       ],
       "includePath": [
+        "/usr/include/node",
         "${workspaceFolder}/node_modules/node-addon-api/**",
         "${workspaceFolder}/node_modules/**",
         "${workspaceFolder}/**",
-        "/usr/include/node",
+        "${workspaceFolder}/src/addon"
+      ]
+    },
+    {
+      "name": "Mac",
+      "compilerPath": "/usr/bin/clang",
+      "cStandard": "c17",
+      "cppStandard": "c++17",
+      "intelliSenseMode": "macos-clang-x64",
+      "compilerArgs": [
+        "-fpermissive"
+      ],
+      "defines": [
+        "NAPI_DISABLE_CPP_EXCEPTIONS"
+      ],
+      "includePath": [
+        "/usr/local/include/node",
+        "${workspaceFolder}/node_modules/node-addon-api/**",
+        "${workspaceFolder}/node_modules/**",
+        "${workspaceFolder}/**",
         "${workspaceFolder}/src/addon"
       ]
     }

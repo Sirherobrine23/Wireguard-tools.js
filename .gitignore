@@ -1,3 +1,9 @@
+# System
+.DS_Store
+
+# Module
+src/addon/wg
+
 # Ignore node
 /*.tgz
 node_modules/
@@ -5,7 +11,7 @@ node_modules/
 
 # Typescript
 src/**/*.js
-src/**/*.d.js
+src/**/*.d.ts
 
 # Anothers
 /build/
