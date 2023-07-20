@@ -1,6 +1,27 @@
 {
-  "files.associations": {
-    "*.dsc": "ini",
-    "random": "cpp"
+  "files.eol": "\n",
+  "editor.tabSize": 2,
+  "files.encoding": "utf8",
+  "files.defaultLanguage": "typescript",
+  "editor.minimap.enabled": false,
+  "files.trimFinalNewlines": true,
+  "files.trimTrailingWhitespace": true,
+  "editor.insertSpaces": true,
+  "editor.detectIndentation": false,
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": true
+  },
+  "files.exclude": {
+    "**/node_modules/": true,
+    "packages/web/src/next/.next": true,
+  },
+  "terminal.integrated.env.windows": {
+    "PATH": "${workspaceFolder}/node_modules/.bin;${env:PATH}"
+  },
+  "terminal.integrated.env.linux": {
+    "PATH": "${workspaceFolder}/node_modules/.bin:${env:PATH}"
+  },
+  "terminal.integrated.env.osx": {
+    "PATH": "${workspaceFolder}/node_modules/.bin:${env:PATH}"
   }
 }

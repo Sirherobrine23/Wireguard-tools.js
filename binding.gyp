@@ -34,7 +34,7 @@
     {
       "target_name": "wireguard_bridge",
       "sources": [
-        "src/addon/binding.cpp"
+        "src/addon/wginterface.cpp"
       ],
       "conditions": [
         ["OS=='linux'", {
