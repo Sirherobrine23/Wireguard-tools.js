@@ -5,7 +5,7 @@ node_modules/
 
 # Typescript
 src/**/*.js
-src/**/*.d.js
+src/**/*.d.ts
 
 # Anothers
 /build/

@@ -267,6 +267,7 @@ void generatePublic(wg_key public_key, const wg_key private_key) {
   memzero_explicit(f, sizeof(f));
 }
 
+
 namespace gereneate_Keys {
   Napi::Value presharedKey(const Napi::CallbackInfo& info) {
     wg_key interfacePresharedKey;
@@ -310,6 +311,7 @@ Napi::Object initKeyGen(Napi::Env env) {
   return keyGen;
 }
 
+#ifdef EXPORT_GEN
 Napi::Object Init(Napi::Env env, Napi::Object exports) {
   exports.Set("presharedKey", Napi::Function::New(env, gereneate_Keys::presharedKey));
   exports.Set("genPrivateKey", Napi::Function::New(env, gereneate_Keys::privateKey));
@@ -317,3 +319,4 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
   return exports;
 }
 NODE_API_MODULE(addon, Init);
+#endif

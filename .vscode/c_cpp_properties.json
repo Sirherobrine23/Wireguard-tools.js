@@ -1,58 +1,59 @@
 {
-    "configurations": [
-        {
-            "name": "Win32",
-            "cStandard": "c17",
-            "cppStandard": "c++17",
-            "intelliSenseMode": "windows-msvc-x64",
-            "defines": [
-                "NAPI_DISABLE_CPP_EXCEPTIONS"
-            ],
-            "includePath": [
-                "C:/Users/${env:username}/AppData/Local/node-gyp/Cache/18.16.0/include/node",
-                "${workspaceFolder}/node_modules/node-addon-api",
-                "${workspaceFolder}/src/addon",
-                "${workspaceFolder}/src/addon/tools/src/wincompat"
-            ]
-        },
-        {
-            "name": "Linux",
-            "compilerPath": "/usr/bin/clang",
-            "cStandard": "c17",
-            "cppStandard": "c++17",
-            "intelliSenseMode": "linux-clang-x64",
-            "compilerArgs": [
-                "-fpermissive"
-            ],
-            "defines": [
-                "NAPI_DISABLE_CPP_EXCEPTIONS"
-            ],
-            "includePath": [
-                "${workspaceFolder}/node_modules/node-addon-api/**",
-                "${workspaceFolder}/node_modules/**",
-                "${workspaceFolder}/**",
-                "/usr/include/node",
-                "${workspaceFolder}/src/addon"
-              ]
-            },
-            {
-              "name": "Mac",
-              "includePath": [
-                "/usr/local/include/node",
-                "${workspaceFolder}/node_modules/node-addon-api",
-                "${workspaceFolder}/src/addon/**"
-              ],
-            "defines": [
-                "NAPI_DISABLE_CPP_EXCEPTIONS"
-            ],
-            "macFrameworkPath": [
-                "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks"
-            ],
-            "compilerPath": "/usr/bin/clang",
-            "cStandard": "c17",
-            "cppStandard": "c++17",
-            "intelliSenseMode": "macos-clang-x64"
-        }
-    ],
-    "version": 4
+  "version": 4,
+  "configurations": [
+    {
+      "name": "Win32",
+      "cStandard": "c17",
+      "cppStandard": "c++17",
+      "intelliSenseMode": "windows-msvc-x64",
+      "defines": [
+        "NAPI_DISABLE_CPP_EXCEPTIONS",
+        "CallSetupWireguard"
+      ],
+      "includePath": [
+        "${env:appdata}/../Local/node-gyp/Cache/18.17.0/include/node",
+        "${workspaceFolder}/node_modules/node-addon-api",
+        "${workspaceFolder}/src/addon/win32/include",
+        "${workspaceFolder}/"
+      ]
+    },
+    {
+      "name": "Linux",
+      "compilerPath": "/usr/bin/clang",
+      "cStandard": "c17",
+      "cppStandard": "c++17",
+      "intelliSenseMode": "linux-clang-x64",
+      "compilerArgs": [
+        "-fpermissive"
+      ],
+      "defines": [
+        "NAPI_DISABLE_CPP_EXCEPTIONS"
+      ],
+      "includePath": [
+        "${workspaceFolder}/node_modules/node-addon-api/**",
+        "${workspaceFolder}/node_modules/**",
+        "${workspaceFolder}/**",
+        "/usr/include/node",
+        "${workspaceFolder}/src/addon"
+      ]
+    },
+    {
+      "name": "Mac",
+      "includePath": [
+        "/usr/local/include/node",
+        "${workspaceFolder}/node_modules/node-addon-api",
+        "${workspaceFolder}/src/addon/**"
+      ],
+      "defines": [
+        "NAPI_DISABLE_CPP_EXCEPTIONS"
+      ],
+      "macFrameworkPath": [
+        "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks"
+      ],
+      "compilerPath": "/usr/bin/clang",
+      "cStandard": "c17",
+      "cppStandard": "c++17",
+      "intelliSenseMode": "macos-clang-x64"
+    }
+  ]
 }

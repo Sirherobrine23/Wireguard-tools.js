@@ -2,9 +2,16 @@
 #include <napi.h>
 #include <map>
 #include <vector>
+#if _WIN32 || defined(__CYGWIN__)
+#include <winsock.h>
+#include <in6addr.h>
+#else
 #include <net/if.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#endif
+
+#pragma once
 
 #ifndef IFNAMSIZ
 #define IFNAMSIZ 16
@@ -22,15 +29,16 @@ enum wgPeerFlags {
 
 union wg_endpoint {
 	struct sockaddr addr;
-	struct sockaddr_in addr4;
-	struct sockaddr_in6 addr6;
 };
 
 class wgAllowedIP {
   public:
   uint8_t cidr;
-  in6_addr ip6;
-  in_addr ip4;
+  uint16_t family;
+  union {
+    struct in_addr ip4;
+    struct in6_addr ip6;
+  };
 };
 
 class wgPeer {
@@ -53,36 +61,19 @@ class wgDevice {
     char name[IFNAMSIZ];
 };
 
+void setupWireguard(const Napi::Env& env);
+
 /*
 Esta função consegela o loop event
 
 Pegar todas as interfaces do Wireguard e retorna em forma de String sendo tratado pelo Node.js quando retornado.
 */
-Napi::Value listDevicesSync(const Napi::CallbackInfo& command);
-
-/*
-Esta função não congela o loop event criando um Napi::AsyncWorker
-
-Pegar todas as interfaces do Wireguard e retorna em forma de String sendo tratado pelo Node.js quando retornado.
-*/
-Napi::Value listDevicesAsync(const Napi::CallbackInfo& command);
-
-/*
-Esta função consegela o loop event
-
-Configure a interface do Wireguard
-*/
-Napi::Value setupInterfaceSync(const Napi::CallbackInfo& info);
-
-/*
-Esta função não congela o loop event criando um Napi::AsyncWorker
-
-Configure a interface do Wireguard
-*/
-Napi::Value setupInterfaceAsync(const Napi::CallbackInfo& info);
+Napi::Value listDevicesSync(const Napi::CallbackInfo& info);
 
 /* Esta função consegela o loop event */
 Napi::Value parseWgDeviceSync(const Napi::CallbackInfo& info);
 
-/* Esta função não congela o loop event criando um Napi::AsyncWorker */
-Napi::Value parseWgDeviceAsync(const Napi::CallbackInfo& info);
+/*
+Configure uma interface do Wireguard.
+*/
+Napi::Value setupInterfaceSync(const Napi::CallbackInfo& info);
