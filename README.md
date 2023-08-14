@@ -4,7 +4,7 @@ A quick way to use Wireguard with Node.js without having to run the Wireguard to
 
 > **Note**
 >
-> we have pre-copied files for Windows, MacOS (x64/intel) and Linux (arm64, x86_64), else require `gcc` or `clang` installed to compile Node addon.
+> we have pre-copiled files for Windows, MacOS (x64/intel) and Linux (arm64, x86_64), else require `gcc` or `clang` installed to compile Node addon.
 
 With this module it is possible to:
 
@@ -13,10 +13,6 @@ With this module it is possible to:
 - Add IPs to the interface.
 - Create `pre-shared`, `private` and `public` keys.
 - Write the Wireguard configuration file and convert it to JSON format.
-
-## External LGPL Licence
-
-This project works because with of [Wireguard embeddable library](https://github.com/WireGuard/wireguard-tools/tree/master/contrib/embeddable-wg-library).
 
 ## Example
 

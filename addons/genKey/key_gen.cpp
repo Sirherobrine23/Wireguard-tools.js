@@ -267,6 +267,7 @@ void generatePublic(wg_key public_key, const wg_key private_key) {
   memzero_explicit(f, sizeof(f));
 }
 
+
 namespace gereneate_Keys {
   Napi::Value presharedKey(const Napi::CallbackInfo& info) {
     wg_key interfacePresharedKey;

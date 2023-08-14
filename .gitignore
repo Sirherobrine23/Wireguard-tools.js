@@ -1,13 +1,14 @@
-# Ignore node
-/*.tgz
+# Node.js
+/build/
 node_modules/
+/*-lock*
+/*.tgz
 *.node
 
 # Typescript
 src/**/*.js
-src/**/*.d.js
+src/**/*.d.ts
 
 # Anothers
-/build/
 .vscode-ctags*
 *.addrs.json

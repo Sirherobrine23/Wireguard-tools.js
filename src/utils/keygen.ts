@@ -1,4 +1,5 @@
-const addonKeyGen = (require("../../libs/prebuildifyLoad.cjs"))(__dirname+"/../../", "keygen");
+import path from "path";
+const addonKeyGen = (require("../../libs/prebuildifyLoad.cjs"))(path.join(__dirname, "../.."), "keygen");
 export type keyObject = {private: string, public: string};
 export type keyObjectPreshered = keyObject & {preshared: string};
 

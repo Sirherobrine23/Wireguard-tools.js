@@ -1,6 +1,6 @@
 {
   "target_defaults": {
-    "include_dirs" : [
+    "include_dirs": [
       "<!(node -p \"require('node-addon-api').include_dir\")"
     ],
     "defines": [
@@ -21,28 +21,38 @@
       "-fpermissive",
       "-fPIC",
       "-static"
-      ],
-
+    ]
   },
   "targets": [
     {
       "target_name": "keygen",
       "sources": [
-        "src/addon/key_gen.cpp"
+        "addons/genKey/key_gen.cpp"
       ]
     },
     {
-      "target_name": "wireguard_bridge",
+      "target_name": "wginterface",
       "sources": [
-        "src/addon/binding.cpp"
+        "addons/tools/wginterface.cpp"
       ],
       "conditions": [
+        ["OS=='win'", {
+          "sources": [
+            "addons/tools/wginterface_win32.cpp"
+          ],
+        }],
         ["OS=='linux'", {
           "sources": [
-            "src/addon/linux/wireguard.c"
-          ]
-        }]
+            "addons/tools/linux/wireguard.c",
+            "addons/tools/wginterface_linux.cpp"
+          ],
+        }],
+        ["OS=='darwin'", {
+          "sources": [
+            "addons/tools/wginterface_darwin.cpp"
+          ],
+        }],
       ]
     }
-  ],
+  ]
 }

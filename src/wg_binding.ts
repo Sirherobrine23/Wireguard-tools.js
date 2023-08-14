@@ -1,4 +1,5 @@
-const wg_binding = require("../libs/prebuildifyLoad.cjs")(__dirname+"/..", "wireguard_bridge");
+import path from "path";
+const wg_binding = require("../libs/prebuildifyLoad.cjs")(path.join(__dirname, ".."), "wginterface");
 
 export type peerConfig = {
   /** Mark this peer to be removed, any changes remove this option */
@@ -31,8 +32,8 @@ export type wireguardInterface = {
  * @returns Interfaces array
  */
 export function listDevices(): string[] {
-  if (typeof wg_binding.listDevices !== "function") throw new Error("Cannot list wireguard devices, check if avaible to current system!");
-  return wg_binding.listDevices();
+  if (typeof wg_binding.listDevicesSync !== "function") throw new Error("Cannot list wireguard devices, check if avaible to current system!");
+  return wg_binding.listDevicesSync();
 }
 
 /**
@@ -41,8 +42,8 @@ export function listDevices(): string[] {
  * @returns
  */
 export function parseWgDevice(deviceName: string): wireguardInterface {
-  if (typeof wg_binding.parseWgDeviceV2 !== "function") throw new Error("Cannot get device configs, check if wireguard is avaible to the system!");
-  return wg_binding.parseWgDeviceV2(deviceName);
+  if (typeof wg_binding.parseWgDeviceSync !== "function") throw new Error("Cannot get device configs, check if wireguard is avaible to the system!");
+  return wg_binding.parseWgDeviceSync(deviceName);
 }
 
 /**
@@ -52,14 +53,10 @@ export function parseWgDevice(deviceName: string): wireguardInterface {
  */
 export function addDevice(deviceName: string, interfaceConfig: wireguardInterface): void {
   if (typeof deviceName !== "string" || deviceName.length > 16 || deviceName.length <= 0) throw new Error("Check interface name!");
-  if (!((listDevices()).includes(deviceName))) {
-    // Create interface
-    wg_binding.registerInterface(deviceName, true);
-  }
-  wg_binding.setupInterface(deviceName, interfaceConfig);
+  wg_binding.setupInterfaceSync(deviceName, interfaceConfig);
 }
 
 export function removeInterface(deviceName: string): void {
   if (!((listDevices()).includes(deviceName))) throw new Error("Device not exists");
-  wg_binding.registerInterface(deviceName, false);
+  // wg_binding.registerInterface(deviceName, false);
 }
