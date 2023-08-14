@@ -13,8 +13,9 @@
       "includePath": [
         "${env:appdata}/../Local/node-gyp/Cache/18.17.0/include/node",
         "${workspaceFolder}/node_modules/node-addon-api",
-        "${workspaceFolder}/src/addon/win32/include",
-        "${workspaceFolder}/"
+        "${workspaceFolder}/addons/tools/wgtool/wincompat/include",
+        "${workspaceFolder}/addons/**",
+        "${workspaceFolder}/addons"
       ]
     },
     {
@@ -30,11 +31,11 @@
         "NAPI_DISABLE_CPP_EXCEPTIONS"
       ],
       "includePath": [
+        "/usr/include/node",
         "${workspaceFolder}/node_modules/node-addon-api/**",
         "${workspaceFolder}/node_modules/**",
-        "${workspaceFolder}/**",
-        "/usr/include/node",
-        "${workspaceFolder}/src/addon"
+        "${workspaceFolder}/addons/**",
+        "${workspaceFolder}/addons"
       ]
     },
     {
@@ -42,7 +43,7 @@
       "includePath": [
         "/usr/local/include/node",
         "${workspaceFolder}/node_modules/node-addon-api",
-        "${workspaceFolder}/src/addon/**"
+        "${workspaceFolder}/addons/**"
       ],
       "defines": [
         "NAPI_DISABLE_CPP_EXCEPTIONS"

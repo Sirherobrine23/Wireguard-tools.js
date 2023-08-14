@@ -1,5 +1,8 @@
 {
   "compilerOptions": {
+    "moduleResolution": "node",
+    "module": "commonjs",
+    "target": "ES6",
     "forceConsistentCasingInFileNames": true,
     "declaration": true,
     "strict": false,
@@ -7,19 +10,14 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "esModuleInterop": true,
-    "moduleResolution": "node",
-    "module": "commonjs",
     "allowJs": true,
-    "target": "ES6",
     "typeRoots": [
       "node_modules/@types"
     ]
   },
   "exclude": [
-    "**/test*/",
-    "src/addon/tools/contrib/**",
-    "node_modules/",
-    "scripts/**",
+    "**/node_modules/**",
+    "**/test*/**",
     "libs/**"
   ],
   "ts-node": {

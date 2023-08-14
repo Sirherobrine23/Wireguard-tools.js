@@ -33,15 +33,15 @@
     "node": ">=16.0.0"
   },
   "scripts": {
-    "install": "node scripts/build.mjs",
-    "prebuildify": "node scripts/build.mjs build --auto",
+    "install": "node libs/build.mjs",
+    "prebuildify": "node libs/build.mjs build --auto",
     "prepack": "tsc --build --clean && tsc --build && npm run prebuildify",
     "postpack": "tsc --build --clean && node-gyp clean"
   },
   "devDependencies": {
     "@types/chai": "^4.3.5",
     "@types/mocha": "^10.0.1",
-    "@types/node": "^20.4.2",
+    "@types/node": "^20.5.0",
     "mocha": "^10.2.0",
     "node-gyp": "^9.4.0",
     "ts-node": "^10.9.1",

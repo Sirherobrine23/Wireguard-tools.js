@@ -1,16 +1,5 @@
-import path from "node:path";
-if (process.platform === "win32") {
-  // Set dll path
-  global["wireguardDllPath"] = path.join(__dirname, "addon/win32/bin", process.arch === "x64" ? "amd64" : process.arch === "ia32" ? "x88" : process.arch, "wireguard.dll");
-}
-
-interface Binding {
-  listDevicesSync?(): any;
-  parseWgDeviceSync?(wgName: string): any;
-  setupInterfaceSync?(wgName: string, config: wireguardInterface): any;
-}
-
-const wg_binding: Binding = require("../libs/prebuildifyLoad.cjs")(__dirname+"/..", "wireguard_bridge");
+import path from "path";
+const wg_binding = require("../libs/prebuildifyLoad.cjs")(path.join(__dirname, ".."), "wginterface");
 
 export type peerConfig = {
   /** Mark this peer to be removed, any changes remove this option */

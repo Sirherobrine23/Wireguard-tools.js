@@ -1,19 +1,21 @@
 {
   "files.eol": "\n",
-  "editor.tabSize": 2,
   "files.encoding": "utf8",
   "files.defaultLanguage": "typescript",
-  "editor.minimap.enabled": false,
   "files.trimFinalNewlines": true,
   "files.trimTrailingWhitespace": true,
+  "editor.tabSize": 2,
   "editor.insertSpaces": true,
+  "editor.minimap.enabled": false,
   "editor.detectIndentation": false,
   "editor.codeActionsOnSave": {
     "source.organizeImports": true
   },
   "files.exclude": {
     "**/node_modules/": true,
-    "packages/web/src/next/.next": true,
+    "**/src/**/*.js": true,
+    "**/src/**/*.d.ts": true,
+    "**/build/": false
   },
   "terminal.integrated.env.windows": {
     "PATH": "${workspaceFolder}/node_modules/.bin;${env:PATH}"

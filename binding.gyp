@@ -1,6 +1,6 @@
 {
   "target_defaults": {
-    "include_dirs" : [
+    "include_dirs": [
       "<!(node -p \"require('node-addon-api').include_dir\")"
     ],
     "defines": [
@@ -21,51 +21,38 @@
       "-fpermissive",
       "-fPIC",
       "-static"
-      ],
-
+    ]
   },
   "targets": [
     {
-      "target_name": "wireguard_bridge",
+      "target_name": "keygen",
       "sources": [
-        "src/addon/wginterface.cpp"
-      ],
-      "conditions": [
-        ["OS=='linux'", {
-          "sources": [
-            "src/addon/linux/wireguard.c"
-          ]
-        }],
-        ["OS=='win'", {
-          "defines": [
-            "CallSetupWireguard"
-          ],
-          "include_dirs": [
-            "src/addon/win32/include"
-          ],
-          "sources": [
-            "src/addon/wginterface_win32.cpp",
-            "src/addon/key_maneger.c"
-          ],
-          "libraries": [
-            "ws2_32.lib",
-            "ntdll.lib",
-            "iphlpapi.lib",
-            "bcrypt.lib",
-            "crypt32.lib",
-            "kernel32.lib"
-          ]
-        }]
+        "addons/genKey/key_gen.cpp"
       ]
     },
     {
-      "target_name": "keygen",
+      "target_name": "wginterface",
       "sources": [
-        "src/addon/key_gen.cpp"
+        "addons/tools/wginterface.cpp"
       ],
-      "defines": [
-        "EXPORT_GEN"
+      "conditions": [
+        ["OS=='win'", {
+          "sources": [
+            "addons/tools/wginterface_win32.cpp"
+          ],
+        }],
+        ["OS=='linux'", {
+          "sources": [
+            "addons/tools/linux/wireguard.c",
+            "addons/tools/wginterface_linux.cpp"
+          ],
+        }],
+        ["OS=='darwin'", {
+          "sources": [
+            "addons/tools/wginterface_darwin.cpp"
+          ],
+        }],
       ]
     }
-  ],
+  ]
 }
