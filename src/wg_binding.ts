@@ -1,6 +1,8 @@
 import path from "path";
 const wg_binding = require("../libs/prebuildifyLoad.cjs")(path.join(__dirname, ".."), "wginterface");
 
+export const constants: { MAX_NAME_LENGTH: number } = wg_binding.constants;
+
 export type peerConfig = {
   /** Mark this peer to be removed, any changes remove this option */
   removeMe?: boolean,

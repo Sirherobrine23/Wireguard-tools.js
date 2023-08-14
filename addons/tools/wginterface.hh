@@ -1,6 +1,8 @@
 #pragma once
 #include <napi.h>
 
+int maxName();
+
 /*
 Esta função consegela o loop event
 

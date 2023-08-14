@@ -36,21 +36,21 @@
         "addons/tools/wginterface.cpp"
       ],
       "conditions": [
-        ["OS=='win'", {
-          "sources": [
-            "addons/tools/wginterface_win32.cpp"
-          ],
-        }],
         ["OS=='linux'", {
           "sources": [
             "addons/tools/linux/wireguard.c",
-            "addons/tools/wginterface_linux.cpp"
-          ],
+            "addons/tools/wginterface-linux.cpp"
+          ]
+        }],
+        ["OS=='win'", {
+          "sources": [
+            "addons/tools/wginterface-win32.cpp"
+          ]
         }],
         ["OS=='darwin'", {
           "sources": [
-            "addons/tools/wginterface_darwin.cpp"
-          ],
+            "addons/tools/wginterface-darwin.cpp"
+          ]
         }],
       ]
     }

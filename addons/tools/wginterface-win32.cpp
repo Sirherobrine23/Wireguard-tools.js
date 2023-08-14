@@ -3,7 +3,8 @@
 
 Napi::Value listDevicesSync(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
-  return Napi::Array::New(env);
+  const Napi::Array deviceList = Napi::Array::New(env);
+  return deviceList;
 }
 
 Napi::Value setupInterfaceSync(const Napi::CallbackInfo& info) {
