@@ -18,7 +18,7 @@ for (let i = 0; i < 20; i++) {
   const peerKey = utils.keygen(true);
   const ips = [utils.nodeCidr4.randomIp(Math.random() > 0.5 ? "192.168.15.1/24" : "10.0.0.1/8"), utils.nodeCidr4.randomIp(Math.random() > 0.5 ? "10.0.0.1/8" : "192.168.15.1/24")];
   deviceConfig.peers[peerKey.public] = {
-    allowedIPs: [...ips, ...ips.map(utils.nodeCidr6.FourToSix)],
+    allowedIPs: ips.concat(ips.map(utils.nodeCidr6.FourToSix)),
     removeMe: Math.random() > 0.7,
   };
   if (i%2 === 0) deviceConfig.peers[peerKey.public].presharedKey = peerKey.preshared;
@@ -31,7 +31,7 @@ if (deviceConfig.Address) deviceConfig.Address.push(...deviceConfig.Address.map(
 describe("Wireguard interface", () => {
   it("Fist list", () => Bridge.listDevices());
   it("Maneger", async () => {
-    Bridge.addDevice(interfaceName, deviceConfig);
+    await Bridge.addDevice(interfaceName, deviceConfig);
     if (!((await Bridge.listDevices()).includes(interfaceName))) throw new Error("Invalid list devices");
   });
 

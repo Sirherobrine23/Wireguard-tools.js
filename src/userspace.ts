@@ -1,8 +1,10 @@
-import { promises as fs } from "node:fs";
-import net from "node:net";
+import { createWriteStream, promises as fs } from "node:fs";
+import net, { isIPv4 } from "node:net";
 import path from "node:path";
 import { finished } from "node:stream/promises";
 import { createInterface as readline } from "node:readline";
+import { spawn } from "node:child_process";
+import { tmpdir } from "node:os";
 
 export type peerConfig = {
   /** Mark this peer to be removed, any changes remove this option */
@@ -97,6 +99,31 @@ export async function parseWgDevice(deviceName: string) {
 
 export async function addDevice(deviceName: string, interfaceConfig: wireguardInterface) {
   if (!deviceName || deviceName.length <= 2) throw new Error("Set valid device name");
+
+  // Create interface
+  if (!((await listDevices()).includes(deviceName))) {
+    const binPath = path.resolve(__dirname, "../addons/wg_go/wireguard-go");
+    if (await fs.open(binPath).then(() => true, () => false)) {
+      const logFolder = path.join(tmpdir(), ("wggo").concat(deviceName));
+      await fs.mkdir(logFolder, { recursive: true });
+      const processWrite = spawn(binPath, ["--foreground", deviceName], { env: Object.assign({}, process.env, { LOG_LEVEL: "debug" }) });
+      await new Promise((done, reject) => processWrite.once("error", reject).once("spawn", done));
+      if (processWrite.stderr) processWrite.stderr.pipe(createWriteStream(path.join(logFolder, "stderr.log")));
+      if (processWrite.stdout) {
+        processWrite.stdout.pipe(createWriteStream(path.join(logFolder, "stdout.log")));
+        await new Promise<void>((done) => {
+          const stt = readline(processWrite.stdout).once("line", function processLine(line) {
+            if (line.indexOf("UAPI listener started") === -1) stt.once("line", processLine);
+            else {
+              stt.close();
+              done();
+            }
+          });
+        });
+      }
+    }
+  }
+
   const socketLocation = path.join(defaultPath, deviceName).concat(".sock");
   const config = [ "set=1" ]; // Init set config in interface
 
@@ -128,7 +155,8 @@ export async function addDevice(deviceName: string, interfaceConfig: wireguardIn
     if (typeof keepInterval === "number" && Math.floor(keepInterval) > 0) config.push(("persistent_keepalive_interval=").concat(String(Math.floor(keepInterval))));
     if (allowedIPs.length > 0) {
       config.push("replace_allowed_ips=true");
-      for (const IIP of allowedIPs) config.push(("allowed_ip=").concat(IIP));
+      const fixed = allowedIPs.map(i => i.indexOf("/") === -1 ? i.concat("/", (isIPv4(i) ? "32" : "128")) : i)
+      for (const IIP of fixed) config.push(("allowed_ip=").concat(IIP));
     }
   }
 

@@ -15,6 +15,9 @@ src/**/*.ts
 .github/
 .git*
 
+# Wireguard
+addons/wg_go/wireguard-go
+
 # node-gyp
 build/**/*
 

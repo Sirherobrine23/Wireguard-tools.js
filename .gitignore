@@ -13,3 +13,6 @@ src/**/*.d.ts
 .vscode-ctags*
 *.addrs.json
 .DS_Store
+
+# Wireguard projects
+addons/wg_go
