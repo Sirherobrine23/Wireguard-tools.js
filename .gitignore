@@ -12,3 +12,4 @@ src/**/*.d.ts
 # Anothers
 .vscode-ctags*
 *.addrs.json
+.DS_Store

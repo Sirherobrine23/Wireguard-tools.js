@@ -18,7 +18,9 @@ With this module it is possible to:
 
 > **Note**
 >
-> To manage the Wireguard interfaces, root access is required.
+> To manage the Wireguard interfaces in linux, root access is required.
+>
+> Another system's require [wireguard-go](https://github.com/WireGuard/wireguard-go)
 
 ### Get Current peers and Statistics
 

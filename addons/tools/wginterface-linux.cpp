@@ -30,15 +30,12 @@ int maxName() {
   return IFNAMSIZ;
 }
 
-Napi::Value registerInterface(const Napi::CallbackInfo& info) {
-  const Napi::Env env = info.Env();
-  const Napi::String interfaceName = info[0].As<Napi::String>();
+Napi::Value registerInterface(const Napi::Env env, const Napi::String interfaceName, const Napi::Boolean Add) {
   if (!(interfaceName.IsString() && (interfaceName.Utf8Value().length() > 0 && interfaceName.Utf8Value().length() < IFNAMSIZ))) {
     Napi::Error::New(env, "Set valid interface name").ThrowAsJavaScriptException();
     return env.Undefined();
   }
 
-  const Napi::Boolean Add = info[1].IsBoolean() ? info[1].ToBoolean() : Napi::Boolean::New(env, true);
   int res = Add.Value() ? wg_add_device(interfaceName.Utf8Value().c_str()) : wg_del_device(interfaceName.Utf8Value().c_str());
   if (res < 0) {
     if (res == -ENOMEM) Napi::Error::New(env, "Out of memory").ThrowAsJavaScriptException();
@@ -171,6 +168,23 @@ Napi::Value setupInterfaceSync(const Napi::CallbackInfo& info) {
   } else if (interfaceName.Utf8Value().length() > IFNAMSIZ) {
     Napi::Error::New(env, "Interface name long!").ThrowAsJavaScriptException();
     return env.Undefined();
+  }
+
+  size_t len;
+  char *device_name, *devicesList = wg_list_device_names();
+  if (!!devicesList) {
+    auto createInterface = true;
+    for ((device_name) = (devicesList), (len) = 0; ((len) = strlen(device_name)); (device_name) += (len) + 1) {
+      if (device_name == interfaceName.Utf8Value().c_str()) {
+        createInterface = false;
+        break;
+      }
+    }
+    free(devicesList);
+    if (createInterface) {
+      Napi::Value registerStatus = registerInterface(env, interfaceName, Napi::Boolean::New(env, true));
+      if (!(registerStatus.IsUndefined())) return registerStatus;
+    }
   }
 
   const Napi::Object deviceConfig = info[1].As<Napi::Object>();

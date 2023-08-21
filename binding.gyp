@@ -42,16 +42,11 @@
             "addons/tools/wginterface-linux.cpp"
           ]
         }],
-        ["OS=='win'", {
+        ["OS!='linux'", {
           "sources": [
-            "addons/tools/wginterface-win32.cpp"
+            "addons/tools/wginterface-dummy.cpp"
           ]
-        }],
-        ["OS=='darwin'", {
-          "sources": [
-            "addons/tools/wginterface-darwin.cpp"
-          ]
-        }],
+        }]
       ]
     }
   ]

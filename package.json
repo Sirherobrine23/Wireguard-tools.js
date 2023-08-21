@@ -34,6 +34,7 @@
   },
   "scripts": {
     "install": "node libs/build.mjs",
+    "test": "mocha tests/**/*.ts",
     "prebuildify": "node libs/build.mjs build --auto",
     "prepack": "tsc --build --clean && tsc --build && npm run prebuildify",
     "postpack": "tsc --build --clean && node-gyp clean"
@@ -43,11 +44,11 @@
     "@types/mocha": "^10.0.1",
     "@types/node": "^20.5.0",
     "mocha": "^10.2.0",
-    "node-gyp": "^9.4.0",
     "ts-node": "^10.9.1",
     "typescript": "^5.1.6"
   },
   "dependencies": {
-    "node-addon-api": "^7.0.0"
+    "node-addon-api": "^7.0.0",
+    "node-gyp": "^9.4.0"
   }
 }
