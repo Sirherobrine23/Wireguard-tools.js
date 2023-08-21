@@ -16,3 +16,5 @@ src/**/*.d.ts
 
 # Wireguard projects
 addons/wg_go
+addons/wireguard-go.exe
+addons/wireguard-go

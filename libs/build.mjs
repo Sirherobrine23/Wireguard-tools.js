@@ -1,9 +1,8 @@
+import child_process from "node:child_process";
 import { promises as fs } from "node:fs";
 import { createRequire } from "node:module";
-import { fileURLToPath } from "node:url";
-import child_process from "node:child_process";
 import path from "node:path";
-import { promisify } from "node:util";
+import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const prebuilds = path.resolve(__dirname, "../prebuilds");
@@ -22,8 +21,6 @@ async function fork(...args) {
   });
 };
 
-const exec = promisify(child_process.execFile);
-
 async function exist(path) {
   return fs.open(path).then(() => true).catch(() => false);
 }
@@ -41,24 +38,6 @@ if (await exist(prebuilds)) {
     }
     await fs.rm(path.join(prebuilds, folder), {recursive: true, force: true});
   }
-}
-
-async function buildWgGo() {
-  // wireguard-go: https://git.zx2c4.com/wireguard-go
-  const gitRoot = path.resolve(__dirname, "../addons/wg_go");
-  const binPath = path.resolve(__dirname, "../addons/wg_go/wireguard-go");
-
-  if (!(await exist(gitRoot))) {
-    console.info("Cloning wireguard-go");
-    await exec("git", [ "clone", "--depth", "1", "https://git.zx2c4.com/wireguard-go", gitRoot ]);
-  }
-  if (await exist(binPath)) {
-    console.info("Removing old wg-go bin!");
-    await fs.rm(binPath);
-  }
-
-  console.info("building wg-go");
-  await exec("go", [ "build", "-v", "-o", binPath ], { cwd: gitRoot });
 }
 
 if (process.argv.slice(2).at(0) === "build") {
@@ -92,11 +71,4 @@ if (process.argv.slice(2).at(0) === "build") {
   }
 } else if (!(await exist(path.join(prebuilds, `${process.platform}_${process.arch}`)) || await exist(build))) {
   await fork(nodeGyp, ["rebuild", "-j", "max"], {stdio: "inherit", env});
-}
-
-try {
-  await buildWgGo();
-} catch (err) {
-  console.error(err.message);
-  console.warn("no wireguard-go build file");
 }
