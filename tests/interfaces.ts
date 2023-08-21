@@ -3,8 +3,8 @@ import * as Bridge from "../src/mergeSets";
 import * as utils from "../src/utils/index";
 import { randomInt } from "crypto";
 
-const interfaceName = (process.platform === "darwin" ? "utun" : "shtest").concat(String(randomInt(20, 1023)));
 // Make base config
+const interfaceName = String(((process.env.WG_INETRFACE||"").length > 0) ? process.env.WG_INETRFACE : (process.platform === "darwin" ? "utun" : "shtest").concat(String(randomInt(20, 1023))));
 const deviceConfig: Bridge.wireguardInterface = {
   portListen: randomInt(1024, 65535),
   privateKey: utils.genPrivateKey(),

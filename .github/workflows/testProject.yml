@@ -11,19 +11,13 @@ jobs:
   test:
     strategy:
       matrix:
-        os:
-          - ubuntu
-          - windows
-          - macos
-        node_version:
-          - 16.x
-          - 18.x
+        node_version: [ 16.x, 17.x, 18.x, 19.x ]
+        os: [ ubuntu, macos ]
     runs-on: ${{ matrix.os }}-latest
+    name: "Test on ${{ matrix.os }} with Node ${{ matrix.node_version }}"
     steps:
     - uses: actions/checkout@v3
       name: Checkout
-      with:
-        submodules: true
 
     - uses: actions/setup-node@v3
       name: Setup Node.js
@@ -33,16 +27,29 @@ jobs:
     - name: Install dependencies
       run: |
         npm install --no-save
-        ${{ matrix.os == 'ubuntu' && 'sudo' || '' }} npm install -g ts-node typescript mocha
+        sudo npm install -g ts-node typescript mocha
+
+    - name: Setup Go environment
+      if: matrix.os == 'macos'
+      uses: actions/setup-go@v4.1.0
+
+    - name: "Start wireguard interface (MacOS)"
+      if: matrix.os == 'macos'
+      run: |
+        cd ..
+        git clone https://git.zx2c4.com/wireguard-go
+        cd wireguard-go
+        echo "WG_INETRFACE=utun15" >> $GITHUB_ENV
+        go build -v -o "wireguard-go"
+        sudo ./wireguard-go utun15
 
     - name: Test
       run: |
         tsc --build --clean
         tsc --build
-        ${{ matrix.os == 'ubuntu' && 'sudo' || '' }} mocha 'tests/**'
+        sudo -E mocha 'tests/**'
 
     - name: Upload generate interface
-      if: matrix.os == 'ubuntu'
       uses: actions/upload-artifact@v3
       with:
         name: ${{ matrix.os }}_${{ matrix.node_version }}
@@ -70,7 +77,7 @@ jobs:
         registry-url: https://registry.npmjs.org/
 
     - run: npm install --no-save --ignore-scripts
-    - run: node scripts/build.mjs build --auto -v
+    - run: npm run prebuildify -- -v
 
     - name: Upload generate interface
       uses: actions/upload-artifact@v3
@@ -107,7 +114,6 @@ jobs:
       uses: actions/download-artifact@v3
       with:
         path: ./prebuilds
-        name: 
 
     - run: npm install --no-save
     - run: npm pack
