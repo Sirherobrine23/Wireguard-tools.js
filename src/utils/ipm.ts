@@ -1,4 +1,5 @@
 import { randomInt } from "node:crypto";
+
 /*
 Original repository: https://github.com/arminhammer/node-cidr
 LINCENSE: Apache-2.0 license
@@ -55,16 +56,21 @@ export function toString(ipInt: number): string {
   return address.join('.');
 }
 
-export function ipCommonCidr(ips: string[]): string {
+/**
+ * Get valid cidr
+ * @param ips
+ * @returns
+ */
+export function ipCommonCidr(ips: [string, ...(string[])]): string {
+  if (!ips || ips.filter(s => !!(address(s))).length < 1) throw new Error("Insert fist ip");
   const ipInt = ips.map(toInt);
   return intCommonCidr(ipInt);
 }
 
-export function toOctets(input: string | number): number[] {
-  if (typeof input === 'number') {
-    input = toString(input);
-  }
-  return input.split('.').map(x => parseInt(x));
+export function toOctets(input: string | number): [number, number, number, number] {
+  if (typeof input === "number") input = toString(input);
+  const [a1, a2, a3, a4] = address(input).split(".").map(x => parseInt(x));
+  return [a1, a2, a3, a4];
 }
 
 /**
@@ -72,9 +78,7 @@ export function toOctets(input: string | number): number[] {
  * @returns {string}
  */
 export function reverse(ip: string | number): string {
-  if (typeof ip === 'number') {
-    ip = toString(ip);
-  }
+  if (typeof ip === "number") ip = toString(ip);
   const octets = toOctets(ip);
   return `${octets[3]}.${octets[2]}.${octets[1]}.${octets[0]}.in-addr.arpa`;
 }
@@ -106,7 +110,7 @@ export function toHex(ip: string | number): string {
  * Returns the next adjacent address.
  * @returns {string}
  */
-export function next(ip: string): string {
+export function nextIp(ip: string): string {
   return toString(toInt(ip) + 1);
 }
 
@@ -114,19 +118,38 @@ export function next(ip: string): string {
  * Returns the previous adjacent address.
  * @returns {string}
  */
-export function previous(ip: string): string {
+export function previousIp(ip: string): string {
   return toString(toInt(ip) - 1);
 }
 
+/**
+ * Get CIDR from ip
+ *
+ * @param ip - Input ip
+ * @returns
+ */
 export function toCidr(ip: string | number): string {
   if (typeof ip === 'number') ip = toString(ip);
+  else if (ip.indexOf("/") !== -1) {
+    const mask = parseInt(ip.split("/")[1]);
+    if (mask >= 0 && mask <= 32) return ip;
+    else ip = address(ip);
+  }
   let mask = 8;
   while (true) {
-    // arendondar para um valor par
-    mask+=4;
+    if (mask >= 32) break;
+    mask += 4;
     if (includes(ip+"/"+mask, ip)) break;
   }
   return min(`${ip}/${mask}`)+"/"+mask;
+}
+
+export function nextCidr(cidr: string): string {
+  return `${toString(toInt(address(cidr)) + 2 ** (32 - mask(cidr)))}/${mask(cidr)}`;
+}
+
+export function previousCidr(cidr: string): string {
+  return `${toString(toInt(address(cidr)) - 2 ** (32 - mask(cidr)))}/${mask(cidr)}`;
 }
 
 export function validateIp(ip: string): string | null {
@@ -166,39 +189,46 @@ export function validateCidr(cidr: string): string | null {
 }
 
 export function address(ip: string): string {
-  return ip.split('/')[0];
+  if (!ip || typeof ip === "string" && ip.length < 3) throw new Error("Set IP address");
+  ip = ip.split("/")[0];
+  if (ip.split(".").length !== 4) throw new Error("set valid IP address");
+  return ip;
 }
 
-export function mask(ip: string): number {
-  return parseInt(ip.split('/')[1]);
+export function mask(ip: string) {
+  if (ip.indexOf("/") === -1) ip = ip.concat("/", toCidr(ip).split("/")[1]);
+  const mask = parseInt(ip.split("/")[1]);
+  if (mask >= 1 && 32 < mask) throw new Error("Invalid mask");
+  return mask;
 }
 
-export function toIntRange(cidr: string): number[] {
-  return [
-    toInt(min(cidr)),
-    toInt(max(cidr))
-  ];
+export function toIntRange(cidr: string): [number, number] {
+  cidr = toCidr(cidr);
+  const __min = toInt(min(cidr)), __max = toInt(max(cidr));
+  if (__min >= __max) throw new Error("Invalid cidr");
+  return [ __min, __max ];
 }
 
-export function toRange(cidr: string): string[] {
+export function toRange(cidr: string): [string, string] {
   return [min(cidr), max(cidr)];
 }
 
 export function cidrCommonCidr(cidrs: string[]): string {
   const ipMap = cidrs.map(x => toIntRange(x));
-  const ipInt = [].concat.apply([], ipMap).sort();
+  const ipInt = Array.prototype.concat.apply([], ipMap).sort();
   return intCommonCidr(ipInt);
 }
 
 export function netmask(cidr: string): string {
-  return toString(2 ** 32 - 2 ** (32 - mask(cidr)));
+  return toString(2 ** 32 - 2 ** (32 - mask(toCidr(cidr))));
 }
 
 export function broadcast(cidr: string): string {
-  return max(cidr);
+  return max(toCidr(cidr));
 }
 
 export function min(cidr: string): string {
+  cidr = toCidr(cidr);
   const addr = address(cidr);
   const addrInt = toInt(addr);
   const div = addrInt % 2 ** (32 - mask(cidr));
@@ -206,21 +236,22 @@ export function min(cidr: string): string {
 }
 
 export function max(cidr: string): string {
+  cidr = toCidr(cidr);
   let initial: number = toInt(min(cidr));
   let add = 2 ** (32 - mask(cidr));
   return toString(initial + add - 1);
 }
 
 export function fistIp(cidr: string): string {
-  if (!/\//.test(cidr)) cidr = toCidr(cidr);
-  return toString(toInt(min(cidr))+1);
+  return toString(toInt(min(toCidr(cidr)))+1);
 }
 
 export function count(cidr: string): number {
-  return 2 ** (32 - mask(cidr));
+  return 2 ** (32 - mask(toCidr(cidr)));
 }
 
 export function usable(cidr: string): string[] {
+  cidr = toCidr(cidr);
   const result = [];
   let start = toInt(min(cidr)) + 1;
   const stop = toInt(max(cidr));
@@ -231,56 +262,115 @@ export function usable(cidr: string): string[] {
   return result;
 }
 
+/**
+ * get representation of subnet attach's ip's
+ *
+ * @example
+ * ```js
+ * wildcardmask("0.0.0.0/0"); // => "255.255.255.255"
+ * wildcardmask("127.0.0.0/1"); // => "127.255.255.255"
+ * wildcardmask("192.0.0.0/24"); // => "0.0.0.255"
+ * ```
+ *
+ * @param cidr
+ * @returns
+ */
 export function wildcardmask(cidr: string): string {
-  return toString(2 ** (32 - mask(cidr)) - 1);
+  return toString(2 ** (32 - mask(toCidr(cidr))) - 1);
 }
 
 export function subnets(cidr: string, subMask: number, limit: number): string[] {
   // const mainMask: number = mask(cidr);
-  let count = toInt(address(cidr));
+  const step = 2 ** (32 - subMask), subnets = [];
+  let count = toInt(address(cidr)) - step;
   let maxIp = toInt(max(cidr));
-  let subnets = [];
-  let step = 2 ** (32 - subMask);
 
-  if (limit) {
-    limit = count + limit * step;
-    if (limit < maxIp) {
-      maxIp = limit;
-    }
-  }
-
-  while (count < maxIp) {
-    subnets.push(`${toString(count)}/${subMask}`);
-    count += step;
-  }
+  if (limit >= Number.MAX_SAFE_INTEGER) throw new Error("Limit is so big");
+  else if (isNaN(limit) || !(isFinite(limit))) throw new Error("Set valid limit");
+  limit = count + limit * step;
+  if (limit < maxIp) maxIp = limit;
+  while (count < maxIp) subnets.push(toString(count += step).concat("/", String(subMask)));
   return subnets;
 }
 
 export function ips(cidr: string): string[] {
   let ips: string[] = [];
-  const maxIp = toInt(max(cidr));
+  const maxIp = toInt(max(toCidr(cidr)));
   let current: string = address(cidr);
   while (toInt(current) <= maxIp) {
     ips.push(current);
-    current = next(current);
+    current = nextIp(current);
   }
   return ips;
 }
 
+/**
+ * Check if ip exists in CIDR
+ * @param cidr
+ * @param ip
+ * @returns
+ */
 export function includes(cidr: string, ip: string): boolean {
   const ipInt = toInt(ip);
   return ipInt >= toInt(min(cidr)) && ipInt <= toInt(max(cidr));
 }
 
-export function nextCidr(cidr: string): string {
-  return `${toString(toInt(address(cidr)) + 2 ** (32 - mask(cidr)))}/${mask(cidr)}`;
+/**
+ * Select random IP from CIDR
+ * @param cidr
+ * @param drops
+ * @returns
+ */
+export function randomIp(cidr: string, drops?: string[]): string {
+  const [minIp, maxIp] = toIntRange(toCidr(cidr));
+  while (true) {
+    const ip = toString(randomInt(minIp, maxIp));
+    if (!((drops||[]).includes(ip))) return ip;
+  }
 }
 
-export function previousCidr(cidr: string): string {
-  return `${toString(toInt(address(cidr)) - 2 ** (32 - mask(cidr)))}/${mask(cidr)}`;
+/**
+ * Convert ipv4 to ipv6
+ *
+ * @example
+ * ```js
+ * toV6("192.178.66.255"); // => "0000:0000:0000:0000:0000:ffff:c0b2:42ff"
+ * toV6("192.178.66.255", false); // => "0000:0000:0000:0000:0000:ffff:c0b2:42ff"
+ * toV6("192.178.66.255", true); // => "::ffff:c0b2:42ff"
+ * ```
+ */
+export function toV6(ipv4: string, compressedv6: boolean = false) {
+  if (!ipv4) throw new Error("ipv4 is required");
+  if (typeof ipv4 !== "string") throw new Error("ipv4 must be a string");
+  const classValues = ipv4.split(".").map(s => parseInt(s.split("/")[0]) % 256);
+  if (classValues.length !== 4) throw "Invalid Address";
+  const hexaCode = (hexaVal: number) => hexaVal >= 0 && hexaVal <= 9 ? hexaVal : (hexaVal === 10 ? "a" : (hexaVal === 11 ? "b" : (hexaVal === 12 ? "c" : (hexaVal === 13 ? "d" : (hexaVal === 14 ? "e" : "f")))));
+  const str = classValues.reduce((acc, val, ind) => {
+    const mod = +val >= 16 ? +val%16 : +val;
+    const modRes = hexaCode(mod);
+    const dividerRes = hexaCode(+val >= 16 ? (val-mod)/16 : 0);
+    return ind === 1 ? `${acc}${dividerRes}${modRes}:`:`${acc}${dividerRes}${modRes}`;
+  }, "");
+  return ("").concat(compressedv6 ? ":" : "0000:0000:0000:0000:0000", (":ffff:"), str);
 }
 
-export function randomIp(cidr: string): string {
-  const [minIp, maxIp] = toIntRange(cidr);
-  return toString(randomInt(minIp, maxIp));
+/**
+ * Convert IPv6 to valid IPv4
+ * @param ipv6
+ * @returns
+ */
+export function fromV6(ipv6: string) {
+  if (!ipv6 || typeof ipv6 !== "string" || !((["::ffff:", "0000:0000:0000:0000:0000:ffff:", "2002:"]).some(s => ipv6.startsWith(s) && (s === "2002:" ? (ipv6.endsWith("::")) : true)))) throw new Error("Invalid block input");
+  let b64: string;
+  if (ipv6.startsWith("2002:")) b64 = ipv6.slice(5, -2);
+  else if (ipv6.startsWith("::ffff:")) b64 = ipv6.slice(7);
+  else b64 = ipv6.slice(30);
+  b64 = b64.split(":").join("");
+  if (b64.length > 8) throw new Error("invalid ipv4 in ipv6");
+  return ([
+    (parseInt(b64.substring(0, 2), 16) & 0xFF),
+    (parseInt(b64.substring(2, 4), 16) & 0xFF),
+    (parseInt(b64.substring(4, 6), 16) & 0xFF),
+    (parseInt(b64.substring(6, 8), 16) & 0xFF)
+  ]).join(".");
 }

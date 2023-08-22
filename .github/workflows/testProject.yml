@@ -47,7 +47,7 @@ jobs:
       run: |
         tsc --build --clean
         tsc --build
-        sudo -E mocha 'tests/**'
+        sudo -E mocha ./
 
     - name: Upload generate interface
       uses: actions/upload-artifact@v3

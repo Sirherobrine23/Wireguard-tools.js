@@ -2,8 +2,8 @@
 export * as config from "./config";
 
 // IPs utils
-export * as nodeCidr4 from "../lib/nodeCidr4";
-export * as nodeCidr6 from "../lib/nodeCidr6";
+export * as ip_manipulation from "./ipm";
+export * as nodeCidr4 from "./ipm";
 
 // Export types fist before export functions
 export * from "./keygen";

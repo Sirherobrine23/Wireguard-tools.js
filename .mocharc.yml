@@ -4,5 +4,6 @@ full-trace: true
 recursive: true
 parallel: false
 timeout: 0
+extension: [ "test.ts" ]
 node-option:
   - "loader=ts-node/register"
