@@ -9,7 +9,7 @@ if (process.platform !== "win32" && (userInfo()).uid === 0) {
   const interfaceName = String(((process.env.WG_INETRFACE||"").length > 0) ? process.env.WG_INETRFACE : (process.platform === "darwin" ? "utun" : "shtest").concat(String(randomInt(20, 1023))));
   const deviceConfig: Bridge.wireguardInterface = {
     portListen: randomInt(1024, 65535),
-    privateKey: utils.genPrivateKey(),
+    privateKey: utils.genPrivate(),
     replacePeers: true,
     Address: [],
     peers: {}

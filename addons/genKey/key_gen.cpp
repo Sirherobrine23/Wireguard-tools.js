@@ -306,15 +306,134 @@ namespace gereneate_Keys {
   }
 }
 
+namespace asyncGenerateKeys {
+  class privateKeyWorker : public Napi::AsyncWorker {
+    private:
+    wg_key keyg;
+    wg_key_b64_string pskString;
+    public:
+    ~privateKeyWorker() {}
+    privateKeyWorker(const Napi::Function& callback) : AsyncWorker(callback) {}
+    void Execute() override {
+      generatePrivate(keyg);
+      keyToBase64(pskString, keyg);
+    }
+    void OnOK() override {
+      Napi::HandleScope scope(Env());
+      Callback().Call({ Env().Null(), Napi::String::New(Env(), pskString) });
+    }
+    void OnError(const Napi::Error& e) override {
+      Napi::HandleScope scope(Env());
+      Callback().Call({ e.Value(), Env().Null() });
+    }
+  };
+
+  class publicKeyWorker : public Napi::AsyncWorker {
+    private:
+    std::string privKey;
+    wg_key interfacePrivateKey, interfacePublicKey;
+    wg_key_b64_string pubString;
+    public:
+    ~publicKeyWorker() {}
+    publicKeyWorker(const Napi::Function& callback, std::string privateKey) : AsyncWorker(callback), privKey(privateKey) {}
+    void Execute() override {
+      keyFromBase64(interfacePrivateKey, privKey.c_str());
+      generatePublic(interfacePublicKey, interfacePrivateKey);
+      keyToBase64(pubString, interfacePublicKey);
+    }
+    void OnOK() override {
+      Napi::HandleScope scope(Env());
+      Callback().Call({ Env().Null(), Napi::String::New(Env(), pubString) });
+    }
+    void OnError(const Napi::Error& e) override {
+      Napi::HandleScope scope(Env());
+      Callback().Call({ e.Value(), Env().Null() });
+    }
+  };
+
+  class presharedKeyWorker : public Napi::AsyncWorker {
+    private:
+    wg_key keyg;
+    public:
+    ~presharedKeyWorker() {}
+    presharedKeyWorker(const Napi::Function& callback) : AsyncWorker(callback) {}
+    void Execute() override {
+      generatePreshared(keyg);
+    }
+    void OnOK() override {
+      Napi::HandleScope scope(Env());
+      wg_key_b64_string pskString;
+      keyToBase64(pskString, keyg);
+      Callback().Call({ Env().Null(), Napi::String::New(Env(), pskString) });
+    }
+    void OnError(const Napi::Error& e) override {
+      Napi::HandleScope scope(Env());
+      Callback().Call({ e.Value(), Env().Null() });
+    }
+  };
+
+  Napi::Value genPresharedAsync(const Napi::CallbackInfo& info) {
+    const Napi::Env env = info.Env();
+    const Napi::Function callback = info[info.Length() - 1].As<Napi::Function>();
+    if (!(callback.IsFunction())) {
+      Napi::Error::New(env, "Require callback").ThrowAsJavaScriptException();
+      return env.Undefined();
+    }
+
+    // Callback function is latest argument
+    auto *Gen = new presharedKeyWorker(callback);
+    Gen->Queue();
+    return env.Undefined();
+  }
+
+  Napi::Value genPrivateAsync(const Napi::CallbackInfo& info) {
+    const Napi::Env env = info.Env();
+    const Napi::Function callback = info[info.Length() - 1].As<Napi::Function>();
+    if (!(callback.IsFunction())) {
+      Napi::Error::New(env, "Require callback").ThrowAsJavaScriptException();
+      return env.Undefined();
+    }
+
+    // Callback function is latest argument
+    auto *Gen = new privateKeyWorker(callback);
+    Gen->Queue();
+    return env.Undefined();
+  }
+
+  Napi::Value genPublicAsync(const Napi::CallbackInfo& info) {
+    const Napi::Env env = info.Env();
+    if (!(info[0].IsString())) {
+      Napi::Error::New(env, "Require private key").ThrowAsJavaScriptException();
+      return env.Undefined();
+    }
+    const Napi::Function callback = info[info.Length() - 1].As<Napi::Function>();
+    if (!(callback.IsFunction())) {
+      Napi::Error::New(env, "Require callback").ThrowAsJavaScriptException();
+      return env.Undefined();
+    }
+
+    // Callback function is latest argument
+    auto *Gen = new publicKeyWorker(callback, info[0].ToString().Utf8Value().c_str());
+    Gen->Queue();
+    return env.Undefined();
+  }
+}
+
 Napi::Object initKeyGen(Napi::Env env) {
   const Napi::Object keyGen = Napi::Object::New(env);
   return keyGen;
 }
 
 Napi::Object Init(Napi::Env env, Napi::Object exports) {
+  // Sync
   exports.Set("presharedKey", Napi::Function::New(env, gereneate_Keys::presharedKey));
   exports.Set("genPrivateKey", Napi::Function::New(env, gereneate_Keys::privateKey));
   exports.Set("getPublicKey", Napi::Function::New(env, gereneate_Keys::publicKey));
+
+  // Async
+  exports.Set("presharedKeyAsync", Napi::Function::New(env, asyncGenerateKeys::genPresharedAsync));
+  exports.Set("genPrivateKeyAsync", Napi::Function::New(env, asyncGenerateKeys::genPrivateAsync));
+  exports.Set("getPublicKeyAsync", Napi::Function::New(env, asyncGenerateKeys::genPublicAsync));
   return exports;
 }
 NODE_API_MODULE(addon, Init);
