@@ -24,6 +24,7 @@ export type wireguardInterface = {
   portListen?: number;
   fwmark?: number;
   Address?: string[];
+  DNS?: string[];
   /** this option will remove all peers if `true` and add new peers */
   replacePeers?: boolean;
   peers: {
@@ -55,7 +56,7 @@ export async function listDevices() {
 export async function parseWgDevice(deviceName: string) {
   if (!deviceName || deviceName.length <= 2) throw new Error("Set valid device name");
   const client = await connectSocket(path.join(defaultPath, deviceName).concat(".sock"));
-  const config: wireguardInterface = { peers: {} };
+  const config: wireguardInterface = {} as any;
 
   let latestPeer: string, previewKey: string;
   client.write("get=1\n\n");
@@ -69,23 +70,27 @@ export async function parseWgDevice(deviceName: string) {
 
     // Drop
     if ((["last_handshake_time_nsec", "protocol_version", "errno"]).includes(keyName)) return;
-    else if (keyName === "preshared_key") config.peers[latestPeer].presharedKey = Buffer.from(value, "hex").toString("base64");
     else if (keyName === "private_key") config.privateKey = Buffer.from(value, "hex").toString("base64");
     else if (keyName === "listen_port") config.portListen = Number(value);
-    else if (keyName === "endpoint") config.peers[latestPeer].endpoint = value;
-    else if (keyName === "persistent_keepalive_interval") config.peers[latestPeer].keepInterval = Number(value);
-    else if (keyName === "rx_bytes") config.peers[latestPeer].rxBytes = Number(value);
-    else if (keyName === "tx_bytes") config.peers[latestPeer].txBytes = Number(value);
-    else if (keyName === "last_handshake_time_sec") config.peers[latestPeer].lastHandshake = new Date(Number(value) * 1000);
-    else if (keyName === "allowed_ip") config.peers[latestPeer].allowedIPs.push(value);
-    else if (keyName === "public_key") {
+    else if (keyName === "endpoint") (config.peers ||= {})[latestPeer].endpoint = value;
+    else if (keyName === "persistent_keepalive_interval") (config.peers ||= {})[latestPeer].keepInterval = Number(value);
+    else if (keyName === "rx_bytes") (config.peers ||= {})[latestPeer].rxBytes = Number(value);
+    else if (keyName === "tx_bytes") (config.peers ||= {})[latestPeer].txBytes = Number(value);
+    else if (keyName === "last_handshake_time_sec") (config.peers ||= {})[latestPeer].lastHandshake = new Date(Number(value) * 1000);
+    else if (keyName === "allowed_ip") {
+      if (!value) return;
+      (config.peers ||= {})[latestPeer].allowedIPs = ((config.peers ||= {})[latestPeer].allowedIPs||[]).concat(value);
+    } else if (keyName === "preshared_key") {
+      if (value === "0000000000000000000000000000000000000000000000000000000000000000") return;
+      (config.peers ||= {})[latestPeer].presharedKey = Buffer.from(value, "hex").toString("base64");
+    } else if (keyName === "public_key") {
       const keyDecode = Buffer.from(value, "hex").toString("base64");
       if (previewKey === "public_key") {
         config.publicKey = latestPeer;
-        config.peers[keyDecode] = config.peers[latestPeer];
-        delete config.peers[latestPeer];
+        (config.peers ||= {})[keyDecode] = (config.peers ||= {})[latestPeer];
+        delete (config.peers ||= {})[latestPeer];
         latestPeer = keyDecode;
-      } else config.peers[(latestPeer = keyDecode)] = { allowedIPs: [] };
+      } else (config.peers ||= {})[(latestPeer = keyDecode)] = {};
     }
     previewKey = keyName;
   });

@@ -366,6 +366,7 @@ export function fromV6(ipv6: string) {
   else if (ipv6.startsWith("::ffff:")) b64 = ipv6.slice(7);
   else b64 = ipv6.slice(30);
   b64 = b64.split(":").join("");
+  if (b64.split(".").length === 4 && !(b64.split(".").map(s => parseInt(s)).some(s => !(s >= 0 && s <= 255)))) return b64;
   if (b64.length > 8) throw new Error("invalid ipv4 in ipv6");
   return ([
     (parseInt(b64.substring(0, 2), 16) & 0xFF),

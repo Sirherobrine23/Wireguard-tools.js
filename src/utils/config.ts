@@ -1,19 +1,4 @@
-export type wireguardConfig = {
-  publicKey?: string;
-  privateKey?: string;
-  portListen?: number;
-  Address?: string[];
-  DNS?: string[];
-  peers: {
-    [peerPublicKey: string]: {
-      presharedKey?: string;
-      keepInterval?: number;
-      endpoint?: string;
-      allowedIPs?: string[];
-    };
-  }
-};
-
+import { wireguardInterface } from "../userspace";
 function removeUndefined<T>(obj: T): T {
   return JSON.parse(JSON.stringify(obj));
 }
@@ -23,7 +8,7 @@ function removeUndefined<T>(obj: T): T {
  * @param wgConfig - Config string
  * @returns
  */
-export function parseConfig(wgConfig: string|Buffer): wireguardConfig {
+export function parseConfig(wgConfig: string|Buffer): wireguardInterface {
   if (Buffer.isBuffer(wgConfig)) wgConfig = wgConfig.toString();
   wgConfig = wgConfig.trim().split("\r\n").join("\n");
   let strs: string[] = [];
@@ -62,7 +47,7 @@ export function parseConfig(wgConfig: string|Buffer): wireguardConfig {
     publicKey: interfaceWG["publickey"],
     DNS: interfaceWG["dns"],
     Address: interfaceWG["address"],
-    peers: peersWG.reduce<wireguardConfig["peers"]>((acc, {data}) => {
+    peers: peersWG.reduce<wireguardInterface["peers"]>((acc, {data}) => {
       acc[data["publickey"]] = {
         presharedKey: data["presharedkey"],
         keepInterval: data["keepinterval"] ? Number(data["keepinterval"]) : undefined,
@@ -77,22 +62,23 @@ export function parseConfig(wgConfig: string|Buffer): wireguardConfig {
 /**
  * Create wireguard config string.
  */
-export function createConfig(config: wireguardConfig) {
-  let configString: string = "[Interface]\n";
-  if (typeof config.publicKey === "string" && config.publicKey.length > 0) configString += ("PublicKey = "+config.publicKey) + "\n";
-  if (typeof config.privateKey === "string" && config.privateKey.length > 0) configString += ("PrivateKey = "+config.privateKey) + "\n";
-  if (typeof config.portListen === "number" && (config.portListen > 0 && config.portListen < 25565)) configString += ("ListenPort = "+config.portListen) + "\n";
-  if (Array.isArray(config.Address) && config.Address.length > 0) configString += ("Address = "+config.Address.join(", ")) + "\n";
-  if (Array.isArray(config.DNS) && config.DNS.length > 0) configString += ("DNS = "+config.DNS.join(", ")) + "\n";
-  configString += "\n";
-  for (const pubKey of Object.keys(config.peers)) {
-    configString += ("[Peer]\nPublicKey = "+pubKey) + "\n";
-    const peerConfig = config.peers[pubKey];
-    if (typeof peerConfig.presharedKey === "string" && peerConfig.presharedKey.length > 0) configString += ("PresharedKey = " + peerConfig.presharedKey) + "\n";
-    if (typeof peerConfig.endpoint === "string" && peerConfig.endpoint.length > 0) configString += ("Endpoint = " + peerConfig.endpoint) + "\n";
-    if (typeof peerConfig.keepInterval === "number" && peerConfig.keepInterval > 0) configString += ("PersistentKeepalive = " + peerConfig.keepInterval) + "\n";
-    if (Array.isArray(peerConfig.allowedIPs) && peerConfig.allowedIPs.length > 0) configString += ("AllowedIPs = " + peerConfig.allowedIPs.join(", ")) + "\n";
+export function createConfig({ portListen, publicKey, privateKey, Address, DNS, peers = {} }: wireguardInterface) {
+  const configString: string[] = ["[Interface]"];
+  if (typeof publicKey === "string" && publicKey.length > 0) configString.push(("PublicKey = ").concat(publicKey));
+  if (typeof privateKey === "string" && privateKey.length > 0) configString.push(("PrivateKey = ").concat(privateKey));
+  if (portListen >= 1 && portListen <= ((2 ** 16) - 1)) configString.push(("ListenPort = ").concat(String(portListen)));
+  if (Array.isArray(Address) && Address.length > 0) configString.push(("Address = ").concat(...(Address.join(", "))));
+  if (Array.isArray(DNS) && DNS.length > 0) configString.push(("DNS = ").concat(DNS.join(", ")));
+
+  // Peers mount
+  for (const pubKey of Object.keys(peers)) {
+    configString.push("", "[Peer]", ("PublicKey = ").concat(pubKey));
+    const { presharedKey, allowedIPs, keepInterval, endpoint } = peers[pubKey];
+    if (typeof presharedKey === "string" && presharedKey.length > 0) configString.push(("PresharedKey = ").concat(presharedKey));
+    if (typeof endpoint === "string" && endpoint.length > 0) configString.push(("Endpoint = ").concat(endpoint));
+    if (typeof keepInterval === "number" && keepInterval > 0) configString.push(("PersistentKeepalive = ").concat(String(keepInterval)));
+    if (Array.isArray(allowedIPs) && allowedIPs.length > 0) configString.push(("AllowedIPs = ").concat(allowedIPs.join(", ")));
   }
 
-  return configString.trim();
+  return configString.join("\n").trim();
 }
