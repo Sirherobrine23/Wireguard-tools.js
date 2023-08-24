@@ -9,9 +9,8 @@ Fix by @Sirherobrine23
 const invalidChars = /^.*?(?=[\^#%&$\*:<>\?\/\{\|\}[a-zA-Z]).*$/;
 
 function intCommonCidr(ips: number[]): string {
-  const ipInt = ips.sort();
+  const ipInt = ips.sort(), range = ipInt[ipInt.length - 1] - ipInt[0];
   let mask = 0;
-  const range = ipInt[ipInt.length - 1] - ipInt[0];
   let baseIp = ipInt[0];
   for (let i = 0; i <= 32; i++) {
     mask = 32 - i;
@@ -30,30 +29,25 @@ function intCommonCidr(ips: number[]): string {
 }
 
 function padLeft(input: string, char: string, min: number): string {
-  while (input.length < min) {
-    input = char + input;
-  }
+  while (input.length < min) input = char + input;
   return input;
 }
 
-// IP Address methods
-
 export function toInt(ipAddress: string): number {
-  return ipAddress.split('.').reduce((p: number, c: string, i: number) => p + parseInt(c) * 256 ** (3 - i), 0);
+  return ipAddress.split(".").reduce((p: number, c: string, i: number) => p + parseInt(c) * 256 ** (3 - i), 0);
 }
 
 export function toString(ipInt: number): string {
-  let remaining = ipInt;
-  let address = [];
+  let remaining = ipInt, address = [];
   for (let i = 0; i < 4; i++) {
-    if (remaining != 0) {
+    if (remaining !== 0) {
       address.push(Math.floor(remaining / 256 ** (3 - i)));
       remaining = remaining % 256 ** (3 - i);
     } else {
       address.push(0);
     }
   }
-  return address.join('.');
+  return address.join(".");
 }
 
 /**
@@ -330,7 +324,7 @@ export function randomIp(cidr: string, drops?: string[]): string {
 }
 
 /**
- * Convert ipv4 to ipv6
+ * Convert ipv4 in to ipv6
  *
  * @example
  * ```js

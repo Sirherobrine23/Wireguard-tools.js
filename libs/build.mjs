@@ -1,30 +1,41 @@
+// @ts-check
 import child_process from "node:child_process";
 import { promises as fs } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const prebuilds = path.resolve(__dirname, "../prebuilds");
-const build = path.resolve(__dirname, "../build/Release");
-const nodeGyp = path.resolve(createRequire(import.meta.url).resolve("node-gyp"), "../../bin/node-gyp.js");
+import { promisify } from "node:util";
+const __dirname = path.dirname(fileURLToPath(import.meta.url)); // Fix ESM __dirname
+const nodeGyp = path.resolve(createRequire(import.meta.url).resolve("node-gyp"), "../../bin/node-gyp.js"); // Node gyp script
 const env = Object.assign({}, process.env);
 
-async function fork(...args) {
-  return new Promise((resolve, reject) => {
-    const child = child_process.fork(...args);
-    child.on("error", reject);
-    child.on("exit", (code, signal) => {
-      if (code === 0) resolve();
-      else reject(new Error(`Process exited with code ${code} and signal ${signal}`));
-    });
-  });
-};
-
+const prebuilds = path.resolve(__dirname, "../prebuilds");
+const buildDir = path.resolve(__dirname, "../build") /* Build Directory */, buildRelease = path.join(buildDir, "Release"), buildDebug = path.join(buildDir, "Debug");
 async function exist(path) {
-  return fs.open(path).then(() => true).catch(() => false);
+  return fs.open(path).then(() => true, () => false);
 }
 
+/**
+ *
+ * @param {string} command
+ * @param {string[]} args
+ * @param {Omit<import("child_process").ForkOptions, "stdio">} options
+ */
+async function fork(command, args, options) {
+  if (options) options["stdio"] = undefined;
+  return new Promise((done, reject) => {
+    const child = child_process.fork(command, args, options);
+    child.on("error", reject);
+    if (child.stdout) child.stdout.pipe(process.stdout);
+    if (child.stderr) child.stderr.pipe(process.stderr);
+    child.once("exit", (code, sig) => {
+      if (code === 0) return done(0);
+      return reject(new Error(("Process exit with ").concat(String(code), " and signal ", String(sig))));
+    });
+  });
+}
+
+// Fix CI prebuild download
 if (await exist(prebuilds)) {
   const prebuildsFolder = (await fs.readdir(prebuilds)).filter(file => file.startsWith("prebuilds_"));
   for (const folder of prebuildsFolder) {
@@ -40,8 +51,25 @@ if (await exist(prebuilds)) {
   }
 }
 
+/**
+ *
+ * @param {string} platform
+ * @param {string} arch
+ */
+async function migrateBuildAddon(platform, arch) {
+  const files = (await fs.readdir(buildRelease)).filter(f => f.endsWith(".node"));
+  if (await exist(path.join(prebuilds, `${platform}_${arch}`))) await fs.rm(path.join(prebuilds, `${platform}_${arch}`), {recursive: true, force: true});
+  await fs.mkdir(path.join(prebuilds, `${platform}_${arch}`), {recursive: true});
+  for (const file of files) await fs.rename(path.join(buildRelease, file), path.join(prebuilds, `${platform}_${arch}`, file));
+  await fs.rm(buildDir, { recursive: true, force: true });
+}
+
 if (process.argv.slice(2).at(0) === "build") {
   let archs = [];
+  if (process.argv.includes("--clean")) {
+    if (await exist(buildDir)) await fs.rm(buildDir, { recursive: true, force: true });
+    if (await exist(prebuilds)) await fs.rm(prebuilds, { recursive: true, force: true });
+  }
   if (process.argv.includes("--auto")) {
     if (process.platform === "linux") archs.push("x64", "arm64");
     else archs.push(process.arch);
@@ -50,7 +78,6 @@ if (process.argv.slice(2).at(0) === "build") {
     if (archs.length <= 0) archs.push(process.arch);
   }
   for (const arch of Array.from(new Set(archs))) {
-    console.log("Bulding to %O\n", arch);
     if (process.platform === "linux" && arch !== process.arch) {
       if (arch === "x64") {
         // x86_64-linux-gnu-gcc
@@ -63,12 +90,12 @@ if (process.argv.slice(2).at(0) === "build") {
       }
     }
 
-    await fork(nodeGyp, ["rebuild", "-j", "max", "--arch="+arch], {stdio: "inherit", env});
-    const files = (await fs.readdir(build)).filter(f => f.endsWith(".node"));
-    if (await exist(path.join(prebuilds, `${process.platform}_${arch}`))) await fs.rm(path.join(prebuilds, `${process.platform}_${arch}`), {recursive: true, force: true});
-    await fs.mkdir(path.join(prebuilds, `${process.platform}_${arch}`), {recursive: true});
-    for (const file of files) await fs.rename(path.join(build, file), path.join(prebuilds, `${process.platform}_${arch}`, file));
+    console.log("Bulding to %O\n", arch);
+    await fork(nodeGyp, ["rebuild", "-j", "max", ("--arch=").concat(arch)], {env});
+    console.log("Migrating addons!");
+    await migrateBuildAddon(process.platform, arch);
   }
-} else if (!(await exist(path.join(prebuilds, `${process.platform}_${process.arch}`)) || await exist(build))) {
-  await fork(nodeGyp, ["rebuild", "-j", "max"], {stdio: "inherit", env});
+} else if (!(await exist(path.join(prebuilds, `${process.platform}_${process.arch}`)) || await exist(buildRelease))) {
+  await fork(nodeGyp, ["rebuild", "-j", "max"], {env});
+  await migrateBuildAddon(process.platform, process.arch);
 }

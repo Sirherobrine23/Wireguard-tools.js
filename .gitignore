@@ -1,7 +1,7 @@
 # Node.js
 /build/
 node_modules/
-/*-lock*
+*-lock*
 /*.tgz
 *.node
 
@@ -13,8 +13,3 @@ src/**/*.d.ts
 .vscode-ctags*
 *.addrs.json
 .DS_Store
-
-# Wireguard projects
-addons/wg_go
-addons/wireguard-go.exe
-addons/wireguard-go

@@ -1,0 +1,11 @@
+{
+  "name": "add_peer",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "node index.mjs"
+  },
+  "dependencies": {
+    "wireguard-tools.js": "file:../.."
+  }
+}

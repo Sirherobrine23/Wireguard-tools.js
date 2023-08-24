@@ -53,7 +53,7 @@ export async function listDevices() {
   });
 }
 
-export async function parseWgDevice(deviceName: string) {
+export async function parseWgDevice(deviceName: string): Promise<wireguardInterface> {
   if (!deviceName || deviceName.length <= 2) throw new Error("Set valid device name");
   const client = await connectSocket(path.join(defaultPath, deviceName).concat(".sock"));
   const config: wireguardInterface = {} as any;
@@ -97,7 +97,7 @@ export async function parseWgDevice(deviceName: string) {
 
   await new Promise((done, reject) => tetrisBreak.on("error", reject).once("close", done));
   await finished(client.end());
-  return config;
+  return Object.assign({peers: {}}, config);
 }
 
 export async function addDevice(deviceName: string, interfaceConfig: wireguardInterface) {

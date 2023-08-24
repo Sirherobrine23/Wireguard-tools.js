@@ -19,6 +19,7 @@
     "**/node_modules/**",
     "**/test*/**",
     "**.test.*",
+    "**/examples/**",
     "libs/**"
   ],
   "ts-node": {

@@ -1,12 +1,12 @@
 import path from "path";
-const addonKeyGen = (require("../../libs/prebuildifyLoad.cjs"))(path.join(__dirname, "../.."), "keygen");
+const addonKeyGen = (require("../../libs/prebuildifyLoad.cjs"))("keygen", path.join(__dirname, "../.."));
 export type keyObject = {private: string, public: string};
 export type keyObjectPreshered = keyObject & {preshared: string};
 
 /**
  * Create a pre-shared key quickly by returning a string with the base64 of the key.
  *
-*/
+ */
 export async function genPresharedAsync(): Promise<string> {
   return new Promise((done, reject) => addonKeyGen["presharedKeyAsync"]((err, key) => err ? reject(err) : done(key)));
 }
@@ -14,7 +14,7 @@ export async function genPresharedAsync(): Promise<string> {
 /**
  * Create a Private key returning its base64.
  *
-*/
+ */
 export async function genPrivateAsync(): Promise<string> {
   return new Promise((done, reject) => addonKeyGen["genPrivateKeyAsync"]((err, key) => err ? reject(err) : done(key)));
 }
@@ -22,7 +22,7 @@ export async function genPrivateAsync(): Promise<string> {
 /**
  * Create your public key from a private key.
  *
-*/
+ */
 export function genPublicAsync(privateKey: string): Promise<string> {
   return new Promise((done, reject) => addonKeyGen["getPublicKeyAsync"](privateKey, (err, key) => err ? reject(err) : done(key)));
 }
@@ -60,24 +60,24 @@ export async function keygenAsync(genPresharedKey: boolean = false): Promise<key
 
 /**
  * Create a pre-shared key quickly by returning a string with the base64 of the key.
- *
-*/
+ * @deprecated use genPresharedAsync, in future are remove
+ */
 export function genPreshared(): string {
   return addonKeyGen.presharedKey();
 }
 
 /**
  * Create a Private key returning its base64.
- *
-*/
+ * @deprecated use genPrivateAsync, in future are remove
+ */
 export function genPrivate(): string {
   return addonKeyGen.genPrivateKey();
 }
 
 /**
  * Create your public key from a private key.
- *
-*/
+ * @deprecated use genPublicAsync, in future are remove
+ */
 export function genPublic(privateKey: string): string {
   if (typeof privateKey !== "string") throw new Error("privateKey must be a string");
   else if (privateKey.length > 44||44 > privateKey.length) throw new Error(`Invalid private key length (44), you length: (${privateKey.length})`);
@@ -86,6 +86,7 @@ export function genPublic(privateKey: string): string {
 
 /**
  * Generate Wireguard keys withou preshared key
+ * @deprecated use keygenAsync, in future are remove
  */
 export function keygen(): keyObject;
 
@@ -93,6 +94,7 @@ export function keygen(): keyObject;
  * Generate Wireguard keys withou preshared key
  *
  * @param genPreshared - In object includes Preshared key, defaults is `false`
+ * @deprecated use keygenAsync, in future are remove
  */
 export function keygen(genPreshared: false): keyObject;
 
@@ -100,6 +102,7 @@ export function keygen(genPreshared: false): keyObject;
  * Generate Wireguard keys with pershared key.
  *
  * @param genPreshared - In object includes Preshared key, defaults is `false`
+ * @deprecated use keygenAsync, in future are remove
  */
 export function keygen(genPreshared: true): keyObjectPreshered;
 
@@ -107,6 +110,7 @@ export function keygen(genPreshared: true): keyObjectPreshered;
  * Generate Wireguard keys without preshared key
  *
  * @param genPreshared - In object includes Preshared key, defaults is `false`
+ * @deprecated use keygenAsync, in future are remove
  */
 export function keygen(genPresharedKey: boolean = false): keyObject|keyObjectPreshered {
   const privateKey = genPrivate();

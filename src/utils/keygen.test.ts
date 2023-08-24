@@ -1,3 +1,4 @@
+import { randomInt } from "crypto";
 import {
   genPreshared, genPresharedAsync,
   genPrivate, genPrivateAsync,
@@ -5,7 +6,7 @@ import {
   keygen, keygenAsync
 } from "./keygen";
 
-const keysToGen = Array(8 ** 3).fill(null);
+const keysToGen = Array(randomInt(10, 8 ** 3)).fill(null);
 
 // Async
 describe("Wireguard generate keys Async", function() {

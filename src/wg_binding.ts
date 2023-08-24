@@ -1,6 +1,6 @@
 import path from "path";
 import { wireguardInterface } from "./userspace";
-const wg_binding = require("../libs/prebuildifyLoad.cjs")(path.join(__dirname, ".."), "wginterface");
+const wg_binding = require("../libs/prebuildifyLoad.cjs")("wginterface", path.join(__dirname, ".."));
 
 export const constants: { MAX_NAME_LENGTH: number } = wg_binding.constants;
 

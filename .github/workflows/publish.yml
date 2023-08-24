@@ -27,7 +27,7 @@ jobs:
         registry-url: https://registry.npmjs.org/
 
     - run: npm install --no-save --ignore-scripts
-    - run: node scripts/build.mjs build --auto -v
+    - run: npm run prebuildify -- -v
 
     - name: Upload generate interface
       uses: actions/upload-artifact@v3
@@ -64,7 +64,7 @@ jobs:
       uses: actions/download-artifact@v3
       with:
         path: ./prebuilds
-        name: 
+        name:
 
     - name: Edit version and install depencies
       run: |

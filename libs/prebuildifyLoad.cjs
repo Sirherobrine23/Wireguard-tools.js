@@ -4,11 +4,11 @@ const path = require("path");
 module.exports = main;
 /**
  * Load node addon
+ * @param {string|number|undefined} name
  * @param {string|undefined} path
- * @param {string|undefined} name
  * @returns {any}
  */
-function main(pathLocation, name) {
+function main(name, pathLocation) {
   if (!pathLocation) pathLocation = process.cwd();
   else pathLocation = path.resolve(pathLocation);
   const folders = [
@@ -16,17 +16,18 @@ function main(pathLocation, name) {
     path.join(pathLocation, "build", "Debug"),
     path.join(pathLocation, "prebuilds", `${process.platform}-${process.arch}`),
     path.join(pathLocation, "prebuilds", `${process.platform}_${process.arch}`)
-  ]
+  ];
   for (const folder of folders) {
     if (fs.existsSync(folder)) {
-      if (!name) name = (fs.readdirSync(folder)).filter(file => file.endsWith(".node")).at(0);
+      const files = (fs.readdirSync(folder)).filter(file => file.endsWith(".node"));
+      if (typeof name === "number") return require(path.join(folder, files.at(name)));
+      else if (!name) name = files.at(0);
       if (typeof name === "string") {
-        if (!(name.endsWith(".node"))) name += ".node";
-        if (fs.existsSync(path.join(folder, name))) return require(path.join(folder, name));
+        const bname = name;
+        if ((name = files.find(s => s.startsWith(name)))) return require(path.join(folder, name));
+        name = bname;
       }
     }
-
-
   }
   throw new Error("Cannot get node addon");
 }
