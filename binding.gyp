@@ -32,6 +32,9 @@
     },
     {
       "target_name": "wginterface",
+      "include_dirs": [
+        "addons/tools"
+      ],
       "sources": [
         "addons/tools/wginterface.cpp"
       ],

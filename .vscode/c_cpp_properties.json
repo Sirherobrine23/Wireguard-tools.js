@@ -13,7 +13,6 @@
       "includePath": [
         "${env:appdata}/../Local/node-gyp/Cache/18.17.0/include/node",
         "${workspaceFolder}/node_modules/node-addon-api",
-        "${workspaceFolder}/addons/tools/wgtool/wincompat/include",
         "${workspaceFolder}/addons/**",
         "${workspaceFolder}/addons"
       ]

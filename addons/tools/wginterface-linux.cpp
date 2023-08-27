@@ -159,6 +159,10 @@ Napi::Value mountAllowedIps(wg_peer *peerStruct, Napi::Env env, const Napi::Arra
   return env.Undefined();
 }
 
+void setConfig::Execute() {
+  SetError("Not implemented in Linux");
+}
+
 Napi::Value setupInterfaceSync(const Napi::CallbackInfo& info) {
   const Napi::Env env = info.Env();
   const Napi::String interfaceName = info[0].As<Napi::String>();
