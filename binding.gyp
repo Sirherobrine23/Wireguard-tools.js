@@ -18,9 +18,7 @@
       }],
       ["OS=='mac'", {
         "xcode_settings": {
-          "GCC_ENABLE_CPP_EXCEPTIONS": "YES",
-          "CLANG_CXX_LIBRARY": "libc++",
-          "MACOSX_DEPLOYMENT_TARGET": "10.7",
+          "GCC_ENABLE_CPP_EXCEPTIONS": "YES"
         },
       }],
     ],
@@ -61,10 +59,24 @@
       ],
       "conditions": [
         ["OS=='linux'", {
+          "defines": [
+            "LISTDEV",
+            "GETCONFIG",
+            "SETCONFIG"
+          ],
           "sources": [
             "addons/tools/linux/wireguard.c",
             "addons/tools/wginterface-linux.cpp"
           ]
+        }],
+        ["OS=='mac'", {
+          "cflags!": [ "-fno-exceptions" ],
+          "cflags_cc!": [ "-fno-exceptions" ],
+          "cflags_cc": [ "-fexceptions" ],
+          "cflags": [ "-fexceptions" ],
+          "xcode_settings": {
+            "GCC_ENABLE_CPP_EXCEPTIONS": "YES"
+          },
         }],
         ["OS!='linux'", {
           "sources": [

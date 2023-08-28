@@ -4,7 +4,7 @@
 #include <vector>
 #include <map>
 
-int maxName();
+unsigned long maxName();
 
 /*
 Esta função consegela o loop event
@@ -12,6 +12,28 @@ Esta função consegela o loop event
 Pegar todas as interfaces do Wireguard e retorna em forma de String sendo tratado pelo Node.js quando retornado.
 */
 Napi::Value listDevicesSync(const Napi::CallbackInfo& info);
+
+class listDevices : public Napi::AsyncWorker {
+  private:
+    std::vector<std::string> deviceNames;
+  public:
+  ~listDevices() {}
+  listDevices(const Napi::Function &callback) : AsyncWorker(callback) {}
+  void OnOK() override {
+    Napi::HandleScope scope(Env());
+    const Napi::Env env = Env();
+    const auto deviceArray = Napi::Array::New(env);
+    if (deviceNames.size() > 0) {
+      for (auto it = deviceNames.begin(); it != deviceNames.end(); ++it) deviceArray.Set(deviceArray.Length(), it->append(""));
+    }
+    Callback().Call({ Env().Undefined(), deviceArray });
+  };
+  void OnError(const Napi::Error& e) override {
+    Napi::HandleScope scope(Env());
+    Callback().Call({ e.Value() });
+  }
+  void Execute() override;
+};
 
 class Peer {
   public:
@@ -162,9 +184,6 @@ class getConfig : public Napi::AsyncWorker {
 
     // Interface address'es
     std::vector<std::string> Address;
-
-    // Replace peers
-    bool replacePeers;
 
     /*
     Wireguard peers

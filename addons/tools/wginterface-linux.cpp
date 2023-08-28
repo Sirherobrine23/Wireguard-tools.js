@@ -24,12 +24,21 @@
 #include <sys/types.h>
 #include "wginterface.hh"
 #include "linux/set_ip.cpp"
-
 extern "C" {
   #include "linux/wireguard.h"
 }
 
-int maxName() {
+#ifndef SETCONFIG
+#define SETCONFIG
+#endif
+#ifndef GETCONFIG
+#define GETCONFIG
+#endif
+#ifndef LISTDEV
+#define LISTDEV
+#endif
+
+unsigned long maxName() {
   return IFNAMSIZ;
 }
 
@@ -45,6 +54,16 @@ Napi::Value listDevicesSync(const Napi::CallbackInfo& info) {
   for ((device_name) = (devicesList), (len) = 0; ((len) = strlen(device_name)); (device_name) += (len) + 1) devicesArray.Set(devicesArray.Length(), Napi::String::New(env, device_name));
   free(devicesList);
   return devicesArray;
+}
+
+void listDevices::Execute() {
+  char *device_name, *devicesList = wg_list_device_names();
+  if (!devicesList) SetError("Unable to get device names");
+  else {
+    size_t len;
+    for ((device_name) = (devicesList), (len) = 0; ((len) = strlen(device_name)); (device_name) += (len) + 1) deviceNames.push_back(device_name);
+    free(devicesList);
+  }
 }
 
 int setInterface(std::string wgName) {

@@ -10,7 +10,7 @@ module.exports = main;
  */
 function main(name, pathLocation) {
   if (!pathLocation) pathLocation = process.cwd();
-  else pathLocation = path.resolve(pathLocation);
+  else pathLocation = path.resolve(process.cwd(), pathLocation);
   const folders = [
     path.join(pathLocation, "build", "Release"),
     path.join(pathLocation, "build", "Debug"),
@@ -23,7 +23,7 @@ function main(name, pathLocation) {
       if (typeof name === "number") return require(path.join(folder, files.at(name)));
       else if (!name) name = files.at(0);
       if (typeof name === "string") {
-        const bname = name;
+        const bname = name.concat("");
         if ((name = files.find(s => s.startsWith(name)))) return require(path.join(folder, name));
         name = bname;
       }

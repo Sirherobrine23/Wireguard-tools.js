@@ -29,6 +29,7 @@ Napi::Value setConfigAsync(const Napi::CallbackInfo &info) {
   }
   return env.Undefined();
 }
+
 Napi::Value getConfigAsync(const Napi::CallbackInfo &info) {
   const Napi::Env env = info.Env();
   const auto wgName = info[0];
@@ -53,6 +54,23 @@ Napi::Value getConfigAsync(const Napi::CallbackInfo &info) {
   return env.Undefined();
 }
 
+Napi::Value listDevicesAsync(const Napi::CallbackInfo &info) {
+  const Napi::Env env = info.Env();
+  const auto callback = info[0];
+  if (!(callback.IsFunction())) {
+    Napi::Error::New(env, "Require callback").ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
+  try {
+    const auto devicesFind = new listDevices(callback.As<Napi::Function>());
+    devicesFind->Queue();
+  } catch (const Napi::Error &err) {
+    err.ThrowAsJavaScriptException();
+  }
+  return env.Undefined();
+}
+
 Napi::Object Init(Napi::Env env, Napi::Object exports) {
   const Napi::Object constants = Napi::Object::New(env);
   constants.Set("MAX_NAME_LENGTH", maxName());
@@ -61,11 +79,15 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
   exports.Set("constants", constants);
 
   // async function
+  #ifdef SETCONFIG
   exports.Set("setConfigAsync", Napi::Function::New(env, setConfigAsync));
+  #endif
+  #ifdef GETCONFIG
   exports.Set("getConfigAsync", Napi::Function::New(env, getConfigAsync));
-
-  // Sync function lock loop
-  exports.Set("listDevicesSync", Napi::Function::New(env, listDevicesSync));
+  #endif
+  #ifdef LISTDEV
+  exports.Set("listDevicesAsync", Napi::Function::New(env, listDevicesAsync));
+  #endif
   return exports;
 }
 NODE_API_MODULE(addon, Init);

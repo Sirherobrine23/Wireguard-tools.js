@@ -1,8 +1,8 @@
 import { randomInt } from "crypto";
 import { writeFileSync } from "fs";
 import { userInfo } from "os";
-import * as Bridge from "../src/mergeSets";
-import * as utils from "../src/utils/index";
+import * as Bridge from "./wginterface";
+import * as utils from "./utils/index";
 
 if (process.platform !== "win32" && (userInfo()).gid === 0) {
   // Make base config
@@ -33,16 +33,18 @@ if (process.platform !== "win32" && (userInfo()).gid === 0) {
   describe(`Wireguard interface (${interfaceName})`, () => {
     it("Fist list", () => Bridge.listDevices());
     it("Maneger", async () => {
-      await Bridge.addDevice(interfaceName, deviceConfig);
-      if (!((await Bridge.listDevices()).includes(interfaceName))) throw new Error("Invalid list devices");
+      await Bridge.setConfig(interfaceName, deviceConfig);
+      if (!((await Bridge.listDevices()).some(s => s.name === interfaceName))) throw new Error("Invalid list devices");
     });
 
     it("Get config", async () => {
-      const raw = await Bridge.parseWgDevice(interfaceName);
+      const raw = await Bridge.getConfig(interfaceName);
+      let keyNot: string;
       writeFileSync(`${__dirname}/../${interfaceName}.addrs.json`, JSON.stringify({
+        raw,
         deviceConfig,
-        raw
       }, null, 2));
+      if (Object.keys(deviceConfig.peers).some(s => !(deviceConfig.peers[s].removeMe) && !(raw.peers[(keyNot = s)]))) throw new Error(("Invalid return config, key not exists: ").concat(keyNot));
     });
 
     it("After list", async () => await Bridge.listDevices());

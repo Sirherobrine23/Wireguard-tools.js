@@ -7,28 +7,11 @@
 #include <net/if.h>
 #endif
 
-
-int maxName() {
+unsigned long maxName() {
   return IFNAMSIZ;
 }
 
-Napi::Value listDevicesSync(const Napi::CallbackInfo& info) {
-  const Napi::Env env = info.Env();
-  Napi::Error::New(env, "Use userpace implementation, kernel only on linux!").ThrowAsJavaScriptException();
-  return env.Undefined();
-}
-
-Napi::Value setupInterfaceSync(const Napi::CallbackInfo& info) {
-  const Napi::Env env = info.Env();
-  Napi::Error::New(env, "Use userpace implementation, kernel only on linux!").ThrowAsJavaScriptException();
-  return env.Undefined();
-}
-
-Napi::Value parseWgDeviceSync(const Napi::CallbackInfo& info) {
-  const Napi::Env env = info.Env();
-  Napi::Error::New(env, "Use userpace implementation, kernel only on linux!").ThrowAsJavaScriptException();
-  return env.Undefined();
-}
+void listDevices::Execute() {}
 
 void setConfig::Execute() {
   SetError("Use userpace implementation, kernel only on linux!");

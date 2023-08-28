@@ -1,4 +1,4 @@
-import { wireguardInterface } from "../userspace";
+import { wireguardInterface } from "../wginterface";
 
 /**
  * Create wg-quick config file
