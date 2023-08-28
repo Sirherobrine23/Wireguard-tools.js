@@ -33,3 +33,7 @@ Napi::Value parseWgDeviceSync(const Napi::CallbackInfo& info) {
 void setConfig::Execute() {
   SetError("Use userpace implementation, kernel only on linux!");
 }
+
+void getConfig::Execute() {
+  SetError("Use userpace implementation, kernel only on linux!");
+}

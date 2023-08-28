@@ -1,5 +1,6 @@
 import path from "path";
 import { wireguardInterface } from "./userspace";
+import { promisify } from "util";
 const wg_binding = require("../libs/prebuildifyLoad.cjs")("wginterface", path.join(__dirname, ".."));
 
 export const constants: { MAX_NAME_LENGTH: number } = wg_binding.constants;
@@ -18,9 +19,9 @@ export async function listDevices(): Promise<string[]> {
  * @param deviceName - Wireguard interface name.
  * @returns
  */
-export function parseWgDevice(deviceName: string): wireguardInterface {
-  if (typeof wg_binding.parseWgDeviceSync !== "function") throw new Error("Cannot get device configs, check if wireguard is avaible to the system!");
-  return wg_binding.parseWgDeviceSync(deviceName);
+export async function parseWgDevice(deviceName: string): Promise<wireguardInterface> {
+  if (typeof wg_binding.getConfigAsync !== "function") throw new Error("Cannot get device configs, check if wireguard is avaible to the system!");
+  return promisify(wg_binding.getConfigAsync)(deviceName);
 }
 
 /**
@@ -28,7 +29,7 @@ export function parseWgDevice(deviceName: string): wireguardInterface {
  * @param deviceName - Wireguard interface name.
  * @param interfaceConfig - Peers and Interface config.
  */
-export function addDevice(deviceName: string, interfaceConfig: wireguardInterface): void {
+export async function addDevice(deviceName: string, interfaceConfig: wireguardInterface): Promise<void> {
   if (typeof deviceName !== "string" || deviceName.length > 16 || deviceName.length <= 0) throw new Error("Check interface name!");
-  wg_binding.setupInterfaceSync(deviceName, interfaceConfig);
+  return promisify(wg_binding.setConfigAsync)(deviceName, interfaceConfig);
 }

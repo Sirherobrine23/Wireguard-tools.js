@@ -6,9 +6,16 @@
       "cStandard": "c17",
       "cppStandard": "c++17",
       "intelliSenseMode": "windows-msvc-x64",
+      "compilerArgs": [
+        "-fpermissive",
+        "-fexceptions",
+        "-w",
+        "-fpermissive",
+        "-fPIC",
+        "-static"
+      ],
       "defines": [
-        "NAPI_DISABLE_CPP_EXCEPTIONS",
-        "CallSetupWireguard"
+        "NAPI_DISABLE_CPP_EXCEPTIONS"
       ],
       "includePath": [
         "${env:appdata}/../Local/node-gyp/Cache/18.17.0/include/node",
@@ -24,7 +31,12 @@
       "cppStandard": "c++17",
       "intelliSenseMode": "linux-clang-x64",
       "compilerArgs": [
-        "-fpermissive"
+        "-fpermissive",
+        "-fexceptions",
+        "-w",
+        "-fpermissive",
+        "-fPIC",
+        "-static"
       ],
       "defines": [
         "NAPI_DISABLE_CPP_EXCEPTIONS"
@@ -40,12 +52,20 @@
     {
       "name": "Mac",
       "includePath": [
-        "/usr/local/include/node",
         "${workspaceFolder}/node_modules/node-addon-api",
-        "${workspaceFolder}/addons/**"
+        "${workspaceFolder}/addons/**",
+        "/usr/local/include/node"
       ],
       "defines": [
         "NAPI_DISABLE_CPP_EXCEPTIONS"
+      ],
+      "compilerArgs": [
+        "-fpermissive",
+        "-fexceptions",
+        "-w",
+        "-fpermissive",
+        "-fPIC",
+        "-static"
       ],
       "macFrameworkPath": [
         "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks"

@@ -2,14 +2,19 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "type": "node",
+      "type": "lldb",
       "request": "launch",
-      "name": "Mocha test",
+      "name": "Debug",
+      "cwd": "${workspaceFolder}",
+      "program": "node",
       "preLaunchTask": {
-        "script": "test:full",
-        "type": "npm"
+        "type": "npm",
+        "script": "dev"
       },
-      "program": "node"
+      "args": [
+        "node_modules/.bin/mocha",
+        "./"
+      ]
     }
   ]
 }

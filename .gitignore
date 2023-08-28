@@ -13,3 +13,4 @@ src/**/*.d.ts
 .vscode-ctags*
 *.addrs.json
 .DS_Store
+*.log

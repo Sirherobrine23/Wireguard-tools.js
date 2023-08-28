@@ -35,6 +35,7 @@
   "scripts": {
     "install": "node libs/build.mjs",
     "test": "mocha ./",
+    "dev": "tsc --build --clean && tsc --build && node libs/build.mjs build",
     "prebuildify": "node libs/build.mjs build --auto",
     "prepack": "tsc --build --clean && tsc --build && npm run prebuildify",
     "postpack": "tsc --build --clean && node-gyp clean"

@@ -4,7 +4,7 @@ import { userInfo } from "os";
 import * as Bridge from "../src/mergeSets";
 import * as utils from "../src/utils/index";
 
-if (process.platform !== "win32" && (userInfo()).uid === 0) {
+if (process.platform !== "win32" && (userInfo()).gid === 0) {
   // Make base config
   const interfaceName = String(((process.env.WG_INETRFACE||"").length > 0) ? process.env.WG_INETRFACE : (process.platform === "darwin" ? "utun" : "shtest").concat(String(randomInt(20, 1023))));
   const deviceConfig: Bridge.wireguardInterface = {
@@ -30,7 +30,7 @@ if (process.platform !== "win32" && (userInfo()).uid === 0) {
   // Add IPv6 addresses
   if (deviceConfig.Address) deviceConfig.Address.push(...deviceConfig.Address.map(s => utils.ipManipulation.toV6(s)));
 
-  describe("Wireguard interface", () => {
+  describe(`Wireguard interface (${interfaceName})`, () => {
     it("Fist list", () => Bridge.listDevices());
     it("Maneger", async () => {
       await Bridge.addDevice(interfaceName, deviceConfig);
