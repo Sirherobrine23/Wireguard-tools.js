@@ -62,7 +62,8 @@
           "defines": [
             "LISTDEV",
             "GETCONFIG",
-            "SETCONFIG"
+            "SETCONFIG",
+            "DELIFACE"
           ],
           "sources": [
             "addons/tools/linux/wireguard.c",

@@ -34,7 +34,7 @@
   },
   "scripts": {
     "install": "node libs/build.mjs",
-    "test": "mocha ./",
+    "test": "mocha ./src",
     "dev": "tsc --build --clean && tsc --build && node libs/build.mjs build",
     "prebuildify": "node libs/build.mjs build --auto",
     "prepack": "tsc --build --clean && tsc --build && npm run prebuildify",

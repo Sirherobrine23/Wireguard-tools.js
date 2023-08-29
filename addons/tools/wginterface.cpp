@@ -30,6 +30,30 @@ Napi::Value setConfigAsync(const Napi::CallbackInfo &info) {
   return env.Undefined();
 }
 
+Napi::Value deleteInterfaceAsync(const Napi::CallbackInfo &info) {
+  const Napi::Env env = info.Env();
+  const auto wgName = info[0];
+  const auto callback = info[1];
+  if (!(wgName.IsString())) {
+    Napi::Error::New(env, "Require wireguard interface name").ThrowAsJavaScriptException();
+    return env.Undefined();
+  } else if (wgName.ToString().Utf8Value().length() >= maxName()) {
+    Napi::Error::New(env, "interface name is so long").ThrowAsJavaScriptException();
+    return env.Undefined();
+  } else if (!(callback.IsFunction())) {
+    Napi::Error::New(env, "Require callback").ThrowAsJavaScriptException();
+    return env.Undefined();
+  }
+
+  try {
+    const auto delInterWorker = new deleteInterface(callback.As<Napi::Function>(), wgName.ToString().Utf8Value());
+    delInterWorker->Queue();
+  } catch (const Napi::Error &err) {
+    err.ThrowAsJavaScriptException();
+  }
+  return env.Undefined();
+}
+
 Napi::Value getConfigAsync(const Napi::CallbackInfo &info) {
   const Napi::Env env = info.Env();
   const auto wgName = info[0];
@@ -78,13 +102,19 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
   // Constants
   exports.Set("constants", constants);
 
-  // async function
+  // Function's
   #ifdef SETCONFIG
   exports.Set("setConfigAsync", Napi::Function::New(env, setConfigAsync));
   #endif
+
+  #ifdef DELIFACE
+  exports.Set("deleteInterfaceAsync", Napi::Function::New(env, deleteInterfaceAsync));
+  #endif
+
   #ifdef GETCONFIG
   exports.Set("getConfigAsync", Napi::Function::New(env, getConfigAsync));
   #endif
+
   #ifdef LISTDEV
   exports.Set("listDevicesAsync", Napi::Function::New(env, listDevicesAsync));
   #endif

@@ -48,5 +48,6 @@ if (process.platform !== "win32" && (userInfo()).gid === 0) {
     });
 
     it("After list", async () => await Bridge.listDevices());
+    it("Delete", async () => await Bridge.deleteInterface(interfaceName));
   });
 }

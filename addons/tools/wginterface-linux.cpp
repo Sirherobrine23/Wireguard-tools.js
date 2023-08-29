@@ -28,32 +28,13 @@ extern "C" {
   #include "linux/wireguard.h"
 }
 
-#ifndef SETCONFIG
-#define SETCONFIG
-#endif
-#ifndef GETCONFIG
-#define GETCONFIG
-#endif
-#ifndef LISTDEV
-#define LISTDEV
-#endif
+#define SETCONFIG 1
+#define GETCONFIG 1
+#define LISTDEV 1
+#define DELIFACE 1
 
 unsigned long maxName() {
   return IFNAMSIZ;
-}
-
-Napi::Value listDevicesSync(const Napi::CallbackInfo& info) {
-  const Napi::Env env = info.Env();
-  size_t len;
-  char *device_name, *devicesList = wg_list_device_names();
-  if (!devicesList) {
-    Napi::Error::New(env, "Unable to get device names").ThrowAsJavaScriptException();
-    return env.Undefined();
-  }
-  const Napi::Array devicesArray = Napi::Array::New(env);
-  for ((device_name) = (devicesList), (len) = 0; ((len) = strlen(device_name)); (device_name) += (len) + 1) devicesArray.Set(devicesArray.Length(), Napi::String::New(env, device_name));
-  free(devicesList);
-  return devicesArray;
 }
 
 void listDevices::Execute() {
@@ -83,6 +64,26 @@ int setInterface(std::string wgName) {
   }
 
   return len;
+}
+
+void deleteInterface::Execute() {
+  size_t len = 0;
+  char *device_name, *devicesList = wg_list_device_names();
+  if (!!devicesList) {
+    for ((device_name) = (devicesList), (len) = 0; ((len) = strlen(device_name)); (device_name) += (len) + 1) {
+      if (device_name == wgName.c_str()) {
+        if ((len = wg_add_device(wgName.c_str())) < 0) {
+          std::string err = "Error code: ";
+          err = err.append(std::to_string(len));
+          if (len == -ENOMEM) err = "Out of memory";
+          else if (len == -errno) err = ((std::string)"Cannot add device, code: ").append(std::to_string(len));
+          SetError(err);
+        }
+        break;
+      }
+    }
+    free(devicesList);
+  }
 }
 
 void setConfig::Execute() {

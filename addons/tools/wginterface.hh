@@ -6,12 +6,24 @@
 
 unsigned long maxName();
 
-/*
-Esta função consegela o loop event
+class deleteInterface : public Napi::AsyncWorker {
+  private:
+    std::string wgName;
+  public:
+  deleteInterface(const Napi::Function &callback, std::string name): AsyncWorker(callback), wgName(name) {}
+  ~deleteInterface() {}
+  void OnOK() override {
+    Napi::HandleScope scope(Env());
+    Callback().Call({ Env().Undefined() });
+  };
+  void OnError(const Napi::Error &e) override {
+    Napi::HandleScope scope(Env());
+    Callback().Call({ e.Value() });
+  }
 
-Pegar todas as interfaces do Wireguard e retorna em forma de String sendo tratado pelo Node.js quando retornado.
-*/
-Napi::Value listDevicesSync(const Napi::CallbackInfo& info);
+  // Set platform Execute script
+  void Execute() override;
+};
 
 class listDevices : public Napi::AsyncWorker {
   private:

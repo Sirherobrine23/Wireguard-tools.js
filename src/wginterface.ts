@@ -81,7 +81,7 @@ export class wgConfig extends Map<string, peerConfig> {
       allowedIPs: [IPv4, IPv6],
       presharedKey: withPreshared ? peerKey.preshared : undefined
     });
-    return this.get(peerKey.public);
+    return Object.assign({}, { publicKey: peerKey.public }, this.get(peerKey.public));
   }
 
   toJSON(): wireguardInterface {
@@ -176,6 +176,16 @@ export async function getConfig(deviceName: string): Promise<wireguardInterface>
   await new Promise((done, reject) => tetrisBreak.on("error", reject).once("close", done));
   await finished(client.end());
   return config.toJSON();
+}
+
+/**
+ * Delete wg interface if possible
+ * @param deviceName - Wireguard interface name.
+ * @returns
+ */
+export async function deleteInterface(deviceName: string): Promise<void> {
+  if (typeof wg_binding.deleteInterfaceAsync === "function") return promisify(wg_binding.deleteInterfaceAsync)(deviceName);
+  return fs.rm(path.join(defaultPath, deviceName).concat(".sock"), { force: true });
 }
 
 /**
