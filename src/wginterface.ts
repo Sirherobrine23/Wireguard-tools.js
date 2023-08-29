@@ -18,6 +18,7 @@ export type peerConfig = {
   /** Mark this peer to be removed, any changes remove this option */
   removeMe?: boolean,
   presharedKey?: string,
+  privateKey?: string,
   keepInterval?: number,
   /** Remote address or hostname to Wireguard connect */
   endpoint?: string,
@@ -40,6 +41,18 @@ export type wireguardInterface = {
   peers: {
     [peerPublicKey: string]: peerConfig;
   }
+};
+
+const removeEmpty = <T>(obj: T): T => {
+  let newObj: T = Object();
+  Object.keys(obj).forEach((key) => {
+    if (obj[key] === Object(obj[key])) {
+      if (Array.isArray(obj[key])) newObj[key] = obj[key].filter(s => (s === undefined || s === null));
+      newObj[key] = removeEmpty(obj[key]);
+    }
+    else if (obj[key] !== undefined) newObj[key] = obj[key];
+  });
+  return newObj;
 };
 
 export class wgConfig extends Map<string, peerConfig> {
@@ -78,15 +91,55 @@ export class wgConfig extends Map<string, peerConfig> {
     const allowedIPs = Array.from(this.values()).map(s => s.allowedIPs).flat(2).filter(s => net.isIPv4(s.split("/")[0]));
     const IPv4 = ipManipulation.randomIp(this.Address.at(this.Address.length === 1 ? 0 : randomInt(0, this.Address.length - 1)), allowedIPs), IPv6 = ipManipulation.toV6(IPv4);
     this.set(peerKey.public, {
+      privateKey: peerKey.private,
+      presharedKey: withPreshared ? peerKey.preshared : undefined,
       allowedIPs: [IPv4, IPv6],
-      presharedKey: withPreshared ? peerKey.preshared : undefined
     });
     return Object.assign({}, { publicKey: peerKey.public }, this.get(peerKey.public));
   }
 
+  /**
+   * Get peer config
+   * @param publicKey - Peer public key
+   * @param remoteAddress - ip or hostname to server, example: 123.456.789.101, [::ffff:24bd:34ac]
+   * @returns
+   */
+  async getClientConfig(publicKey: string, remoteAddress: string): Promise<wireguardInterface> {
+    if (!(this.has(publicKey))) throw new Error("Set valid public key");
+    const { presharedKey, privateKey, allowedIPs } = this.get(publicKey);
+    if (!privateKey) throw new Error("Peer not set private key to add in interface");
+    const endpoint = remoteAddress.concat(":", String(Math.floor(this.portListen)));
+    return {
+      privateKey,
+      Address: allowedIPs,
+      peers: {
+        [await keygen.genPublicAsync(this.privateKey)]: {
+          presharedKey,
+          endpoint,
+          allowedIPs: [
+            "0.0.0.0/0",
+            "::/0"
+          ]
+        }
+      }
+    };
+  }
+
+  /** Get server config JSON */
+  getServerConfig() {
+    const { Address, portListen, privateKey, fwmark } = this;
+    return Array.from(this.entries()).reduce<wireguardInterface>((acc, [publicKey, {presharedKey, allowedIPs}]) => {
+      acc.peers[publicKey] = { presharedKey, allowedIPs };
+      return acc;
+    }, { Address, portListen, privateKey, fwmark, peers: {} });
+  }
+
   toJSON(): wireguardInterface {
     const { privateKey, publicKey, portListen, replacePeers, fwmark, Address, DNS } = this;
-    return {
+    return removeEmpty(Array.from(this.entries()).reduce<wireguardInterface>((acc, [pubKey, { presharedKey, privateKey, endpoint, keepInterval, removeMe, allowedIPs }]) =>  {
+      acc.peers[pubKey] = { presharedKey, privateKey, endpoint, keepInterval, removeMe, allowedIPs };
+      return acc;
+    }, {
       privateKey,
       publicKey,
       portListen,
@@ -94,8 +147,8 @@ export class wgConfig extends Map<string, peerConfig> {
       replacePeers,
       Address,
       DNS,
-      peers: Array.from(this).reduce((acc, [pubKey, info]) => Object.assign(acc, { [pubKey]: info}), {})
-    };
+      peers: {}
+    }));
   }
 
   toString() {
