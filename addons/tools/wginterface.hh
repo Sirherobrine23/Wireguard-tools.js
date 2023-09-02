@@ -36,7 +36,7 @@ class listDevices : public Napi::AsyncWorker {
     const Napi::Env env = Env();
     const auto deviceArray = Napi::Array::New(env);
     if (deviceNames.size() > 0) {
-      for (auto it = deviceNames.begin(); it != deviceNames.end(); ++it) deviceArray.Set(deviceArray.Length(), it->append(""));
+      for (auto &it : deviceNames) deviceArray.Set(deviceArray.Length(), it);
     }
     Callback().Call({ Env().Undefined(), deviceArray });
   };
@@ -219,23 +219,23 @@ class getConfig : public Napi::AsyncWorker {
     if (fwmark >= 0) config.Set("fwmark", fwmark);
     if (Address.size() > 0) {
       const auto Addrs = Napi::Array::New(env);
-      for (auto it = Address.begin(); it != Address.end(); ++it) Addrs.Set(Addrs.Length(), it->append(""));
+      for (auto &addr : Address) Addrs.Set(Addrs.Length(), addr);
       config.Set("Address", Addrs);
     }
 
     // Peer object
     const auto PeersObject = Napi::Object::New(env);
-    for (auto it = peersVector.begin(); it != peersVector.end(); ++it) {
+    for (auto &peer : peersVector) {
       const auto PeerObject = Napi::Object::New(env);
-      const std::string peerPubKey = it->first;
-      auto peerConfig = it->second;
+      const std::string peerPubKey = peer.first;
+      auto peerConfig = peer.second;
 
       if (peerConfig.presharedKey.length() > 0) PeerObject.Set("presharedKey", peerConfig.presharedKey);
       if (peerConfig.keepInterval > 0) PeerObject.Set("keepInterval", peerConfig.keepInterval);
       if (peerConfig.endpoint.length() > 0) PeerObject.Set("endpoint", peerConfig.endpoint);
       if (peerConfig.allowedIPs.size() > 0) {
         const auto allowedIPs = Napi::Array::New(env);
-        for (auto it = peerConfig.allowedIPs.begin(); it != peerConfig.allowedIPs.end(); ++it) allowedIPs.Set(allowedIPs.Length(), it->append(""));
+        for (auto &ip : peerConfig.allowedIPs) allowedIPs.Set(allowedIPs.Length(), ip);
         PeerObject.Set("allowedIPs", allowedIPs);
       }
 

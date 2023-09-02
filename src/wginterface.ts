@@ -56,13 +56,33 @@ const removeEmpty = <T>(obj: T): T => {
 };
 
 export class wgConfig extends Map<string, peerConfig> {
-  publicKey?: string;
   privateKey?: string;
-  portListen?: number;
-  fwmark?: number;
+  publicKey: string;
+
+  #portListen?: number;
+  public get portListen() { return this.#portListen||0; }
+  public set portListen(portListen: number) {
+    if (portListen >= 0 && portListen <= ((2 ** 16) - 1)) this.#portListen = portListen;
+    else throw new Error("Invalid port listen");
+  }
+
+  #fwmark?: number;
+  public get fwmark() {
+    this.#fwmark = (parseInt(String(this.#fwmark))||0);
+    if (this.#fwmark < 0) this.#fwmark = 0;
+    return this.#fwmark;
+  }
+  public set fwmark(fwmark: number) {
+    if (fwmark >= 0) this.#fwmark = fwmark;
+    else throw new Error("Set valid fwmark");
+  }
+
+  #replacePeers = true;
+  public get replacePeers() { return !!(this.#replacePeers); }
+  public set replacePeers(replace: boolean) { this.#replacePeers = !!replace; }
+
   Address?: string[] = [];
   DNS?: string[] = [];
-  replacePeers = true;
 
   constructor(config?: wireguardInterface) {
     super();
@@ -87,9 +107,10 @@ export class wgConfig extends Map<string, peerConfig> {
       peerKey = await keygen.keygenAsync(true);
       if (this.has(peerKey.public)) peerKey = undefined;
     }
-
+    if (this.Address.filter(s => net.isIPv4(s.split("/")[0])).length === 0) throw new Error("Set Interface IPv4 subnet");
     const allowedIPs = Array.from(this.values()).map(s => s.allowedIPs).flat(2).filter(s => net.isIPv4(s.split("/")[0]));
-    const IPv4 = ipManipulation.randomIp(this.Address.at(this.Address.length === 1 ? 0 : randomInt(0, this.Address.length - 1)), allowedIPs), IPv6 = ipManipulation.toV6(IPv4);
+
+    const IPv4 = ipManipulation.nextIpSequence(this.Address.at(this.Address.length === 1 ? 0 : randomInt(0, this.Address.length - 1)), allowedIPs), IPv6 = ipManipulation.toV6(IPv4, true);
     this.set(peerKey.public, {
       privateKey: peerKey.private,
       presharedKey: withPreshared ? peerKey.preshared : undefined,
@@ -112,6 +133,7 @@ export class wgConfig extends Map<string, peerConfig> {
     return {
       privateKey,
       Address: allowedIPs,
+      DNS: Array.from(new Set(([...this.DNS]).map(s => s.split("/")[0]))),
       peers: {
         [await keygen.genPublicAsync(this.privateKey)]: {
           presharedKey,

@@ -77,9 +77,17 @@
           "cflags": [ "-fexceptions" ],
           "xcode_settings": {
             "GCC_ENABLE_CPP_EXCEPTIONS": "YES"
-          },
+          }
         }],
-        ["OS!='linux'", {
+        ["OS=='win'", {
+          "defines": [
+            "LISTDEV"
+          ],
+          "sources": [
+            "addons/tools/wginterface-win.cpp"
+          ]
+        }],
+        ["OS not in 'linux win'", {
           "sources": [
             "addons/tools/wginterface-dummy.cpp"
           ]

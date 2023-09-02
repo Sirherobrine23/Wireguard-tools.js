@@ -317,10 +317,29 @@ export function includes(cidr: string, ip: string): boolean {
  */
 export function randomIp(cidr: string, drops?: string[]): string {
   const [minIp, maxIp] = toIntRange(toCidr(cidr));
-  while (true) {
+  let trys = maxIp - minIp;
+  while (trys > 0) {
     const ip = toString(randomInt(minIp, maxIp));
     if (!((drops||[]).includes(ip))) return ip;
+    trys--;
   }
+  throw new Error("Cannot get random IP or overflow IPs");
+}
+
+/**
+ * Get next IP from cidr and skip if exist's else throw if no avaible IP's
+ * @param cidr
+ * @param skips
+ * @returns
+ */
+export function nextIpSequence(cidr: string, skips: string[]): string {
+  const [minIp, maxIp] = toIntRange(toCidr(cidr));
+  let index = -1;
+  while ((minIp + index) < maxIp) {
+    const ip = toString(minIp + (++index));
+    if (!((skips||[]).includes(ip))) return ip;
+  }
+  throw new Error("Cannot get random IP or overflow IPs");
 }
 
 /**
