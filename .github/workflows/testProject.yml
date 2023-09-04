@@ -16,7 +16,7 @@ jobs:
     runs-on: ${{ matrix.os }}-latest
     name: "Test on ${{ matrix.os }} with Node ${{ matrix.node_version }}"
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       name: Checkout
 
     - uses: actions/setup-node@v3
@@ -64,7 +64,7 @@ jobs:
           - macos
     runs-on: ${{ matrix.os }}-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       name: Code checkout
       with:
         submodules: true
@@ -93,7 +93,7 @@ jobs:
     env:
       PACKAGE_VERSION: ${{ github.ref }}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       name: Code checkout
       with:
         submodules: true
