@@ -80,8 +80,22 @@
           }
         }],
         ["OS=='win'", {
+          "include_dirs": [
+            "addons/tools/win/wireguard-nt/include"
+          ],
           "defines": [
-            "LISTDEV"
+            "ONSTARTADDON",
+            "LISTDEV",
+            "DELIFACE",
+            "SETCONFIG"
+          ],
+          "libraries": [
+            "bcrypt.lib",
+            "crypt32.lib",
+            "iphlpapi.lib",
+            "kernel32.lib",
+            "ntdll.lib",
+            "ws2_32.lib"
           ],
           "sources": [
             "addons/tools/wginterface-win.cpp"

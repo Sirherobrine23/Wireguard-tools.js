@@ -37,6 +37,10 @@ unsigned long maxName() {
   return IFNAMSIZ;
 }
 
+std::string versionDrive() {
+  return "Kernel";
+}
+
 void listDevices::Execute() {
   char *device_name, *devicesList = wg_list_device_names();
   if (!devicesList) SetError("Unable to get device names");

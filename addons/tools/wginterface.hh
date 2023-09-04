@@ -4,7 +4,17 @@
 #include <vector>
 #include <map>
 
+#define WG_KEY_LENGTH 44
+
+// Get wireguard max name length
 unsigned long maxName();
+
+// Get wireguard version
+std::string versionDrive();
+
+
+// On start module call this function
+std::string startAddon(const Napi::Env env);
 
 class deleteInterface : public Napi::AsyncWorker {
   private:
@@ -102,12 +112,16 @@ class setConfig : public Napi::AsyncWorker {
   setConfig(const Napi::Env env, const Napi::Function &callback, std::string name, const Napi::Object &config) : AsyncWorker(callback), wgName(name) {
     // Wireguard public key
     const auto sppk = config.Get("publicKey");
-    if (sppk.IsString()) publicKey = sppk.ToString().Utf8Value();
+    if (sppk.IsString()) {
+      publicKey = sppk.ToString().Utf8Value();
+      if (publicKey.length() != WG_KEY_LENGTH) throw Napi::Error::New(env, "Set valid publicKey");
+    }
 
     // Private key
     const auto sprk = config.Get("privateKey");
     if (!(sprk.IsString())) throw Napi::Error::New(env, "privateKey is empty");
     privateKey = sprk.ToString().Utf8Value();
+    if (privateKey.length() != WG_KEY_LENGTH) throw Napi::Error::New(env, ((std::string)"Set valid privateKey ").append(std::to_string(privateKey.length())));
 
     // Port to listen Wireguard interface
     const auto spor = config.Get("portListen");
@@ -138,6 +152,7 @@ class setConfig : public Napi::AsyncWorker {
         const auto peerPubKey = Keys[peerIndex];
         if (peerPubKey.IsString() && Peers.Get(Keys[peerIndex]).IsObject()) {
           std::string ppkey = peerPubKey.ToString().Utf8Value();
+          if (ppkey.length() != WG_KEY_LENGTH) throw Napi::Error::New(env, "Set valid peer publicKey");
           const Napi::Object peerConfigObject = Peers.Get(Keys[peerIndex]).ToObject();
 
           Peer peerConfig = Peer();
@@ -146,7 +161,10 @@ class setConfig : public Napi::AsyncWorker {
           else {
             // Preshared key
             const auto pprekey = peerConfigObject.Get("presharedKey");
-            if (pprekey.IsString()) peerConfig.presharedKey = pprekey.ToString().Utf8Value();
+            if (pprekey.IsString()) {
+              peerConfig.presharedKey = pprekey.ToString().Utf8Value();
+              if (peerConfig.presharedKey.length() != WG_KEY_LENGTH) throw Napi::Error::New(env, "Set valid peer presharedKey");
+            }
 
             // Keep interval
             const auto pKeepInterval = peerConfigObject.Get("keepInterval");

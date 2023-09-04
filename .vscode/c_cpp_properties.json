@@ -15,11 +15,15 @@
         "-static"
       ],
       "defines": [
-        "NAPI_DISABLE_CPP_EXCEPTIONS"
+        "NAPI_DISABLE_CPP_EXCEPTIONS",
+        "DELIFACE",
+        "SETCONFIG",
+        "ONSTARTADDON"
       ],
       "includePath": [
         "${env:appdata}/../Local/node-gyp/Cache/18.17.0/include/node",
         "${workspaceFolder}/node_modules/node-addon-api",
+        "${workspaceFolder}/addons/tools/win/wireguard-nt/include",
         "${workspaceFolder}/addons/**",
         "${workspaceFolder}/addons"
       ]
