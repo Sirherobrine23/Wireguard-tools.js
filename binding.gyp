@@ -81,7 +81,8 @@
         }],
         ["OS=='win'", {
           "include_dirs": [
-            "addons/tools/win/wireguard-nt/include"
+            "addons/tools/win/wireguard-nt/include",
+            "addons/tools/win"
           ],
           "defines": [
             "ONSTARTADDON",
@@ -95,7 +96,8 @@
             "iphlpapi.lib",
             "kernel32.lib",
             "ntdll.lib",
-            "ws2_32.lib"
+            "ws2_32.lib",
+            "setupapi.lib"
           ],
           "sources": [
             "addons/tools/wginterface-win.cpp"

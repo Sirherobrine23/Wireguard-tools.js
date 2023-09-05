@@ -19,6 +19,9 @@
 #include <wincrypt.h>
 #include <sysinfoapi.h>
 #include <winternl.h>
+#include <cstdlib>
+#include <win/ipc.cpp>
+#include <win/set_ip.cpp>
 #include "wginterface.hh"
 
 #define IFNAMSIZ MAX_ADAPTER_NAME - 1
@@ -38,6 +41,20 @@ static WIREGUARD_SET_CONFIGURATION_FUNC *WireGuardSetConfiguration;
 
 unsigned long maxName() {
   return IFNAMSIZ;
+}
+
+std::string getErrorString(DWORD errorMessageID) {
+  if(errorMessageID == 0) ((std::string)"Error code: ").append(std::to_string(errorMessageID));
+  LPSTR messageBuffer = nullptr;
+  //Ask Win32 to give us the string version of that message ID.
+  //The parameters we pass in, tell Win32 to create the buffer that holds the message for us (because we don't yet know how long the message string will be).
+  size_t size = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+                               NULL, errorMessageID, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&messageBuffer, 0, NULL);
+  //Copy the error message into a std::string.
+  std::string message(messageBuffer, size);
+  //Free the Win32's string's buffer.
+  LocalFree(messageBuffer);
+  return message;
 }
 
 HMODULE InitializeWireGuardNT(LPCWSTR dllPath = L"wireguard.dll") {
@@ -68,27 +85,25 @@ std::string startAddon(const Napi::Env env) {
   std::string err = "";
   auto DLLPATH = env.Global().ToObject().Get("WIREGUARD_DLL_PATH");
   if (!(DLLPATH.IsString())) return "Require WIREGUARD_DLL_PATH in Global process";
-  if (!(InitializeWireGuardNT(toLpcwstr(DLLPATH.ToString())))) err = ((std::string)"Failed to initialize WireGuardNT, error code: ").append(std::to_string(GetLastError()));
+  if (!(InitializeWireGuardNT(toLpcwstr(DLLPATH.ToString())))) err = ((std::string)"Failed to initialize WireGuardNT, ").append(getErrorString(GetLastError()));
   return err;
 }
 
 std::string versionDrive() {
-  GUID ExampleGuid;
-  CoCreateGuid(&ExampleGuid);
-  WIREGUARD_ADAPTER_HANDLE Adapter = WireGuardCreateAdapter(L"getWgVersion", L"Wireguard-tools.js", &ExampleGuid);
+  WIREGUARD_ADAPTER_HANDLE Adapter = WireGuardCreateAdapter(L"getWgVersion", L"Wireguard-tools.js", NULL);
   DWORD Version = WireGuardGetRunningDriverVersion();
   if (Version == 0) {
     auto statusErr = GetLastError();
     WireGuardCloseAdapter(Adapter);
     if (statusErr == ERROR_FILE_NOT_FOUND) return "Driver not loaded";
-    return ((std::string)"Cannot get version drive, error code: ").append(std::to_string(GetLastError()));
+    return ((std::string)"Cannot get version drive, ").append(getErrorString(GetLastError()));
   }
   WireGuardCloseAdapter(Adapter);
   return ((std::string)"WireGuardNT v").append(std::to_string((Version >> 16) & 0xff)).append(".").append(std::to_string((Version >> 0) & 0xff));
 }
 
 // Wireguard interfaces
-std::map<std::string, WIREGUARD_ADAPTER_HANDLE> WgInterfaces;
+std::vector<std::string> WgInterfaces;
 
 static int decodeBase64(const char src[4]) {
   int val = 0;
@@ -98,16 +113,13 @@ static int decodeBase64(const char src[4]) {
   return val;
 }
 
-int insertKey(BYTE *key, std::string keyBase64) {
+void insertKey(BYTE key[32], std::string keyBase64) {
   auto base64 = keyBase64.c_str();
+  if (keyBase64.length() != WG_KEY_LENGTH || base64[WG_KEY_LENGTH - 1] != '=') throw std::string("invalid key, length: ").append(std::to_string(keyBase64.length()));
+
   unsigned int i;
   int val;
   volatile uint8_t ret = 0;
-
-  if (keyBase64.length() != WIREGUARD_KEY_LENGTH - 1 || base64[WIREGUARD_KEY_LENGTH - 2] != '=') {
-    errno = EINVAL;
-    return -errno;
-  }
 
   for (i = 0; i < 32 / 3; ++i) {
     val = decodeBase64(&base64[i * 4]);
@@ -121,61 +133,136 @@ int insertKey(BYTE *key, std::string keyBase64) {
   ret |= ((uint32_t)val >> 31) | (val & 0xff);
   key[i * 3 + 0] = (val >> 16) & 0xff;
   key[i * 3 + 1] = (val >> 8) & 0xff;
-  errno = EINVAL & ~((ret - 1) >> 8);
-  return -errno;
+  int status = EINVAL & ~((ret - 1) >> 8);
+  if (status != 0) throw std::string("Cannot decode key, ret code: ").append(std::to_string(status));
 }
 
-std::string createWgInterface(std::string name) {
-  std::string err = "";
-  for (auto internals : WgInterfaces) if (name == internals.first) return err;
-  GUID wgGuid;
-  CoCreateGuid(&wgGuid);
-  WIREGUARD_ADAPTER_HANDLE Adapter = WireGuardCreateAdapter(toLpcwstr(name), L"Wireguard-tools.js", &wgGuid);
-  if (!Adapter) err = ((std::string)"Failed to create adapter, error code: ").append(std::to_string(GetLastError()));
-  return err;
-}
+struct SetConfigStruct {
+  WIREGUARD_INTERFACE Interface;
+  WIREGUARD_PEER Peer;
+  WIREGUARD_ALLOWED_IP AllV4;
+};
 
 void setConfig::Execute() {
-  auto createStatus = createWgInterface(wgName);
-  if (createStatus.length() >= 1) return SetError(createStatus);
-  WIREGUARD_ADAPTER_HANDLE Adapter = WgInterfaces[wgName];
-  auto interfaceConfig = new WIREGUARD_INTERFACE({});
+  WIREGUARD_ADAPTER_HANDLE Adapter = WireGuardOpenAdapter(toLpcwstr(wgName));
+  if (!Adapter) {
+    Adapter = WireGuardCreateAdapter(toLpcwstr(wgName), L"Wireguard-tools.js", NULL);
+    if (!Adapter) return SetError(((std::string)"Failed to create adapter, ").append(getErrorString(GetLastError())));
+  }
+  bool insertInVector = true;
+  for (auto internals : WgInterfaces) if (wgName == internals) { insertInVector = false; break; }
+  if (insertInVector) WgInterfaces.push_back(wgName);
+  HANDLE handle = kernel_interface_handle(wgName.c_str());
+  if (!handle) return SetError("Cannot get Adapter handler");
 
-  // Private key
-  interfaceConfig->Flags = WIREGUARD_INTERFACE_FLAG::WIREGUARD_INTERFACE_HAS_PRIVATE_KEY;
-  insertKey(interfaceConfig->PrivateKey, privateKey);
+  WG_IOCTL_INTERFACE *wg_iface = NULL;
+  WG_IOCTL_PEER *wg_peer;
+  WG_IOCTL_ALLOWED_IP *wg_aip;
+  DWORD buf_len = sizeof(WG_IOCTL_INTERFACE);
+  struct wgpeer *peer;
+  struct wgallowedip *aip;
+  size_t peer_count, aip_count;
+  int ret = 0;
+  for (auto peer : peersVector) {
+    if (DWORD_MAX - buf_len < sizeof(WG_IOCTL_PEER)) {
+      errno = EOVERFLOW;
+      goto out;
+    }
+    buf_len += sizeof(WG_IOCTL_PEER);
+    for (auto aip : peer.second.allowedIPs) {
+      if (DWORD_MAX - buf_len < sizeof(WG_IOCTL_ALLOWED_IP)) {
+        errno = EOVERFLOW;
+        goto out;
+      }
+      buf_len += sizeof(WG_IOCTL_ALLOWED_IP);
+    }
+  }
+  wg_iface = (WG_IOCTL_INTERFACE *)calloc(1, buf_len);
+  if (!wg_iface) goto out;
 
-  // Public key
-  if (publicKey.size() == WIREGUARD_KEY_LENGTH) {
-    interfaceConfig->Flags = (WIREGUARD_INTERFACE_FLAG)(interfaceConfig->Flags|WIREGUARD_INTERFACE_FLAG::WIREGUARD_INTERFACE_HAS_PUBLIC_KEY);
-    insertKey(interfaceConfig->PublicKey, publicKey);
+  if (privateKey.size() == WG_KEY_LENGTH) {
+    try {
+      insertKey(wg_iface->PrivateKey, privateKey);
+      wg_iface->Flags = (WG_IOCTL_INTERFACE_FLAG)(wg_iface->Flags|WG_IOCTL_INTERFACE_HAS_PRIVATE_KEY);
+    } catch (std::string &err) {
+      return SetError(((std::string)"Invalid privateKey, ").append(err));
+    }
   }
 
-  // Port listen
   if (portListen >= 0) {
-    interfaceConfig->Flags = (WIREGUARD_INTERFACE_FLAG)(interfaceConfig->Flags|WIREGUARD_INTERFACE_FLAG::WIREGUARD_INTERFACE_HAS_LISTEN_PORT);
-    interfaceConfig->ListenPort = portListen;
+    wg_iface->ListenPort = portListen;
+    wg_iface->Flags = (WG_IOCTL_INTERFACE_FLAG)(wg_iface->Flags|WG_IOCTL_INTERFACE_HAS_LISTEN_PORT);
   }
 
-  // if (replacePeers) interfaceConfig->Flags = (WIREGUARD_INTERFACE_FLAG)(interfaceConfig->Flags|WIREGUARD_INTERFACE_FLAG::WIREGUARD_INTERFACE_REPLACE_PEERS);
-  // interfaceConfig->PeersCount = peersVector.size();
-  // for (auto &peer : peersVector) {
-  //   WIREGUARD_PEER peerSetts;
-  //   peerSetts.Flags = WIREGUARD_PEER_FLAG::WIREGUARD_PEER_HAS_PUBLIC_KEY;
-  //   insertKey(peerSetts.PublicKey, peer.first);
+  if (replacePeers) wg_iface->Flags = (WG_IOCTL_INTERFACE_FLAG)(wg_iface->Flags|WG_IOCTL_INTERFACE_FLAG::WG_IOCTL_INTERFACE_REPLACE_PEERS);
+  peer_count = 0;
+  wg_peer = (WG_IOCTL_PEER*)((WG_IOCTL_PEER*)wg_iface + sizeof(WG_IOCTL_INTERFACE));
+  for (auto peer : peersVector) {
+    try {
+      insertKey(wg_peer->PublicKey, peer.first);
+      wg_peer->Flags = WG_IOCTL_PEER_HAS_PUBLIC_KEY;
+    } catch (std::string &err) {
+      return SetError(((std::string)"Invalid peer publicKey, ").append(err));
+    }
 
-  //   if (peer.second.removeMe) peerSetts.Flags = (WIREGUARD_PEER_FLAG)(peerSetts.Flags|WIREGUARD_PEER_FLAG::WIREGUARD_PEER_REMOVE);
-  //   else {
-  //     peerSetts.Flags = (WIREGUARD_PEER_FLAG)(peerSetts.Flags|WIREGUARD_PEER_FLAG::WIREGUARD_PEER_UPDATE);
-  //     if (peer.second.presharedKey.size() == WIREGUARD_KEY_LENGTH) {
-  //       peerSetts.Flags = (WIREGUARD_PEER_FLAG)(peerSetts.Flags|WIREGUARD_PEER_FLAG::WIREGUARD_PEER_HAS_PRESHARED_KEY);
-  //       insertKey(peerSetts.PresharedKey, peer.second.presharedKey);
-  //     }
-  //   }
-  // }
+    if (peer.second.removeMe) wg_peer->Flags = (WG_IOCTL_PEER_FLAG)(wg_peer->Flags|WG_IOCTL_PEER_FLAG::WG_IOCTL_PEER_REMOVE);
+    else {
+      if (peer.second.presharedKey.size() == WG_KEY_LENGTH) {
+        try {
+          insertKey(wg_peer->PresharedKey, peer.second.presharedKey);
+          wg_peer->Flags = (WG_IOCTL_PEER_FLAG)(wg_peer->Flags|WG_IOCTL_PEER_FLAG::WG_IOCTL_PEER_HAS_PRESHARED_KEY);
+        } catch (std::string &err) {
+          return SetError(((std::string)"Invalid peer presharedKey, ").append(err));
+        }
+      }
+      if (peer.second.keepInterval >= 0) {
+        wg_peer->PersistentKeepalive = peer.second.keepInterval;
+        wg_peer->Flags = (WG_IOCTL_PEER_FLAG)(wg_peer->Flags|WG_IOCTL_PEER_FLAG::WG_IOCTL_PEER_HAS_PERSISTENT_KEEPALIVE);
+      }
 
-  std::cout << "Deploy config" << std::endl;
-  if (!(WireGuardSetConfiguration(Adapter, interfaceConfig, sizeof(interfaceConfig)))) return SetError(((std::string)"Failed to set configuration, Error code: ").append(std::to_string(GetLastError())));
+      if (peer.second.endpoint.size() > 0) parseEndpoint(&wg_peer->Endpoint, peer.second.endpoint.c_str());
+
+      aip_count = 0;
+      wg_aip = (WG_IOCTL_ALLOWED_IP*)wg_peer + sizeof(WG_IOCTL_PEER);
+      for (auto aip : peer.second.allowedIPs) {
+        if (strchr(aip.c_str(), ':')) {
+          if (inet_pton(AF_INET6, aip.c_str(), &wg_aip->Address.V4) == 1) {
+            wg_aip->AddressFamily = AF_INET6;
+            wg_aip->Cidr = 32;
+          } else continue;
+        } else {
+          if (inet_pton(AF_INET, aip.c_str(), &wg_aip->Address.V6) == 1) {
+            wg_aip->AddressFamily = AF_INET;
+            wg_aip->Cidr = 128;
+          } else continue;
+        }
+        ++aip_count;
+        ++wg_aip;
+      }
+      wg_peer->AllowedIPsCount = aip_count;
+      ++peer_count;
+		  wg_peer = (WG_IOCTL_PEER *)wg_aip;
+    }
+  }
+  wg_iface->PeersCount = peer_count;
+
+  if (!DeviceIoControl(handle, WG_IOCTL_SET, NULL, 0, (void *)wg_iface, buf_len, &buf_len, NULL)) {
+    SetError(((std::string)"Failed to set interface config, ").append(getErrorString(GetLastError())));
+    goto out;
+  }
+  if (!(WireGuardSetAdapterState(Adapter, WIREGUARD_ADAPTER_STATE::WIREGUARD_ADAPTER_STATE_UP))) {
+    return SetError(((std::string)"Failed to set Up interface, ").append(getErrorString(GetLastError())));
+    goto out;
+  }
+	errno = 0;
+
+  out:
+  ret = -errno;
+  free(wg_iface);
+  if (errno != 0) {
+    if (errno == EACCES) return SetError(((std::string)"Cannot set config"));
+    SetError(((std::string)"OUT: Handler code exit: ").append(std::to_string(-errno)));
+  }
 }
 
 void getConfig::Execute() {
@@ -183,13 +270,11 @@ void getConfig::Execute() {
 }
 
 void deleteInterface::Execute() {
-  for (auto internals : WgInterfaces) {
-    if (wgName == internals.first) {
-      WireGuardCloseAdapter(internals.second);
-      return;
-    }
-  }
-  SetError("This interface not exists in Wireguard-Tools.js addon!");
+  WIREGUARD_ADAPTER_HANDLE Adapter = WireGuardOpenAdapter(toLpcwstr(wgName));
+  if (!Adapter) return SetError("This interface not exists in Wireguard-Tools.js addon!");
+  if (!(WireGuardSetAdapterState(Adapter, WIREGUARD_ADAPTER_STATE::WIREGUARD_ADAPTER_STATE_DOWN))) return SetError(((std::string)"Failed to set down interface, ").append(getErrorString(GetLastError())));
+  WireGuardCloseAdapter(Adapter);
+  for (auto it = WgInterfaces.begin(); it != WgInterfaces.end(); ++it) if (wgName == (*it)) WgInterfaces.erase(it);
 }
 
 void listDevices::Execute() {
@@ -219,5 +304,6 @@ void listDevices::Execute() {
     }
   }
 
-  for (auto internals : WgInterfaces) deviceNames.push_back(internals.first);
+  for (auto internals : WgInterfaces) deviceNames.push_back(internals);
+  for (auto internals : kernel_get_wireguard_interfaces()) deviceNames.push_back(internals);
 }
