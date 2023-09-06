@@ -81,14 +81,14 @@
         }],
         ["OS=='win'", {
           "include_dirs": [
-            "addons/tools/win/wireguard-nt/include",
             "addons/tools/win"
           ],
           "defines": [
             "ONSTARTADDON",
             "LISTDEV",
-            "DELIFACE",
-            "SETCONFIG"
+            "GETCONFIG",
+            "SETCONFIG",
+            "DELIFACE"
           ],
           "libraries": [
             "bcrypt.lib",

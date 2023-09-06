@@ -199,7 +199,7 @@ async function connectSocket(path: string): Promise<net.Socket> {
  */
 export async function listDevices() {
   let interfaceNames: {from: "userspace"|"kernel", name: string}[] = [];
-  if (typeof wg_binding.listDevicesAsync === "function") interfaceNames = interfaceNames.concat((await promisify(wg_binding.listDevicesAsync)() as string[]).map(name => ({from: "kernel", name})) );
+  if (typeof wg_binding.listDevicesAsync === "function") interfaceNames = interfaceNames.concat(await promisify(wg_binding.listDevicesAsync)());
   return interfaceNames.concat((await fs.readdir(defaultPath).catch((): string[] => [])).map(name => ({from: "userspace", name: name.endsWith(".sock") ? name.slice(0, -5) : name})));
 }
 

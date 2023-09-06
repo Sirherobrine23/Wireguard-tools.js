@@ -58,9 +58,13 @@ if (await exist(prebuilds)) {
  */
 async function migrateBuildAddon(platform, arch) {
   const files = (await fs.readdir(buildRelease)).filter(f => f.endsWith(".node"));
-  if (await exist(path.join(prebuilds, `${platform}_${arch}`))) await fs.rm(path.join(prebuilds, `${platform}_${arch}`), {recursive: true, force: true});
-  await fs.mkdir(path.join(prebuilds, `${platform}_${arch}`), {recursive: true});
-  for (const file of files) await fs.rename(path.join(buildRelease, file), path.join(prebuilds, `${platform}_${arch}`, file));
+  const targetPath = path.join(prebuilds, `${platform}_${arch}`);
+  if (await exist(targetPath)) await fs.rm(targetPath, {recursive: true, force: true});
+  await fs.mkdir(targetPath, {recursive: true});
+  for (const file of files) {
+    console.log("Move %O to %O", path.join(buildRelease, file), path.join(targetPath, file));
+    await fs.rename(path.join(buildRelease, file), path.join(targetPath, file));
+  }
   await fs.rm(buildDir, { recursive: true, force: true });
 }
 

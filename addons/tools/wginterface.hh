@@ -37,7 +37,7 @@ class deleteInterface : public Napi::AsyncWorker {
 
 class listDevices : public Napi::AsyncWorker {
   private:
-    std::vector<std::string> deviceNames;
+    std::map<std::string, std::string> deviceNames;
   public:
   ~listDevices() {}
   listDevices(const Napi::Function &callback) : AsyncWorker(callback) {}
@@ -46,7 +46,12 @@ class listDevices : public Napi::AsyncWorker {
     const Napi::Env env = Env();
     const auto deviceArray = Napi::Array::New(env);
     if (deviceNames.size() > 0) {
-      for (auto &it : deviceNames) deviceArray.Set(deviceArray.Length(), it);
+      for (auto &it : deviceNames) {
+        auto info = Napi::Object::New(env);
+        info.Set("name", it.first);
+        info.Set("from", it.second);
+        deviceArray.Set(deviceArray.Length(), info);
+      }
     }
     Callback().Call({ Env().Undefined(), deviceArray });
   };
@@ -82,21 +87,18 @@ class setConfig : public Napi::AsyncWorker {
     std::string publicKey;
 
     // Wireguard port listen
-    uint32_t portListen;
+    uint32_t portListen = -1;
 
     // Wiki
-    uint32_t fwmark;
+    uint32_t fwmark = -1;
 
     // Interface address'es
     std::vector<std::string> Address;
 
     // Replace peers
-    bool replacePeers;
+    bool replacePeers = false;
 
-    /*
-    Wireguard peers
-    Map: <publicKey, Peer>
-    */
+    // Wireguard peers, Map: <publicKey(std::string), Peer>
     std::map<std::string, Peer> peersVector;
   public:
   void OnOK() override {
@@ -125,7 +127,7 @@ class setConfig : public Napi::AsyncWorker {
 
     // Port to listen Wireguard interface
     const auto spor = config.Get("portListen");
-    if (spor.IsNumber() && (spor.ToNumber().Int32Value() > 0)) portListen = spor.ToNumber().Int32Value();
+    if (spor.IsNumber() && (spor.ToNumber().Int32Value() >= 0)) portListen = spor.ToNumber().Int32Value();
 
     //\?
     const auto sfw = config.Get("fwmark");
@@ -207,10 +209,10 @@ class getConfig : public Napi::AsyncWorker {
     std::string publicKey;
 
     // Wireguard port listen
-    uint32_t portListen;
+    uint32_t portListen = -1;
 
     // Wiki
-    uint32_t fwmark;
+    uint32_t fwmark = -1;
 
     // Interface address'es
     std::vector<std::string> Address;
@@ -231,9 +233,9 @@ class getConfig : public Napi::AsyncWorker {
     const Napi::Env env = Env();
     const auto config = Napi::Object::New(env);
 
-    if (publicKey.length() > 0) config.Set("publicKey", publicKey);
-    if (privateKey.length() > 0) config.Set("privateKey", privateKey);
-    if (portListen > 0) config.Set("portListen", portListen);
+    if (publicKey.length() == WG_KEY_LENGTH) config.Set("publicKey", publicKey);
+    if (privateKey.length() == WG_KEY_LENGTH) config.Set("privateKey", privateKey);
+    if (portListen > 0 && portListen <= 65535) config.Set("portListen", portListen);
     if (fwmark >= 0) config.Set("fwmark", fwmark);
     if (Address.size() > 0) {
       const auto Addrs = Napi::Array::New(env);
@@ -248,7 +250,7 @@ class getConfig : public Napi::AsyncWorker {
       const std::string peerPubKey = peer.first;
       auto peerConfig = peer.second;
 
-      if (peerConfig.presharedKey.length() > 0) PeerObject.Set("presharedKey", peerConfig.presharedKey);
+      if (peerConfig.presharedKey.length() == WG_KEY_LENGTH) PeerObject.Set("presharedKey", peerConfig.presharedKey);
       if (peerConfig.keepInterval > 0) PeerObject.Set("keepInterval", peerConfig.keepInterval);
       if (peerConfig.endpoint.length() > 0) PeerObject.Set("endpoint", peerConfig.endpoint);
       if (peerConfig.allowedIPs.size() > 0) {

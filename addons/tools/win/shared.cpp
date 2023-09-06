@@ -1,11 +1,28 @@
 #include <string>
 #include <vector>
+#include <windows.h>
 #include <ws2ipdef.h>
 #include <ws2def.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <chrono>
 #include <thread>
+
+// Function to check if the current user has administrator privileges
+bool IsRunAsAdmin()
+{
+  BOOL fRet = FALSE;
+  HANDLE hToken = NULL;
+  if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken)) {
+    TOKEN_ELEVATION Elevation;
+    DWORD cbSize = sizeof(TOKEN_ELEVATION);
+    if (GetTokenInformation(hToken, TokenElevation, &Elevation, sizeof(Elevation), &cbSize)) {
+      fRet = Elevation.TokenIsElevated;
+    }
+  }
+  if (hToken) CloseHandle(hToken);
+  return !!fRet;
+}
 
 int parse_dns_retries() {
 	unsigned long ret;
