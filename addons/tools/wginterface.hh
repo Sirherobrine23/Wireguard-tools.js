@@ -127,7 +127,7 @@ class setConfig : public Napi::AsyncWorker {
 
     // Port to listen Wireguard interface
     const auto spor = config.Get("portListen");
-    if (spor.IsNumber() && (spor.ToNumber().Int32Value() >= 0)) portListen = spor.ToNumber().Int32Value();
+    if (spor.IsNumber() && (spor.ToNumber().Int32Value() >= 0 && spor.ToNumber().Int32Value() <= 65535)) portListen = spor.ToNumber().Int32Value();
 
     //\?
     const auto sfw = config.Get("fwmark");
@@ -170,7 +170,7 @@ class setConfig : public Napi::AsyncWorker {
 
             // Keep interval
             const auto pKeepInterval = peerConfigObject.Get("keepInterval");
-            if (pKeepInterval.IsNumber() && (pKeepInterval.ToNumber().Int32Value() > 0)) peerConfig.keepInterval = pKeepInterval.ToNumber().Int32Value();
+            if (pKeepInterval.IsNumber() && (pKeepInterval.ToNumber().Int32Value() > 0 && pKeepInterval.ToNumber().Int32Value() <= 65535)) peerConfig.keepInterval = pKeepInterval.ToNumber().Int32Value();
 
             // Peer endpoint
             const auto pEndpoint = peerConfigObject.Get("endpoint");
@@ -251,7 +251,7 @@ class getConfig : public Napi::AsyncWorker {
       auto peerConfig = peer.second;
 
       if (peerConfig.presharedKey.length() == WG_KEY_LENGTH) PeerObject.Set("presharedKey", peerConfig.presharedKey);
-      if (peerConfig.keepInterval > 0) PeerObject.Set("keepInterval", peerConfig.keepInterval);
+      if (peerConfig.keepInterval > 0 && peerConfig.keepInterval <= 65535) PeerObject.Set("keepInterval", peerConfig.keepInterval);
       if (peerConfig.endpoint.length() > 0) PeerObject.Set("endpoint", peerConfig.endpoint);
       if (peerConfig.allowedIPs.size() > 0) {
         const auto allowedIPs = Napi::Array::New(env);
