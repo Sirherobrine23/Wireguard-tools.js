@@ -258,20 +258,30 @@ void getConfig::Execute() {
   if (wg_iface->Flags & WIREGUARD_INTERFACE_FLAG::WIREGUARD_INTERFACE_HAS_PUBLIC_KEY) publicKey = keyToBase64(wg_iface->PublicKey);
 
   std::cout << wg_iface->PeersCount << std::endl;
-  WIREGUARD_PEER *wg_peer = reinterpret_cast<WIREGUARD_PEER*>(reinterpret_cast<char*>(wg_iface) + sizeof(WIREGUARD_INTERFACE));
+  WIREGUARD_PEER *wg_peer = reinterpret_cast<WIREGUARD_PEER*>(((char*)wg_iface) + sizeof(WIREGUARD_INTERFACE));
   for (DWORD i = 0; i < wg_iface->PeersCount; i++) {
     auto pubKey = keyToBase64(wg_peer->PublicKey);
     Peer peerConfig;
+
+    if (wg_peer->Flags & WIREGUARD_PEER_FLAG::WIREGUARD_PEER_HAS_PRESHARED_KEY) peerConfig.presharedKey = keyToBase64(wg_peer->PresharedKey);
+    if (wg_peer->Flags & WIREGUARD_PEER_FLAG::WIREGUARD_PEER_HAS_PERSISTENT_KEEPALIVE) peerConfig.keepInterval = wg_peer->PersistentKeepalive;
     peerConfig.rxBytes = wg_peer->RxBytes;
     peerConfig.txBytes = wg_peer->TxBytes;
 
-    WIREGUARD_ALLOWED_IP* aip = reinterpret_cast<WIREGUARD_ALLOWED_IP*>(((char*)wg_peer) + sizeof(WIREGUARD_PEER));
+    WIREGUARD_ALLOWED_IP* wg_aip = reinterpret_cast<WIREGUARD_ALLOWED_IP*>(((char*)wg_peer) + sizeof(WIREGUARD_PEER));
     for (DWORD __aip = 0; __aip < wg_peer->AllowedIPsCount; __aip++) {
-      if (aip->AddressFamily == AF_INET) {}
-      else if (aip->AddressFamily == AF_INET6) {}
-      ++aip;
+      if (wg_aip->AddressFamily == AF_INET) {
+				char saddr[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &wg_aip->Address.V6, saddr, INET_ADDRSTRLEN);
+        peerConfig.allowedIPs.push_back(std::string(saddr).append("/").append(std::to_string(wg_aip->Cidr)));
+			} else if (wg_aip->AddressFamily == AF_INET6) {
+				char saddr[INET6_ADDRSTRLEN];
+        inet_ntop(AF_INET6, &wg_aip->Address.V6, saddr, INET6_ADDRSTRLEN);
+        peerConfig.allowedIPs.push_back(std::string(saddr).append("/").append(std::to_string(wg_aip->Cidr)));
+			}
+      ++wg_aip;
     }
-    wg_peer = reinterpret_cast<WIREGUARD_PEER*>(aip);
+    wg_peer = reinterpret_cast<WIREGUARD_PEER*>(wg_aip);
     peersVector[pubKey] = peerConfig;
   }
 
@@ -296,15 +306,15 @@ void setConfig::Execute() {
   insertKey(wg_iface->PrivateKey, privateKey);
   wg_iface->Flags = WIREGUARD_INTERFACE_FLAG::WIREGUARD_INTERFACE_HAS_PRIVATE_KEY;
 
-  if (portListen >= 0) {
+  if (portListen > 0) {
     wg_iface->ListenPort = portListen;
     wg_iface->Flags = (WIREGUARD_INTERFACE_FLAG)(wg_iface->Flags|WIREGUARD_INTERFACE_FLAG::WIREGUARD_INTERFACE_HAS_LISTEN_PORT);
   }
 
   if (replacePeers) wg_iface->Flags = (WIREGUARD_INTERFACE_FLAG)(wg_iface->Flags|WIREGUARD_INTERFACE_FLAG::WIREGUARD_INTERFACE_REPLACE_PEERS);
 
-	WIREGUARD_PEER *wg_peer = reinterpret_cast<WIREGUARD_PEER*>(reinterpret_cast<char*>(wg_iface) + sizeof(WIREGUARD_INTERFACE));
 	WIREGUARD_ALLOWED_IP *wg_aip;
+	WIREGUARD_PEER *wg_peer = reinterpret_cast<WIREGUARD_PEER*>(reinterpret_cast<char*>(wg_iface) + sizeof(WIREGUARD_INTERFACE));
 
   for (auto __peer : peersVector) {
     // break;
@@ -312,31 +322,47 @@ void setConfig::Execute() {
     std::cout << std::endl << "Peer: " << peerPublicKey << ", Peer address: " << &*wg_peer << std::endl;
     insertKey(wg_peer->PublicKey, peerPublicKey);
     wg_peer->Flags = WIREGUARD_PEER_FLAG::WIREGUARD_PEER_HAS_PUBLIC_KEY;
-    wg_iface->PeersCount++;
     wg_peer->AllowedIPsCount = 0;
+    wg_iface->PeersCount++;
 
-	  wg_peer = reinterpret_cast<WIREGUARD_PEER*>(((char*)wg_peer) + sizeof(WIREGUARD_PEER));
-	  // WIREGUARD_ALLOWED_IP* aip = reinterpret_cast<WIREGUARD_ALLOWED_IP*>(((char*)wg_peer) + sizeof(WIREGUARD_PEER));
-    // for (auto aip : peerConfig.allowedIPs) {
-    //   unsigned long cidr = 0;
-    //   if (aip.find("/") != std::string::npos) {
-    //     cidr = std::stoi(aip.substr(aip.find("/")+1));
-    //     aip = aip.substr(0, aip.find("/"));
-    //   }
-    //   aip = aip.substr(0, aip.find("/"));
-    //   wg_aip->AddressFamily = strchr(aip.c_str(), ':') ? AF_INET6 : AF_INET;
-    //   auto status = wg_aip->AddressFamily == AF_INET6 ? inet_pton(wg_aip->AddressFamily, aip.c_str(), &wg_aip->Address.V6) : inet_pton(wg_aip->AddressFamily, aip.c_str(), &wg_aip->Address.V4);
-    //   if (status == 1) {
-    //     if (cidr == 0) cidr = wg_aip->AddressFamily == AF_INET6 ? 128 : 32;
-    //   } else continue;
-    //   wg_aip->Cidr = cidr;
-    //   wg_peer->AllowedIPsCount++;
-    //   std::cout << std::endl << "Peer aip: " << &*wg_aip << std::endl;
-    //   wg_aip = reinterpret_cast<WIREGUARD_ALLOWED_IP*>(reinterpret_cast<char*>(wg_aip) + sizeof(WIREGUARD_ALLOWED_IP));
-    //   std::cout << "Peer aip end: " << &*wg_aip << std::endl;
-    // }
-    // wg_peer = reinterpret_cast<WIREGUARD_PEER*>(wg_aip);
+    if (peerConfig.removeMe) {
+      wg_peer->Flags = (WIREGUARD_PEER_FLAG)(wg_peer->Flags|WIREGUARD_PEER_FLAG::WIREGUARD_PEER_REMOVE);
+      wg_peer = reinterpret_cast<WIREGUARD_PEER*>(((char*)wg_peer) + sizeof(WIREGUARD_PEER));
+    } else {
+      if (peerConfig.presharedKey.size() == WG_KEY_LENGTH) {
+        insertKey(wg_peer->PresharedKey, peerConfig.presharedKey);
+        wg_peer->Flags = (WIREGUARD_PEER_FLAG)(wg_peer->Flags|WIREGUARD_PEER_FLAG::WIREGUARD_PEER_HAS_PRESHARED_KEY);
+      }
 
+      if (peerConfig.keepInterval > 0) {
+        wg_peer->PersistentKeepalive = peerConfig.keepInterval;
+        wg_peer->Flags = (WIREGUARD_PEER_FLAG)(wg_peer->Flags|WIREGUARD_PEER_FLAG::WIREGUARD_PEER_HAS_PERSISTENT_KEEPALIVE);
+      }
+
+      if (peerConfig.endpoint.size() > 0) {
+        parseEndpoint(&wg_peer->Endpoint, peerConfig.endpoint.c_str());
+      }
+
+	    // wg_peer = reinterpret_cast<WIREGUARD_PEER*>(((char*)wg_peer) + sizeof(WIREGUARD_PEER));
+      wg_aip = reinterpret_cast<WIREGUARD_ALLOWED_IP*>(((char*)wg_peer) + sizeof(WIREGUARD_PEER));
+      for (auto aip : peerConfig.allowedIPs) {
+        unsigned long cidr = 0;
+        if (aip.find("/") != std::string::npos) {
+          cidr = std::stoi(aip.substr(aip.find("/")+1));
+          aip = aip.substr(0, aip.find("/"));
+        }
+        aip = aip.substr(0, aip.find("/"));
+        wg_aip->AddressFamily = strchr(aip.c_str(), ':') ? AF_INET6 : AF_INET;
+        auto status = wg_aip->AddressFamily == AF_INET6 ? inet_pton(wg_aip->AddressFamily, aip.c_str(), &wg_aip->Address.V6) : inet_pton(wg_aip->AddressFamily, aip.c_str(), &wg_aip->Address.V4);
+        if (status == 1) {
+          if (cidr == 0) cidr = wg_aip->AddressFamily == AF_INET6 ? 128 : 32;
+        } else continue;
+        wg_aip->Cidr = cidr;
+        wg_peer->AllowedIPsCount++;
+	      wg_aip = reinterpret_cast<WIREGUARD_ALLOWED_IP*>(((char*)wg_aip) + sizeof(WIREGUARD_ALLOWED_IP));
+      }
+	    wg_peer = reinterpret_cast<WIREGUARD_PEER*>(((char*)wg_aip));
+    }
     std::cout << "Peer address end: " << &*wg_peer << std::endl;
   }
 
@@ -346,17 +372,14 @@ void setConfig::Execute() {
     if (!Adapter) return SetError(((std::string)"Failed to create adapter, ").append(getErrorString(GetLastError())));
   }
 
-  if (!WireGuardSetAdapterState(Adapter, WIREGUARD_ADAPTER_STATE::WIREGUARD_ADAPTER_STATE_UP)) {
-    free(wg_iface);
-    auto status = GetLastError();
-    WireGuardCloseAdapter(Adapter);
-    return SetError(((std::string)"Failed to set interface up, ").append(getErrorString(status)));
-  }
-
   if (!WireGuardSetConfiguration(Adapter, reinterpret_cast<WIREGUARD_INTERFACE*>(wg_iface), buf_len)) {
-    free(wg_iface);
     auto status = GetLastError();
+    SetError(((std::string)"Failed to set interface config, ").append(getErrorString(status)));
     WireGuardCloseAdapter(Adapter);
-    return SetError(((std::string)"Failed to set interface config, ").append(getErrorString(status)));
+  } else if (!WireGuardSetAdapterState(Adapter, WIREGUARD_ADAPTER_STATE::WIREGUARD_ADAPTER_STATE_UP)) {
+    auto status = GetLastError();
+    SetError(((std::string)"Failed to set interface up, ").append(getErrorString(status)));
+    WireGuardCloseAdapter(Adapter);
   }
+  free(wg_iface);
 }

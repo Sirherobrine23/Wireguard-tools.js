@@ -127,11 +127,13 @@ class setConfig : public Napi::AsyncWorker {
 
     // Port to listen Wireguard interface
     const auto spor = config.Get("portListen");
-    if (spor.IsNumber() && (spor.ToNumber().Int32Value() >= 0 && spor.ToNumber().Int32Value() <= 65535)) portListen = spor.ToNumber().Int32Value();
+    if (spor.IsNumber() && (spor.ToNumber().Int32Value() > 0 && spor.ToNumber().Int32Value() <= 65535)) portListen = spor.ToNumber().Int32Value();
 
     //\?
+    #ifdef __linux
     const auto sfw = config.Get("fwmark");
     if (sfw.IsNumber() && (sfw.ToNumber().Uint32Value() >= 0)) fwmark = sfw.ToNumber().Uint32Value();
+    #endif
 
     const auto saddr = config.Get("Address");
     if (saddr.IsArray()) {
@@ -209,10 +211,10 @@ class getConfig : public Napi::AsyncWorker {
     std::string publicKey;
 
     // Wireguard port listen
-    uint32_t portListen = -1;
+    unsigned int portListen;
 
     // Wiki
-    uint32_t fwmark = -1;
+    unsigned int fwmark;
 
     // Interface address'es
     std::vector<std::string> Address;
@@ -236,7 +238,9 @@ class getConfig : public Napi::AsyncWorker {
     if (publicKey.length() == WG_KEY_LENGTH) config.Set("publicKey", publicKey);
     if (privateKey.length() == WG_KEY_LENGTH) config.Set("privateKey", privateKey);
     if (portListen > 0 && portListen <= 65535) config.Set("portListen", portListen);
+    #ifdef __linux
     if (fwmark >= 0) config.Set("fwmark", fwmark);
+    #endif
     if (Address.size() > 0) {
       const auto Addrs = Napi::Array::New(env);
       for (auto &addr : Address) Addrs.Set(Addrs.Length(), addr);
