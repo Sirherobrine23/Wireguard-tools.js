@@ -143,7 +143,6 @@ jobs:
       uses: actions/download-artifact@v3
       with:
         path: ./prebuilds
-        name: prebuilds_
 
     - run: npm install --no-save --ignore-scripts
     - run: npm pack
