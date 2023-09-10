@@ -1,10 +1,13 @@
 #include <string>
 #include <vector>
+#include <wireguard-nt/include/wireguard.h>
 #include <windows.h>
 #include <ws2ipdef.h>
 #include <ws2def.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include <netioapi.h>
+#include <iphlpapi.h>
 #include <chrono>
 #include <thread>
 
@@ -24,6 +27,12 @@ bool IsRunAsAdmin()
   return !!fRet;
 }
 
+LPCWSTR toLpcwstr(std::string s) {
+  wchar_t* wString = new wchar_t[s.length()+1];
+  MultiByteToWideChar(CP_ACP, 0, s.c_str(), -1, wString, s.length()+1);
+  return wString;
+}
+
 int parse_dns_retries() {
   unsigned long ret;
   char *retries = getenv("WG_ENDPOINT_RESOLUTION_RETRIES"), *end;
@@ -39,79 +48,82 @@ int parse_dns_retries() {
   return (int)ret;
 }
 
-void parseEndpoint(SOCKADDR_INET *endpoint, const char *value) {
-  char *mmutable = strdup(value);
-  char *begin, *end;
-  int ret, retries = parse_dns_retries();
-  addrinfo *resolved;
-  addrinfo hints;
-  hints.ai_family = AF_UNSPEC;
-  hints.ai_socktype = SOCK_DGRAM;
-  hints.ai_protocol = IPPROTO_UDP;
-  if (!mmutable) {
-    perror("strdup");
-    throw std::string("Cannot convert to char*");
-  }
-  if (!strlen(value)) {
+void insertIpAddr(NET_LUID InterfaceLuid) {}
+
+void insertEndpoint(SOCKADDR_INET *endpoint, std::string value) {
+	int ret, retries = parse_dns_retries();
+	char *begin, *end;
+  auto mmutable = strdup(value.c_str());
+	if (!mmutable) throw std::string("strdup");
+	if (!value.size()) {
     free(mmutable);
     throw std::string("Unable to parse empty endpoint");
   }
-  if (mmutable[0] == '[') {
-    begin = &mmutable[1];
-    end = strchr(mmutable, ']');
-    if (!end) {
+	if (mmutable[0] == '[') {
+		begin = &mmutable[1];
+		end = strchr(mmutable, ']');
+		if (!end) {
       free(mmutable);
-      throw std::string("Unable to find matching brace of endpoint: '").append(value).append("'");
+      throw std::string("Unable to find matching brace of endpoint: ").append(value);
     }
-    *end++ = '\0';
-    if (*end++ != ':' || !*end) {
+		*end++ = '\0';
+		if (*end++ != ':' || !*end) {
       free(mmutable);
-      throw std::string("Unable to find port of endpoint: '").append(value).append("'");
+      throw std::string("Unable to find port of endpoint: ").append(value);
     }
-  } else {
-    begin = mmutable;
-    end = strrchr(mmutable, ':');
-    if (!end || !*(end + 1)) {
+	} else {
+		begin = mmutable;
+		end = strrchr(mmutable, ':');
+		if (!end || !*(end + 1)) {
       free(mmutable);
-      throw std::string("Unable to find port of endpoint: '").append(value).append("'");
+      throw std::string("Unable to find port of endpoint: ").append(value);
     }
-    *end++ = '\0';
-  }
+		*end++ = '\0';
+	}
 
-  // #define min(a, b) ((a) < (b) ? (a) : (b))
-  for (unsigned int timeout = 1000000;; timeout = ((20000000) < (timeout * 6 / 5) ? (20000000) : (timeout * 6 / 5))) {
-    ret = getaddrinfo(begin, end, &hints, &resolved);
-    if (!ret)
-      break;
-    /* The set of return codes that are "permanent failures". All other possibilities are potentially transient.
-     *
-     * This is according to https://sourceware.org/glibc/wiki/NameResolver which states:
-     *	"From the perspective of the application that calls getaddrinfo() it perhaps
-     *	 doesn't matter that much since EAI_FAIL, EAI_NONAME and EAI_NODATA are all
-     *	 permanent failure codes and the causes are all permanent failures in the
-     *	 sense that there is no point in retrying later."
-     *
-     * So this is what we do, except FreeBSD removed EAI_NODATA some time ago, so that's conditional.
-     */
-    if (ret == EAI_NONAME || ret == EAI_FAIL ||
-      #ifdef EAI_NODATA
-        ret == EAI_NODATA ||
-      #endif
-        (retries >= 0 && !retries--)) {
-      free(mmutable);
-      // fprintf(stderr, "%s: `%s'\n", ret == EAI_SYSTEM ? strerror(errno) : gai_strerror(ret), value);
-      throw std::string(ret == -11 ? strerror(errno) : gai_strerror(ret)).append(": '").append(value).append("'");
-    }
-    // fprintf(stderr, "%s: `%s'. Trying again in %.2f seconds...\n", ret == EAI_SYSTEM ? strerror(errno) : gai_strerror(ret), value, timeout / 1000000.0);
+
+	ADDRINFOA *resolved;
+	// #define min(a, b) ((a) < (b) ? (a) : (b))
+	for (unsigned int timeout = 1000000;; timeout = ((20000000) < (timeout * 6 / 5) ? (20000000) : (timeout * 6 / 5))) {
+		// ret = getaddrinfo(begin, end, &hints, &resolved);
+		ret = getaddrinfo(begin, end, NULL, &resolved);
+		if (!ret) break;
+		/* The set of return codes that are "permanent failures". All other possibilities are potentially transient.
+		 *
+		 * This is according to https://sourceware.org/glibc/wiki/NameResolver which states:
+		 *	"From the perspective of the application that calls getaddrinfo() it perhaps
+		 *	 doesn't matter that much since EAI_FAIL, EAI_NONAME and EAI_NODATA are all
+		 *	 permanent failure codes and the causes are all permanent failures in the
+		 *	 sense that there is no point in retrying later."
+		 *
+		 * So this is what we do, except FreeBSD removed EAI_NODATA some time ago, so that's conditional.
+		 */
+		if (ret == EAI_NONAME || ret == EAI_FAIL ||
+			#ifdef EAI_NODATA
+				ret == EAI_NODATA ||
+			#endif
+				(retries >= 0 && !retries--)) {
+			free(mmutable);
+			throw std::string("Error code: ").append(std::to_string(ret));
+		}
     std::this_thread::sleep_for(std::chrono::microseconds(timeout));
-  }
-  if ((resolved->ai_family == AF_INET && resolved->ai_addrlen == sizeof(struct sockaddr_in)) || (resolved->ai_family == AF_INET6 && resolved->ai_addrlen == sizeof(struct sockaddr_in6))) memcpy(endpoint, resolved->ai_addr, resolved->ai_addrlen);
-  else {
-    freeaddrinfo(resolved);
-    free(mmutable);
-    fprintf(stderr, "Neither IPv4 nor IPv6 address found: `%s'\n", value);
-    throw std::string("Neither IPv4 nor IPv6 address found: '").append(value).append("'");
-  }
-  freeaddrinfo(resolved);
+	}
+
+	if ((resolved->ai_family == AF_INET && resolved->ai_addrlen == sizeof(SOCKADDR_IN))) memcpy(&endpoint->Ipv4, resolved->ai_addr, resolved->ai_addrlen);
+  else if (resolved->ai_family == AF_INET6 && resolved->ai_addrlen == sizeof(SOCKADDR_IN6)) memcpy(&endpoint->Ipv6, resolved->ai_addr, resolved->ai_addrlen);
+	else {
+		freeaddrinfo(resolved);
+		throw std::string("Neither IPv4 nor IPv6 address found: ").append(value);
+	}
+	freeaddrinfo(resolved);
   free(mmutable);
+}
+
+std::string parseEndpoint(SOCKADDR_INET *input) {
+  if (!(input->si_family == AF_INET || input->si_family == AF_INET6)) return "";
+  char saddr[INET6_ADDRSTRLEN];
+  input->si_family == AF_INET ? inet_ntop(AF_INET, &input->Ipv4.sin_addr, saddr, INET_ADDRSTRLEN) : inet_ntop(AF_INET6, &input->Ipv6.sin6_addr, saddr, INET6_ADDRSTRLEN);
+
+  if (input->si_family == AF_INET6) return std::string("[").append(saddr).append("]:").append(std::to_string(htons(input->Ipv6.sin6_port)));
+  return std::string(saddr).append(":").append(std::to_string(htons(input->Ipv4.sin_port)));
 }
