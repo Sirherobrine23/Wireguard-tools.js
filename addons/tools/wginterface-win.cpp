@@ -235,6 +235,13 @@ void deleteInterface::Execute() {
 void getConfig::Execute() {
   WIREGUARD_ADAPTER_HANDLE Adapter = WireGuardOpenAdapter(toLpcwstr(wgName));
   if (!Adapter) return SetError("This interface not exists in Wireguard-Tools.js addon!");
+
+  NET_LUID InterfaceLuid;
+  WireGuardGetAdapterLUID(Adapter, &InterfaceLuid);
+  try {
+    for (auto aip : getIpAddr(InterfaceLuid)) Address.push_back(aip);
+  } catch (void* err) {}
+
   DWORD buf_len = 0;
   WIREGUARD_INTERFACE *wg_iface = nullptr;
 
@@ -245,9 +252,11 @@ void getConfig::Execute() {
     if (!wg_iface) return SetError(((std::string)"Failed get interface config, ").append(std::to_string(-errno)));
   }
 
-  if (wg_iface->Flags & WIREGUARD_INTERFACE_FLAG::WIREGUARD_INTERFACE_HAS_LISTEN_PORT && (wg_iface->ListenPort > 0 && 65535 <= wg_iface->ListenPort)) portListen = wg_iface->ListenPort;
   if (wg_iface->Flags & WIREGUARD_INTERFACE_FLAG::WIREGUARD_INTERFACE_HAS_PRIVATE_KEY) privateKey = keyToBase64(wg_iface->PrivateKey);
   if (wg_iface->Flags & WIREGUARD_INTERFACE_FLAG::WIREGUARD_INTERFACE_HAS_PUBLIC_KEY) publicKey = keyToBase64(wg_iface->PublicKey);
+  portListen = 0;
+  if (wg_iface->Flags & WIREGUARD_INTERFACE_FLAG::WIREGUARD_INTERFACE_HAS_LISTEN_PORT) portListen = wg_iface->ListenPort;
+
 
   WIREGUARD_PEER *wg_peer = reinterpret_cast<WIREGUARD_PEER*>(((char*)wg_iface) + sizeof(WIREGUARD_INTERFACE));
   for (DWORD i = 0; i < wg_iface->PeersCount; i++) {
@@ -301,7 +310,7 @@ void setConfig::Execute() {
   wg_iface->Flags = WIREGUARD_INTERFACE_FLAG::WIREGUARD_INTERFACE_HAS_PRIVATE_KEY;
 
   wg_iface->ListenPort = portListen;
-  if (portListen > 0 && 65535 <= portListen) wg_iface->Flags = (WIREGUARD_INTERFACE_FLAG)(wg_iface->Flags|WIREGUARD_INTERFACE_FLAG::WIREGUARD_INTERFACE_HAS_LISTEN_PORT);
+  if (portListen >= 0 && 65535 <= portListen) wg_iface->Flags = (WIREGUARD_INTERFACE_FLAG)(wg_iface->Flags|WIREGUARD_INTERFACE_FLAG::WIREGUARD_INTERFACE_HAS_LISTEN_PORT);
 
   if (replacePeers) wg_iface->Flags = (WIREGUARD_INTERFACE_FLAG)(wg_iface->Flags|WIREGUARD_INTERFACE_FLAG::WIREGUARD_INTERFACE_REPLACE_PEERS);
 
@@ -365,16 +374,34 @@ void setConfig::Execute() {
   if (!Adapter) SetError(((std::string)"Failed to create adapter, ").append(getErrorString(GetLastError())));
   else if (!WireGuardSetConfiguration(Adapter, reinterpret_cast<WIREGUARD_INTERFACE*>(wg_iface), buf_len)) {
     auto status = GetLastError();
-    SetError(((std::string)"Failed to set interface config, ").append(getErrorString(status)));
+    SetError(std::string("Failed to set interface config, ").append(getErrorString(status)));
     WireGuardCloseAdapter(Adapter);
   } else if (!WireGuardSetAdapterState(Adapter, WIREGUARD_ADAPTER_STATE::WIREGUARD_ADAPTER_STATE_UP)) {
     auto status = GetLastError();
-    SetError(((std::string)"Failed to set interface up, ").append(getErrorString(status)));
+    SetError(std::string("Failed to set interface up, ").append(getErrorString(status)));
     WireGuardCloseAdapter(Adapter);
   } else {
-    NET_LUID InterfaceLuid;
-    WireGuardGetAdapterLUID(Adapter, &InterfaceLuid);
-    insertIpAddr(InterfaceLuid);
+    if (Address.size() > 0) {
+      std::string IPv4, IPv6;
+      for (auto aip : Address) {
+        aip = aip.substr(0, aip.find("/"));
+        auto family = strchr(aip.c_str(), ':') ? AF_INET6 : AF_INET;
+        SOCKADDR_INET address;
+        int status = family == AF_INET ? inet_pton(family, aip.c_str(), &address.Ipv4.sin_addr) : inet_pton(family, aip.c_str(), &address.Ipv6.sin6_addr);
+        if (status != 1) continue;
+        char saddr[INET6_ADDRSTRLEN];
+        family == AF_INET ? inet_ntop(AF_INET, &address.Ipv4.sin_addr, saddr, INET_ADDRSTRLEN) : inet_ntop(AF_INET6, &address.Ipv6.sin6_addr, saddr, INET6_ADDRSTRLEN);
+        if (family == AF_INET) IPv4 = std::string(saddr);
+        // else IPv6 = std::string(saddr);
+      }
+
+      if (IPv4.size() > 0 || IPv6.size() > 0) {
+        NET_LUID InterfaceLuid;
+        WireGuardGetAdapterLUID(Adapter, &InterfaceLuid);
+        auto setStatus = insertIpAddr(InterfaceLuid, IPv4, IPv6);
+        if (setStatus.size() > 0) SetError(setStatus);
+      }
+    }
   }
   outEnd:
   free(wg_iface);

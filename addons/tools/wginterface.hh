@@ -128,7 +128,7 @@ class setConfig : public Napi::AsyncWorker {
 
     // Port to listen Wireguard interface
     const auto spor = config.Get("portListen");
-    if (spor.IsNumber() && (spor.ToNumber().Int32Value() > 0 && spor.ToNumber().Int32Value() <= 65535)) portListen = spor.ToNumber().Int32Value();
+    if (spor.IsNumber() && (spor.ToNumber().Int32Value() >= 0 && spor.ToNumber().Int32Value() <= 65535)) portListen = spor.ToNumber().Int32Value();
 
     //\?
     #ifdef __linux

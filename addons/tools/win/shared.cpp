@@ -48,8 +48,6 @@ int parse_dns_retries() {
   return (int)ret;
 }
 
-void insertIpAddr(NET_LUID InterfaceLuid) {}
-
 void insertEndpoint(SOCKADDR_INET *endpoint, std::string value) {
 	int ret, retries = parse_dns_retries();
 	char *begin, *end;
@@ -126,4 +124,55 @@ std::string parseEndpoint(SOCKADDR_INET *input) {
 
   if (input->si_family == AF_INET6) return std::string("[").append(saddr).append("]:").append(std::to_string(htons(input->Ipv6.sin6_port)));
   return std::string(saddr).append(":").append(std::to_string(htons(input->Ipv4.sin_port)));
+}
+
+std::string insertIpAddr(NET_LUID InterfaceLuid, std::string IPv4, std::string IPv6) {
+  NET_IFINDEX ind;
+  if (ConvertInterfaceLuidToIndex(&InterfaceLuid, &ind) != NO_ERROR) return "Cannot get interface index";
+
+  // IPv4
+  if (IPv4.size() > 0) {
+    ULONG NTEContext = 0;
+    ULONG NTEInstance = 0;
+    UINT iaIPAddress;
+    inet_pton(AF_INET, IPv4.c_str(), &iaIPAddress);
+    auto status = AddIPAddress(iaIPAddress, NULL, ind, &NTEContext, &NTEInstance);
+    if (status != NO_ERROR) {
+      if (status == 5010) {
+      } else return std::string("Cannot set IPv4 interface, error code: ").append(std::to_string(status));
+    }
+  }
+
+  // IPv6
+  if (IPv6.size() > 0) {
+    UINT iaIPAddress;
+    inet_pton(AF_INET6, IPv6.c_str(), &iaIPAddress);
+    std::cerr << "Current not support IPv6 to set in interface!" << std::endl;
+  }
+  return "";
+}
+
+std::vector<std::string> getIpAddr(NET_LUID InterfaceLuid) {
+  NET_IFINDEX ind;
+  if (ConvertInterfaceLuidToIndex(&InterfaceLuid, &ind) != NO_ERROR) throw std::string("Cannot get interface index");
+  std::vector<std::string> ips;
+
+  IP_ADAPTER_INFO  *pAdapterInfo;
+  ULONG ulOutBufLen;
+  DWORD dwRetVal;
+  pAdapterInfo = (IP_ADAPTER_INFO *) malloc( sizeof(IP_ADAPTER_INFO) );
+  ulOutBufLen = sizeof(IP_ADAPTER_INFO);
+  if (GetAdaptersInfo( pAdapterInfo, &ulOutBufLen) != ERROR_SUCCESS) {
+    free (pAdapterInfo);
+    pAdapterInfo = (IP_ADAPTER_INFO *) malloc ( ulOutBufLen );
+  }
+  if ((dwRetVal = GetAdaptersInfo(pAdapterInfo, &ulOutBufLen)) != ERROR_SUCCESS) throw std::string("GetAdaptersInfo call failed with ").append(std::to_string(dwRetVal));
+  PIP_ADAPTER_INFO pAdapter = pAdapterInfo;
+  while (pAdapter) {
+    if (pAdapter->Index == ind) ips.push_back(std::string(pAdapter->IpAddressList.IpAddress.String).append("/32"));
+    pAdapter = pAdapter->Next;
+  }
+  if (pAdapterInfo) free(pAdapterInfo);
+
+  return ips;
 }
