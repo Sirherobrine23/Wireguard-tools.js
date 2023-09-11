@@ -80,8 +80,24 @@
           }
         }],
         ["OS=='win'", {
+          "include_dirs": [
+            "addons/tools/win"
+          ],
           "defines": [
-            "LISTDEV"
+            "ONSTARTADDON",
+            "LISTDEV",
+            "GETCONFIG",
+            "SETCONFIG",
+            "DELIFACE"
+          ],
+          "libraries": [
+            "bcrypt.lib",
+            "crypt32.lib",
+            "iphlpapi.lib",
+            "kernel32.lib",
+            "ntdll.lib",
+            "ws2_32.lib",
+            "setupapi.lib"
           ],
           "sources": [
             "addons/tools/wginterface-win.cpp"

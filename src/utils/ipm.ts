@@ -334,7 +334,7 @@ export function randomIp(cidr: string, drops?: string[]): string {
  */
 export function nextIpSequence(cidr: string, skips: string[]): string {
   const [minIp, maxIp] = toIntRange(toCidr(cidr));
-  let index = -1;
+  let index = 0;
   while ((minIp + index) < maxIp) {
     const ip = toString(minIp + (++index));
     if (!((skips||[]).includes(ip))) return ip;

@@ -37,14 +37,16 @@ unsigned long maxName() {
   return IFNAMSIZ;
 }
 
+std::string versionDrive() {
+  return "Kernel";
+}
+
 void listDevices::Execute() {
   char *device_name, *devicesList = wg_list_device_names();
-  if (!devicesList) SetError("Unable to get device names");
-  else {
-    size_t len;
-    for ((device_name) = (devicesList), (len) = 0; ((len) = strlen(device_name)); (device_name) += (len) + 1) deviceNames.push_back(device_name);
-    free(devicesList);
-  }
+  if (!devicesList) return SetError("Unable to get device names");
+  size_t len;
+  for ((device_name) = (devicesList), (len) = 0; ((len) = strlen(device_name)); (device_name) += (len) + 1) deviceNames[std::string(device_name)] = "kernel";
+  free(devicesList);
 }
 
 int setInterface(std::string wgName) {

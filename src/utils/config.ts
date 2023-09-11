@@ -1,4 +1,4 @@
-import { wireguardInterface } from "../wginterface";
+import { wireguardInterface, constants } from "../wginterface";
 
 /**
  * Create wg-quick config file
@@ -7,9 +7,9 @@ import { wireguardInterface } from "../wginterface";
  */
 export function createConfig({ portListen, publicKey, privateKey, Address, DNS, peers = {} }: wireguardInterface) {
   const configString: string[] = ["[Interface]"];
-  if (typeof publicKey === "string" && publicKey.length > 0) configString.push(("PublicKey = ").concat(publicKey));
-  if (typeof privateKey === "string" && privateKey.length > 0) configString.push(("PrivateKey = ").concat(privateKey));
-  if (portListen >= 1 && portListen <= ((2 ** 16) - 1)) configString.push(("ListenPort = ").concat(String(portListen)));
+  if (typeof publicKey === "string" && publicKey.length === constants.WG_B64_LENGTH) configString.push(("PublicKey = ").concat(publicKey));
+  if (typeof privateKey === "string" && privateKey.length === constants.WG_B64_LENGTH) configString.push(("PrivateKey = ").concat(privateKey));
+  if (portListen >= 0 && portListen <= ((2 ** 16) - 1)) configString.push(("ListenPort = ").concat(String(portListen)));
   if (Array.isArray(Address) && Address.length > 0) configString.push(("Address = ").concat(...(Address.join(", "))));
   if (Array.isArray(DNS) && DNS.length > 0) configString.push(("DNS = ").concat(DNS.join(", ")));
 

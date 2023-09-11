@@ -4,7 +4,17 @@
 #include <vector>
 #include <map>
 
+#define WG_KEY_LENGTH 44
+
+// Get wireguard max name length
 unsigned long maxName();
+
+// Get wireguard version
+std::string versionDrive();
+
+
+// On start module call this function
+std::string startAddon(const Napi::Env env);
 
 class deleteInterface : public Napi::AsyncWorker {
   private:
@@ -27,7 +37,7 @@ class deleteInterface : public Napi::AsyncWorker {
 
 class listDevices : public Napi::AsyncWorker {
   private:
-    std::vector<std::string> deviceNames;
+    std::map<std::string, std::string> deviceNames;
   public:
   ~listDevices() {}
   listDevices(const Napi::Function &callback) : AsyncWorker(callback) {}
@@ -36,7 +46,12 @@ class listDevices : public Napi::AsyncWorker {
     const Napi::Env env = Env();
     const auto deviceArray = Napi::Array::New(env);
     if (deviceNames.size() > 0) {
-      for (auto &it : deviceNames) deviceArray.Set(deviceArray.Length(), it);
+      for (auto &it : deviceNames) {
+        auto info = Napi::Object::New(env);
+        info.Set("name", it.first);
+        info.Set("from", it.second);
+        deviceArray.Set(deviceArray.Length(), info);
+      }
     }
     Callback().Call({ Env().Undefined(), deviceArray });
   };
@@ -54,7 +69,8 @@ class Peer {
   std::string endpoint;
   std::vector<std::string> allowedIPs;
   uint32_t keepInterval;
-  uint64_t rxBytes, txBytes, last_handshake;
+  uint64_t rxBytes = 0, txBytes = 0;
+  long long last_handshake = 0;
 };
 
 /*
@@ -72,21 +88,18 @@ class setConfig : public Napi::AsyncWorker {
     std::string publicKey;
 
     // Wireguard port listen
-    uint32_t portListen;
+    uint32_t portListen = 0;
 
     // Wiki
-    uint32_t fwmark;
+    uint32_t fwmark = 0;
 
     // Interface address'es
     std::vector<std::string> Address;
 
     // Replace peers
-    bool replacePeers;
+    bool replacePeers = false;
 
-    /*
-    Wireguard peers
-    Map: <publicKey, Peer>
-    */
+    // Wireguard peers, Map: <publicKey(std::string), Peer>
     std::map<std::string, Peer> peersVector;
   public:
   void OnOK() override {
@@ -102,20 +115,26 @@ class setConfig : public Napi::AsyncWorker {
   setConfig(const Napi::Env env, const Napi::Function &callback, std::string name, const Napi::Object &config) : AsyncWorker(callback), wgName(name) {
     // Wireguard public key
     const auto sppk = config.Get("publicKey");
-    if (sppk.IsString()) publicKey = sppk.ToString().Utf8Value();
+    if (sppk.IsString()) {
+      publicKey = sppk.ToString().Utf8Value();
+      if (publicKey.length() != WG_KEY_LENGTH) throw Napi::Error::New(env, "Set valid publicKey");
+    }
 
     // Private key
     const auto sprk = config.Get("privateKey");
     if (!(sprk.IsString())) throw Napi::Error::New(env, "privateKey is empty");
     privateKey = sprk.ToString().Utf8Value();
+    if (privateKey.length() != WG_KEY_LENGTH) throw Napi::Error::New(env, ((std::string)"Set valid privateKey ").append(std::to_string(privateKey.length())));
 
     // Port to listen Wireguard interface
     const auto spor = config.Get("portListen");
-    if (spor.IsNumber() && (spor.ToNumber().Int32Value() > 0)) portListen = spor.ToNumber().Int32Value();
+    if (spor.IsNumber() && (spor.ToNumber().Int32Value() >= 0 && spor.ToNumber().Int32Value() <= 65535)) portListen = spor.ToNumber().Int32Value();
 
     //\?
+    #ifdef __linux
     const auto sfw = config.Get("fwmark");
     if (sfw.IsNumber() && (sfw.ToNumber().Uint32Value() >= 0)) fwmark = sfw.ToNumber().Uint32Value();
+    #endif
 
     const auto saddr = config.Get("Address");
     if (saddr.IsArray()) {
@@ -138,6 +157,7 @@ class setConfig : public Napi::AsyncWorker {
         const auto peerPubKey = Keys[peerIndex];
         if (peerPubKey.IsString() && Peers.Get(Keys[peerIndex]).IsObject()) {
           std::string ppkey = peerPubKey.ToString().Utf8Value();
+          if (ppkey.length() != WG_KEY_LENGTH) throw Napi::Error::New(env, "Set valid peer publicKey");
           const Napi::Object peerConfigObject = Peers.Get(Keys[peerIndex]).ToObject();
 
           Peer peerConfig = Peer();
@@ -146,11 +166,14 @@ class setConfig : public Napi::AsyncWorker {
           else {
             // Preshared key
             const auto pprekey = peerConfigObject.Get("presharedKey");
-            if (pprekey.IsString()) peerConfig.presharedKey = pprekey.ToString().Utf8Value();
+            if (pprekey.IsString()) {
+              peerConfig.presharedKey = pprekey.ToString().Utf8Value();
+              if (peerConfig.presharedKey.length() != WG_KEY_LENGTH) throw Napi::Error::New(env, "Set valid peer presharedKey");
+            }
 
             // Keep interval
             const auto pKeepInterval = peerConfigObject.Get("keepInterval");
-            if (pKeepInterval.IsNumber() && (pKeepInterval.ToNumber().Int32Value() > 0)) peerConfig.keepInterval = pKeepInterval.ToNumber().Int32Value();
+            if (pKeepInterval.IsNumber() && (pKeepInterval.ToNumber().Int32Value() > 0 && pKeepInterval.ToNumber().Int32Value() <= 65535)) peerConfig.keepInterval = pKeepInterval.ToNumber().Int32Value();
 
             // Peer endpoint
             const auto pEndpoint = peerConfigObject.Get("endpoint");
@@ -189,10 +212,10 @@ class getConfig : public Napi::AsyncWorker {
     std::string publicKey;
 
     // Wireguard port listen
-    uint32_t portListen;
+    unsigned int portListen;
 
     // Wiki
-    uint32_t fwmark;
+    unsigned int fwmark;
 
     // Interface address'es
     std::vector<std::string> Address;
@@ -213,10 +236,12 @@ class getConfig : public Napi::AsyncWorker {
     const Napi::Env env = Env();
     const auto config = Napi::Object::New(env);
 
-    if (publicKey.length() > 0) config.Set("publicKey", publicKey);
-    if (privateKey.length() > 0) config.Set("privateKey", privateKey);
-    if (portListen > 0) config.Set("portListen", portListen);
+    if (publicKey.length() == WG_KEY_LENGTH) config.Set("publicKey", publicKey);
+    if (privateKey.length() == WG_KEY_LENGTH) config.Set("privateKey", privateKey);
+    if (portListen > 0 && portListen <= 65535) config.Set("portListen", portListen);
+    #ifdef __linux
     if (fwmark >= 0) config.Set("fwmark", fwmark);
+    #endif
     if (Address.size() > 0) {
       const auto Addrs = Napi::Array::New(env);
       for (auto &addr : Address) Addrs.Set(Addrs.Length(), addr);
@@ -230,9 +255,13 @@ class getConfig : public Napi::AsyncWorker {
       const std::string peerPubKey = peer.first;
       auto peerConfig = peer.second;
 
-      if (peerConfig.presharedKey.length() > 0) PeerObject.Set("presharedKey", peerConfig.presharedKey);
-      if (peerConfig.keepInterval > 0) PeerObject.Set("keepInterval", peerConfig.keepInterval);
+      if (peerConfig.presharedKey.length() == WG_KEY_LENGTH) PeerObject.Set("presharedKey", peerConfig.presharedKey);
+      if (peerConfig.keepInterval > 0 && peerConfig.keepInterval <= 65535) PeerObject.Set("keepInterval", peerConfig.keepInterval);
       if (peerConfig.endpoint.length() > 0) PeerObject.Set("endpoint", peerConfig.endpoint);
+      if (peerConfig.last_handshake >= 0) PeerObject.Set("lastHandshake", Napi::Date::New(env, peerConfig.last_handshake));
+      // if (peerConfig.last_handshake >= 0) PeerObject.Set("lastHandshake", peerConfig.last_handshake);
+      if (peerConfig.rxBytes >= 0) PeerObject.Set("rxBytes", peerConfig.rxBytes);
+      if (peerConfig.txBytes >= 0) PeerObject.Set("txBytes", peerConfig.txBytes);
       if (peerConfig.allowedIPs.size() > 0) {
         const auto allowedIPs = Napi::Array::New(env);
         for (auto &ip : peerConfig.allowedIPs) allowedIPs.Set(allowedIPs.Length(), ip);

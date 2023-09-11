@@ -15,13 +15,15 @@
         "-static"
       ],
       "defines": [
-        "NAPI_DISABLE_CPP_EXCEPTIONS"
+        "NAPI_DISABLE_CPP_EXCEPTIONS",
+        "DELIFACE",
+        "SETCONFIG",
+        "ONSTARTADDON"
       ],
       "includePath": [
         "${env:appdata}/../Local/node-gyp/Cache/18.17.0/include/node",
         "${workspaceFolder}/node_modules/node-addon-api",
-        "${workspaceFolder}/addons/**",
-        "${workspaceFolder}/addons"
+        "${workspaceFolder}/addons/tools/**"
       ]
     },
     {
@@ -45,16 +47,15 @@
         "/usr/include/node",
         "${workspaceFolder}/node_modules/node-addon-api/**",
         "${workspaceFolder}/node_modules/**",
-        "${workspaceFolder}/addons/**",
-        "${workspaceFolder}/addons"
+        "${workspaceFolder}/addons/tools/**"
       ]
     },
     {
       "name": "Mac",
       "includePath": [
         "${workspaceFolder}/node_modules/node-addon-api",
-        "${workspaceFolder}/addons/**",
-        "/usr/local/include/node"
+        "/usr/local/include/node",
+        "${workspaceFolder}/addons/tools/**"
       ],
       "defines": [
         "NAPI_DISABLE_CPP_EXCEPTIONS"

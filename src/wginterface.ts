@@ -1,3 +1,4 @@
+import { randomInt } from "node:crypto";
 import { promises as fs } from "node:fs";
 import net from "node:net";
 import { createInterface as readline } from "node:readline";
@@ -7,12 +8,19 @@ import { promisify } from "util";
 import { createConfig } from "./utils/config";
 import * as ipManipulation from "./utils/ipm";
 import * as keygen from "./utils/keygen";
-import { randomInt } from "node:crypto";
+if (process.platform === "win32") {
+  const arch = process.arch === "x64" ? "amd64" : process.arch === "ia32" ? "x68" : process.arch;
+  global.WIREGUARD_DLL_PATH = path.join(__dirname, "../addons/tools/win/wireguard-nt/bin", arch, "wireguard.dll");
+}
 const wg_binding = require("../libs/prebuildifyLoad.cjs")("wginterface", path.join(__dirname, ".."));
 
 /** default location to run socket's */
 export const defaultPath = (process.env.WIRWGUARD_GO_RUN||"").length > 0 ? path.resolve(process.cwd(), process.env.WIRWGUARD_GO_RUN) : process.platform === "win32" ? "\\\\.\\pipe\\WireGuard" : "/var/run/wireguard";
-export const constants: { MAX_NAME_LENGTH: number } = wg_binding.constants;
+export const constants: {
+  WG_B64_LENGTH: number;
+  MAX_NAME_LENGTH: number;
+  driveVersion: string;
+} = wg_binding.constants;
 
 export type peerConfig = {
   /** Mark this peer to be removed, any changes remove this option */
@@ -191,7 +199,7 @@ async function connectSocket(path: string): Promise<net.Socket> {
  */
 export async function listDevices() {
   let interfaceNames: {from: "userspace"|"kernel", name: string}[] = [];
-  if (typeof wg_binding.listDevicesAsync === "function") interfaceNames = interfaceNames.concat((await promisify(wg_binding.listDevicesAsync)() as string[]).map(name => ({from: "kernel", name})) );
+  if (typeof wg_binding.listDevicesAsync === "function") interfaceNames = interfaceNames.concat(await promisify(wg_binding.listDevicesAsync)());
   return interfaceNames.concat((await fs.readdir(defaultPath).catch((): string[] => [])).map(name => ({from: "userspace", name: name.endsWith(".sock") ? name.slice(0, -5) : name})));
 }
 

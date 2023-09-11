@@ -96,8 +96,20 @@ Napi::Value listDevicesAsync(const Napi::CallbackInfo &info) {
 }
 
 Napi::Object Init(Napi::Env env, Napi::Object exports) {
+  /// Call Addon
+  #ifdef ONSTARTADDON
+  auto status = startAddon(env);
+  if (status.length() >= 1) {
+    Napi::Error::New(env, status).ThrowAsJavaScriptException();
+    return exports;
+  }
+  #endif
+
+  // Wireguard constants set
   const Napi::Object constants = Napi::Object::New(env);
+  constants.Set("WG_B64_LENGTH", WG_KEY_LENGTH);
   constants.Set("MAX_NAME_LENGTH", maxName());
+  constants.Set("driveVersion", versionDrive());
 
   // Constants
   exports.Set("constants", constants);

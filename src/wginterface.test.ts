@@ -4,7 +4,7 @@ import { userInfo } from "os";
 import * as Bridge from "./wginterface";
 import * as utils from "./utils/index";
 
-if (process.platform !== "win32" && (userInfo()).gid === 0) {
+if (process.platform === "win32" || (userInfo()).gid === 0) {
   // Make base config
   const interfaceName = String(((process.env.WG_INETRFACE||"").length > 0) ? process.env.WG_INETRFACE : (process.platform === "darwin" ? "utun" : "shtest").concat(String(randomInt(20, 1023))));
   const deviceConfig: Bridge.wireguardInterface = {

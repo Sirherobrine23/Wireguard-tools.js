@@ -8,13 +8,11 @@ on:
     - main
 
 jobs:
-  test:
+  linux_test:
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         node_version: [ 16.x, 17.x, 18.x, 19.x ]
-        os: [ ubuntu, macos ]
-    runs-on: ${{ matrix.os }}-latest
-    name: "Test on ${{ matrix.os }} with Node ${{ matrix.node_version }}"
     steps:
     - uses: actions/checkout@v4
       name: Checkout
@@ -26,15 +24,45 @@ jobs:
 
     - name: Install dependencies
       run: |
-        npm install --no-save
-        sudo npm install -g ts-node typescript mocha
+        export DEBIAN_FRONTEND=noninteractive
+        sudo apt update
+        sudo apt install -y binutils-multiarch gcc-*aarch64-linux-gnu gcc-*aarch64-linux-gnu-base g++-*aarch64-linux-gnu libc6-arm64-cross
+        npm install --no-save --ignore-scripts
+
+    - name: Test
+      run: npm run prebuildify -- -v && sudo -E ./node_modules/.bin/mocha ./src
+
+    - name: Upload generate interface
+      uses: actions/upload-artifact@v3
+      with:
+        name: addrs_${{ runner.os }}_${{ matrix.node_version }}
+        path: "*.addrs.json"
+
+    - name: Upload generate interface
+      uses: actions/upload-artifact@v3
+      with:
+        retention-days: 7
+        name: prebuilds_${{ runner.os }}
+        path: "prebuilds/**"
+
+  macos_test:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        node_version: [ 16.x, 17.x, 18.x, 19.x ]
+    steps:
+    - uses: actions/checkout@v4
+      name: Checkout
+
+    - uses: actions/setup-node@v3
+      name: Setup Node.js
+      with:
+        node-version: ${{ matrix.node_version }}
 
     - name: Setup Go environment
-      if: matrix.os == 'macos'
       uses: actions/setup-go@v4.1.0
 
-    - name: "Start wireguard interface (MacOS)"
-      if: matrix.os == 'macos'
+    - name: Setup wireguard-go
       run: |
         cd ..
         git clone https://git.zx2c4.com/wireguard-go
@@ -43,51 +71,60 @@ jobs:
         go build -v -o "wireguard-go"
         sudo ./wireguard-go utun15
 
+    - name: Install dependencies
+      run: npm install --no-save --ignore-scripts
+
     - name: Test
-      run: |
-        tsc --build --clean
-        tsc --build
-        sudo -E mocha ./src
+      run: npm run prebuildify -- -v && sudo -E ./node_modules/.bin/mocha ./src
 
     - name: Upload generate interface
       uses: actions/upload-artifact@v3
       with:
-        name: ${{ matrix.os }}_${{ matrix.node_version }}
+        name: addrs_${{ runner.os }}_${{ matrix.node_version }}
         path: "*.addrs.json"
-
-  build:
-    needs: test
-    strategy:
-      matrix:
-        os:
-          - windows
-          - macos
-    runs-on: ${{ matrix.os }}-latest
-    steps:
-    - uses: actions/checkout@v4
-      name: Code checkout
-      with:
-        submodules: true
-
-    # Install basic tools
-    - uses: actions/setup-node@v3
-      name: Setup node.js
-      with:
-        node-version: 18.x
-        registry-url: https://registry.npmjs.org/
-
-    - run: npm install --no-save --ignore-scripts
-    - run: npm run prebuildify -- -v
 
     - name: Upload generate interface
       uses: actions/upload-artifact@v3
       with:
         retention-days: 7
-        name: prebuilds_${{ matrix.os }}
+        name: prebuilds_${{ runner.os }}
+        path: "prebuilds/**"
+
+  win_test:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        node_version: [ 16.x, 17.x, 18.x, 19.x ]
+    steps:
+    - uses: actions/checkout@v4
+      name: Checkout
+
+    - uses: actions/setup-node@v3
+      name: Setup Node.js
+      with:
+        node-version: ${{ matrix.node_version }}
+
+    - name: Install dependencies
+      run: npm install --no-save --ignore-scripts
+
+    - name: Test
+      run: npm run prebuildify -- -v && ./node_modules/.bin/mocha ./src
+
+    - name: Upload generate interface
+      uses: actions/upload-artifact@v3
+      with:
+        name: addrs_${{ runner.os }}_${{ matrix.node_version }}
+        path: "*.addrs.json"
+
+    - name: Upload generate interface
+      uses: actions/upload-artifact@v3
+      with:
+        retention-days: 7
+        name: prebuilds_${{ runner.os }}
         path: "prebuilds/**"
 
   pack_package:
-    needs: build
+    needs: [ linux_test, macos_test, win_test ]
     runs-on: ubuntu-latest
     name: Pack npm package
     env:
@@ -95,15 +132,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       name: Code checkout
-      with:
-        submodules: true
 
-    - name: Ubuntu dependecies
-      run: |
-        export DEBIAN_FRONTEND=noninteractive
-        sudo apt install -y binutils-multiarch gcc-*aarch64-linux-gnu gcc-*aarch64-linux-gnu-base g++-*aarch64-linux-gnu libc6-arm64-cross
-
-    # Install basic tools
     - uses: actions/setup-node@v3
       name: Setup node.js
       with:
@@ -115,7 +144,7 @@ jobs:
       with:
         path: ./prebuilds
 
-    - run: npm install --no-save
+    - run: npm install --no-save --ignore-scripts
     - run: npm pack
 
     - name: Upload npm package

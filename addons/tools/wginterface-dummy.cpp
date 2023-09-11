@@ -6,6 +6,10 @@ unsigned long maxName() {
   return IFNAMSIZ;
 }
 
+std::string versionDrive() {
+  return "Userspace";
+}
+
 void listDevices::Execute() {}
 void deleteInterface::Execute() {}
 void setConfig::Execute() {}
