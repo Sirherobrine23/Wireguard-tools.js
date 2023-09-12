@@ -85,6 +85,7 @@ if (process.argv.slice(2).at(0) === "build") {
   if (process.argv.includes("--auto")) {
     if (process.platform === "linux") archs.push("x64", "arm64");
     else if (process.platform === "win32") archs.push("x64", "arm64");
+    else if (process.platform === "darwin") archs.push("x64", "arm64");
     else archs.push(process.arch);
   } else {
     process.argv.slice(2).filter(f => f.startsWith("--arch=")).map(arch => arch.slice(7));

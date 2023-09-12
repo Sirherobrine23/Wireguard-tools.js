@@ -10,20 +10,6 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "esModuleInterop": true,
-    "allowJs": true,
-    "typeRoots": [
-      "node_modules/@types"
-    ]
-  },
-  "exclude": [
-    "**/node_modules/**",
-    "**/test*/**",
-    "**.test.*",
-    "**/examples/**",
-    "libs/**"
-  ],
-  "ts-node": {
-    "files": true,
-    "transpileOnly": true
+    "allowJs": true
   }
 }

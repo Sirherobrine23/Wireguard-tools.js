@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node_version: [ 16.x, 17.x, 18.x, 19.x ]
+        node_version: [ 16.x, 17.x, 18.x, 19.x, 20.x ]
     steps:
     - uses: actions/checkout@v4
       name: Checkout
@@ -38,7 +38,7 @@ jobs:
         name: addrs_${{ runner.os }}_${{ matrix.node_version }}
         path: "*.addrs.json"
 
-    - name: Upload generate interface
+    - name: Upload prebuilds interface
       uses: actions/upload-artifact@v3
       with:
         retention-days: 7
@@ -49,7 +49,7 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        node_version: [ 16.x, 17.x, 18.x, 19.x ]
+        node_version: [ 16.x, 17.x, 18.x, 19.x, 20.x ]
     steps:
     - uses: actions/checkout@v4
       name: Checkout
@@ -83,7 +83,7 @@ jobs:
         name: addrs_${{ runner.os }}_${{ matrix.node_version }}
         path: "*.addrs.json"
 
-    - name: Upload generate interface
+    - name: Upload prebuilds interface
       uses: actions/upload-artifact@v3
       with:
         retention-days: 7
@@ -94,7 +94,7 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        node_version: [ 16.x, 17.x, 18.x, 19.x ]
+        node_version: [ 16.x, 17.x, 18.x, 19.x, 20.x ]
     steps:
     - uses: actions/checkout@v4
       name: Checkout
@@ -116,7 +116,7 @@ jobs:
         name: addrs_${{ runner.os }}_${{ matrix.node_version }}
         path: "*.addrs.json"
 
-    - name: Upload generate interface
+    - name: Upload prebuilds interface
       uses: actions/upload-artifact@v3
       with:
         retention-days: 7
@@ -136,7 +136,7 @@ jobs:
     - uses: actions/setup-node@v3
       name: Setup node.js
       with:
-        node-version: 18.x
+        node-version: 20.x
         registry-url: https://registry.npmjs.org/
 
     - name: Download all artefacts

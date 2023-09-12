@@ -5,10 +5,6 @@ node_modules/
 /*.tgz
 *.node
 
-# Typescript
-src/**/*.js
-src/**/*.d.ts
-
 # Anothers
 .vscode-ctags*
 *.addrs.json

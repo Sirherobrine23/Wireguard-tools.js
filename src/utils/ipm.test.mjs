@@ -3,7 +3,7 @@ import {
   cidrCommonCidr, previousCidr, nextCidr,
   randomIp, previousIp, nextIp, count,
   toV6, fromV6,
-} from "./ipm";
+} from "./ipm.js";
 
 describe("IP Manipulation", function() {
   // CIDR

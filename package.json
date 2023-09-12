@@ -2,13 +2,21 @@
   "name": "wireguard-tools.js",
   "version": "1.7.3",
   "description": "Control your wireguard interface from node.js, not a wireguard-tools wrapper!",
-  "main": "src/index.js",
-  "types": "src/index.d.ts",
   "private": false,
   "type": "commonjs",
+  "main": "./export/index.cjs",
+  "types": "./export/index.d.ts",
+  "default": "./export/index.mjs",
+  "exports": {
+    ".": {
+      "require": "./export/index.cjs",
+      "default": "./export/index.mjs",
+      "types": "./export/index.d.ts"
+    }
+  },
   "homepage": "https://github.com/Sirherobrine23/Wireguard-tools.js#readme",
   "author": "Matheus Sampaio Queiroga <srherobrine20@gmail.com> (https://sirherobrine23.org/)",
-  "license": "GPL-2.0-only",
+  "license": "GPL-3.0-or-later",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Sirherobrine23/Wireguard-tools.js.git"
@@ -35,17 +43,13 @@
   "scripts": {
     "install": "node libs/build.mjs",
     "test": "mocha ./src",
-    "dev": "tsc --build --clean && tsc --build && node libs/build.mjs build",
-    "prebuildify": "node libs/build.mjs build --auto",
-    "prepack": "tsc --build --clean && tsc --build",
-    "postpack": "tsc --build --clean && node-gyp clean"
+    "dev": "node libs/build.mjs build",
+    "prebuildify": "node libs/build.mjs build --auto"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.1",
-    "@types/node": "^20.5.3",
-    "mocha": "^10.2.0",
-    "ts-node": "^10.9.1",
-    "typescript": "^5.1.6"
+    "@types/node": "^20.6.0",
+    "mocha": "^10.2.0"
   },
   "dependencies": {
     "node-addon-api": "^7.0.0",

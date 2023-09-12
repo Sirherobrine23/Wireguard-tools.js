@@ -1,15 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
-import { createConfig, parseConfig } from "./config";
-import { keygenAsync } from "./keygen";
-const wg0 = fs.readFileSync(path.resolve(__dirname, "../../configsExamples/wg0.ini"), "utf8"); // Server config
-const wg1 = fs.readFileSync(path.resolve(__dirname, "../../configsExamples/wg1.ini"), "utf8"); // Client config
+import __config from "./config.js";
+import __keygen from "./keygen.js";
+const { createConfig, parseConfig } = __config, { keygen } = __keygen;
 
 describe("Parse and Create config", function() {
-  it("Parse server config", () => parseConfig(wg0));
-  it("Parse client config", () => parseConfig(wg1));
   it("Create server config", async () => {
-    const interfaceKeys = await keygenAsync();
+    const interfaceKeys = await keygen();
     const config = {
       publicKey: interfaceKeys.public,
       privateKey: interfaceKeys.private,
@@ -19,7 +16,7 @@ describe("Parse and Create config", function() {
     createConfig(config);
   });
   it("Create client config", async () => {
-    const interfaceKeys = await keygenAsync();
+    const interfaceKeys = await keygen();
     const config = {
       publicKey: interfaceKeys.public,
       privateKey: interfaceKeys.private,

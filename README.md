@@ -7,17 +7,22 @@ other tools are wrappers over `wg`, `wireguard-tools.js` is not like that, it is
 ## Support to:
 
 1. Userpsace [(wireguard-go)](https://git.zx2c4.com/wireguard-go/about/)
-2. Maneger wireguard interface (linux create if not exist's).
+2. Maneger wireguard interface (linux and windows create if not exist's).
 3. Generate `pre-shared`, `private` and `public` keys.
 4. [wg-quick](https://man7.org/linux/man-pages/man8/wg-quick.8.html) file support.
 
 > **Note**
 >
-> we have pre-copiled files for Windows, MacOS (x64/intel) and Linux (arm64, x86_64) else arch and system require `gcc` or `clang` installed to compile Node addon.
+> we have pre-copiled files for:
+> - `Windows`: x64, arm64
+> - `MacOS`: x64/intel, arm64
+> - `Linux`: x64/amd64, arm64
 >
-> To manage the Wireguard interfaces in linux, root access is required.
+> else arch and system require copiler supported by `node-gyp` installed to compile Node addon.
 >
-> Another system's require `wireguard-go` [(check this page)](https://github.com/WireGuard/wireguard-go)
+> 1. To manage the Wireguard interfaces in linux, root access is required.
+> 1. Windows user are `wireguard-nt` dll files includes in module
+> 1. Another system's require `wireguard-go` [(check this page)](https://github.com/WireGuard/wireguard-go)
 
 ## Examples
 

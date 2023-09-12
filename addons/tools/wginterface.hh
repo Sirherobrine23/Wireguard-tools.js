@@ -90,8 +90,10 @@ class setConfig : public Napi::AsyncWorker {
     // Wireguard port listen
     uint32_t portListen = 0;
 
+    #ifdef __linux
     // Wiki
     uint32_t fwmark = 0;
+    #endif
 
     // Interface address'es
     std::vector<std::string> Address;
@@ -212,10 +214,12 @@ class getConfig : public Napi::AsyncWorker {
     std::string publicKey;
 
     // Wireguard port listen
-    unsigned int portListen;
+    uint32_t portListen;
 
     // Wiki
-    unsigned int fwmark;
+    #ifdef __linux
+    uint32_t fwmark;
+    #endif
 
     // Interface address'es
     std::vector<std::string> Address;

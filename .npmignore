@@ -7,10 +7,6 @@ node_modules/
 .vscode/
 .vscode-ctags
 
-# Typescript
-src/**/*.ts
-!src/**/*.d.ts
-
 # Github and Git
 .github/
 .git*

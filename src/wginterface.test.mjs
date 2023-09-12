@@ -1,15 +1,21 @@
+// @ts-check
 import { randomInt } from "crypto";
 import { writeFileSync } from "fs";
 import { userInfo } from "os";
-import * as Bridge from "./wginterface";
-import * as utils from "./utils/index";
+import Bridge from "./wginterface.js";
+import utils from "./utils/index.js";
+import path from "path";
+import { fileURLToPath } from "url";
+// @ts-ignore
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 if (process.platform === "win32" || (userInfo()).gid === 0) {
   // Make base config
   const interfaceName = String(((process.env.WG_INETRFACE||"").length > 0) ? process.env.WG_INETRFACE : (process.platform === "darwin" ? "utun" : "shtest").concat(String(randomInt(20, 1023))));
-  const deviceConfig: Bridge.wireguardInterface = {
+  const deviceConfig = {
     portListen: randomInt(1024, 65535),
-    privateKey: utils.genPrivate(),
+    // @ts-ignore
+    privateKey: await utils.genPrivate(),
     replacePeers: true,
     Address: [],
     peers: {}
@@ -17,7 +23,8 @@ if (process.platform === "win32" || (userInfo()).gid === 0) {
 
   // Create Random Peer
   for (let i = 0; i < 20; i++) {
-    const peerKey = utils.keygen(true);
+    // @ts-ignore
+    const peerKey = await utils.keygen(true);
     const ips = [utils.ipManipulation.randomIp(Math.random() > 0.5 ? "192.168.15.1/24" : "10.0.0.1/8"), utils.ipManipulation.randomIp(Math.random() > 0.5 ? "10.0.0.1/8" : "192.168.15.1/24")];
     deviceConfig.peers[peerKey.public] = {
       allowedIPs: ips.concat(ips.map(s => utils.ipManipulation.toV6(s))),
@@ -39,7 +46,7 @@ if (process.platform === "win32" || (userInfo()).gid === 0) {
 
     it("Get config", async () => {
       const raw = await Bridge.getConfig(interfaceName);
-      let keyNot: string;
+      let keyNot;
       writeFileSync(`${__dirname}/../${interfaceName}.addrs.json`, JSON.stringify({
         raw,
         deviceConfig,
