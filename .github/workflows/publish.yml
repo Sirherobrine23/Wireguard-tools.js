@@ -2,8 +2,21 @@ name: Publish
 on:
   release:
     types:
-    - released
-    - prereleased
+      - released
+      - prereleased
+  workflow_dispatch:
+    inputs:
+      pkgVersion:
+        required: true
+        type: string
+        description: Package version
+      releaseType:
+        type: choice
+        description: Is pre-release or next stable release
+        default: next
+        options:
+          - latest
+          - next
 
 jobs:
   linux_build:
@@ -20,8 +33,9 @@ jobs:
 
     - name: Install dependencies
       run: |
+        set -ex
         export DEBIAN_FRONTEND=noninteractive
-        sudo apt update
+        sudo apt update &> /dev/null
         sudo apt install -y binutils-multiarch gcc-*aarch64-linux-gnu gcc-*aarch64-linux-gnu-base g++-*aarch64-linux-gnu libc6-arm64-cross
         npm install --no-save --ignore-scripts
 
@@ -114,7 +128,7 @@ jobs:
     - name: Edit version and install depencies
       run: |
         sudo npm i -g semver
-        VERSION="$(semver -c ${{ github.ref_name }})"
+        VERSION="$(semver -c ${{ github.event_name == 'release' && github.ref_name || github.event.inputs.pkgVersion }})"
         echo "PACKAGE_VERSION=$VERSION" >> $GITHUB_ENV
         jq --arg ver $VERSION '.version = $ver' package.json > package2.json
         mv -fv package2.json package.json
@@ -123,19 +137,34 @@ jobs:
         npm install --no-save --ignore-scripts
         node libs/build.mjs
 
-    # Publish npm
-    - run: npm publish --access public --tag ${{ github.event.release.prerelease && 'next' || 'latest' }}
+    - run: npm publish --access public --tag ${{ github.event_name == 'release' && (github.event.release.prerelease && 'next' || 'latest') || github.event.inputs.releaseType }}
       env:
         NODE_AUTH_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
 
+    - name: Pack tgz file to release
+      run: npm pack
+
     - uses: peter-evans/create-pull-request@v5
       name: Create Pull Request
+      id: pull
       with:
-        commit-message: Update to (${{ env.PACKAGE_VERSION }})
         delete-branch: true
+        signoff: true
+        base: ${{ github.event_name == 'release' && github.event.release.target_commitish || github.ref_name }}
+        commit-message: Update to (${{ env.PACKAGE_VERSION }})
         assignees: SirHerobrine23
         reviewers: SirHerobrine23
         branch: version_update_${{ env.PACKAGE_VERSION }}
         title: new release version v${{ env.PACKAGE_VERSION }}
         body: Auto update version, created with GitHub Actions
         add-paths: "."
+
+    - name: Release
+      uses: softprops/action-gh-release@v0.1.15
+      with:
+        prerelease: ${{ github.event_name == 'release' && github.event.release.prerelease || github.event.inputs.releaseType == 'next' }}
+        tag_name: ${{ github.event_name == 'release' && github.ref_name || format('v{0}', github.event.inputs.pkgVersion) }}
+        name: ${{ github.event_name == 'release' && github.ref_name || format('v{0}', github.event.inputs.pkgVersion) }}
+        body: ${{ github.event_name == 'release' && github.event.release.body || format('Release v{0}', github.event.inputs.pkgVersion) }}
+        target_commitish: ${{ steps.pull.outputs.pull-request-head-sha }}
+        files: "*.tgz"

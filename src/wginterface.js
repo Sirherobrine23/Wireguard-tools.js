@@ -27,7 +27,7 @@ async function connectSocket(path) {
 
 /**
  * List all Wireguard interfaces
- * @returns Interfaces array
+ * @returns {Promise<{from: "userspace"|"kernel", name: string}[]>} Interfaces array
  */
 async function listDevices() {
   let interfaceNames = [];
@@ -54,11 +54,9 @@ async function getConfig(deviceName) {
   let latestPeer,
   /** @type {string} */
   previewKey;
-  client.write("get=1\n\n");
   const tetrisBreak = readline(client);
   tetrisBreak.on("line", function lineProcess(line) {
     if (line === "") tetrisBreak.removeListener("line", lineProcess).close();
-
     const findout = line.indexOf("="), keyName = line.slice(0, findout), value = line.slice(findout+1);
     if (findout <= 0) return;
     if (keyName === "errno" && value !== "0") throw new Error(("wireguard-go error, code: ").concat(value));
@@ -90,7 +88,7 @@ async function getConfig(deviceName) {
     }
     previewKey = keyName;
   });
-
+  client.write("get=1\n\n");
   await new Promise((done, reject) => tetrisBreak.on("error", reject).once("close", done));
   await finished(client.end());
   return config.toJSON();
@@ -111,7 +109,7 @@ async function deleteInterface(deviceName) {
 
 /**
  * Set Wireguard interface config.
- * @param deviceName - Wireguard interface name.
+ * @param {string} deviceName - Wireguard interface name.
  * @param interfaceConfig - Peers and Interface config.
  */
 async function setConfig(deviceName, interfaceConfig) {
