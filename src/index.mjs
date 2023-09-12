@@ -1,4 +1,4 @@
-import main from "./index.cjs";
+import main from "./index.js";
 export default main;
 export const {
   utils,

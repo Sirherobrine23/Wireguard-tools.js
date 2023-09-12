@@ -1,7 +1,7 @@
 {
   "files.eol": "\n",
   "files.encoding": "utf8",
-  "files.defaultLanguage": "typescript",
+  "files.defaultLanguage": "javascript",
   "files.trimFinalNewlines": true,
   "files.trimTrailingWhitespace": true,
   "editor.tabSize": 2,

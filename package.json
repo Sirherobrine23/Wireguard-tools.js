@@ -4,14 +4,14 @@
   "description": "Control your wireguard interface from node.js, not a wireguard-tools wrapper!",
   "private": false,
   "type": "commonjs",
-  "main": "./export/index.cjs",
-  "types": "./export/index.d.ts",
-  "default": "./export/index.mjs",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "default": "./src/index.mjs",
   "exports": {
     ".": {
-      "require": "./export/index.cjs",
-      "default": "./export/index.mjs",
-      "types": "./export/index.d.ts"
+      "require": "./src/index.js",
+      "default": "./src/index.mjs",
+      "types": "./src/index.d.ts"
     }
   },
   "homepage": "https://github.com/Sirherobrine23/Wireguard-tools.js#readme",
@@ -29,7 +29,7 @@
     "wireguard-utils"
   ],
   "bugs": {
-    "url": "https://github.com/Sirherobrine23/Wireguard-tools.js/issues"
+    "url": "https://github.com/Sirherobrine23/Wireguard-tools.js/issues/new"
   },
   "sponsor": {
     "url": "https://github.com/sponsors/Sirherobrine23"
