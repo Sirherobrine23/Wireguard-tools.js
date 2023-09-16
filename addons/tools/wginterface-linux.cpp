@@ -45,7 +45,11 @@ void listDevices::Execute() {
   char *device_name, *devicesList = wg_list_device_names();
   if (!devicesList) return SetError("Unable to get device names");
   size_t len;
-  for ((device_name) = (devicesList), (len) = 0; ((len) = strlen(device_name)); (device_name) += (len) + 1) deviceNames[std::string(device_name)] = "kernel";
+  for ((device_name) = (devicesList), (len) = 0; ((len) = strlen(device_name)); (device_name) += (len) + 1) {
+    listInfo setInfo;
+    setInfo.tunType = "kernel";
+    deviceNames[std::string(device_name)] = setInfo;
+  }
   free(devicesList);
 }
 

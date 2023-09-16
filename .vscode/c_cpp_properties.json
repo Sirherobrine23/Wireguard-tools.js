@@ -23,6 +23,7 @@
       "includePath": [
         "${env:appdata}/../Local/node-gyp/Cache/18.17.0/include/node",
         "${workspaceFolder}/node_modules/node-addon-api",
+        "${workspaceFolder}/addons/genKey/**",
         "${workspaceFolder}/addons/tools/**"
       ]
     },
@@ -47,6 +48,7 @@
         "/usr/include/node",
         "${workspaceFolder}/node_modules/node-addon-api/**",
         "${workspaceFolder}/node_modules/**",
+        "${workspaceFolder}/addons/genKey/**",
         "${workspaceFolder}/addons/tools/**"
       ]
     },
@@ -55,6 +57,7 @@
       "includePath": [
         "${workspaceFolder}/node_modules/node-addon-api",
         "/usr/local/include/node",
+        "${workspaceFolder}/addons/genKey/**",
         "${workspaceFolder}/addons/tools/**"
       ],
       "defines": [

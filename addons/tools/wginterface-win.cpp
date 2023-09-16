@@ -26,6 +26,7 @@
 #include <devguid.h>
 #include <ndisguid.h>
 #include "wginterface.hh"
+#include <wgkeys.hh>
 
 const DEVPROPKEY devpkey_name = { { 0x65726957, 0x7547, 0x7261, { 0x64, 0x4e, 0x61, 0x6d, 0x65, 0x4b, 0x65, 0x79 } }, DEVPROPID_FIRST_USABLE + 1 };
 #define IFNAMSIZ MAX_ADAPTER_NAME - 1
@@ -94,75 +95,6 @@ std::string versionDrive() {
   return ((std::string)"WireGuardNT v").append(std::to_string((Version >> 16) & 0xff)).append(".").append(std::to_string((Version >> 0) & 0xff));
 }
 
-typedef uint8_t wg_key[32];
-typedef char wg_key_b64_string[((sizeof(wg_key) + 2) / 3) * 4 + 1];
-bool key_is_zero(const uint8_t key[32])
-{
-  volatile uint8_t acc = 0;
-
-  for (unsigned int i = 0; i < 32; ++i) {
-    acc |= key[i];
-    // asm volatile("" : "=r"(acc) : "0"(acc));
-  }
-  return !!(1 & ((acc - 1) >> 8));
-}
-
-static int decodeBase64(const char src[4]) {
-  int val = 0;
-  unsigned int i;
-
-  for (i = 0; i < 4; ++i) val |= (-1 + ((((('A' - 1) - src[i]) & (src[i] - ('Z' + 1))) >> 8) & (src[i] - 64)) + ((((('a' - 1) - src[i]) & (src[i] - ('z' + 1))) >> 8) & (src[i] - 70)) + ((((('0' - 1) - src[i]) & (src[i] - ('9' + 1))) >> 8) & (src[i] + 5)) + ((((('+' - 1) - src[i]) & (src[i] - ('+' + 1))) >> 8) & 63) + ((((('/' - 1) - src[i]) & (src[i] - ('/' + 1))) >> 8) & 64)) << (18 - 6 * i);
-  return val;
-}
-
-static void encode_base64(char dest[4], const uint8_t src[3]) {
-  const uint8_t input[] = {
-    static_cast<uint8_t>((src[0] >> 2) & 63),
-    static_cast<uint8_t>(((src[0] << 4) | (src[1] >> 4)) & 63),
-    static_cast<uint8_t>(((src[1] << 2) | (src[2] >> 6)) & 63),
-    static_cast<uint8_t>(src[2] & 63)
-  };
-  unsigned int i;
-  for (i = 0; i < 4; ++i) dest[i] = input[i] + 'A' + (((25 - input[i]) >> 8) & 6) - (((51 - input[i]) >> 8) & 75) - (((61 - input[i]) >> 8) & 15) + (((62 - input[i]) >> 8) & 3);
-}
-
-void insertKey(wg_key key, std::string keyBase64) {
-  auto base64 = keyBase64.c_str();
-  if (keyBase64.length() != WG_KEY_LENGTH || base64[WG_KEY_LENGTH - 1] != '=') throw std::string("invalid key, length: ").append(std::to_string(keyBase64.length()));
-
-  unsigned int i;
-  int val;
-  volatile uint8_t ret = 0;
-
-  for (i = 0; i < 32 / 3; ++i) {
-    val = decodeBase64(&base64[i * 4]);
-    ret |= (uint32_t)val >> 31;
-    key[i * 3 + 0] = (val >> 16) & 0xff;
-    key[i * 3 + 1] = (val >> 8) & 0xff;
-    key[i * 3 + 2] = val & 0xff;
-  }
-  const char tempDecode[4] = {base64[i * 4 + 0], base64[i * 4 + 1], base64[i * 4 + 2], 'A'};
-  val = decodeBase64(tempDecode);
-  ret |= ((uint32_t)val >> 31) | (val & 0xff);
-  key[i * 3 + 0] = (val >> 16) & 0xff;
-  key[i * 3 + 1] = (val >> 8) & 0xff;
-  int status = EINVAL & ~((ret - 1) >> 8);
-  if (status != 0) throw std::string("Cannot decode key, ret code: ").append(std::to_string(status));
-}
-
-std::string keyToBase64(const wg_key key) {
-  wg_key_b64_string base64;
-  unsigned int i;
-
-  for (i = 0; i < 32 / 3; ++i) encode_base64(&base64[i * 4], &key[i * 3]);
-  const uint8_t tempKey[3] = { key[i * 3 + 0], key[i * 3 + 1], 0 };
-  encode_base64(&base64[i * 4], tempKey);
-  base64[sizeof(wg_key_b64_string) - 2] = '=';
-  base64[sizeof(wg_key_b64_string) - 1] = '\0';
-
-  return std::string(base64);
-}
-
 void listDevices::Execute() {
   std::vector<std::string> arrayPrefix;
   arrayPrefix.push_back("ProtectedPrefix\\Administrators\\WireGuard\\");
@@ -170,9 +102,8 @@ void listDevices::Execute() {
 
   WIN32_FIND_DATA find_data;
   HANDLE find_handle;
-  int ret = 0;
   for (auto &preit : arrayPrefix) {
-    ret = 0;
+    int ret = 0;
     find_handle = FindFirstFile("\\\\.\\pipe\\*", &find_data);
     if (find_handle == INVALID_HANDLE_VALUE) continue;
 
@@ -180,14 +111,13 @@ void listDevices::Execute() {
     do {
       if (strncmp(preit.c_str(), find_data.cFileName, strlen(preit.c_str()))) continue;
       iface = find_data.cFileName + strlen(preit.c_str());
-      deviceNames[std::string(iface)] = "userspace";
+      listInfo setInfo;
+      setInfo.tunType = "userspace";
+      setInfo.pathSock = std::string("\\\\.\\pipe\\").append(preit).append(iface);
+      deviceNames[std::string(iface)] = setInfo;
     } while (FindNextFile(find_handle, &find_data));
     FindClose(find_handle);
-    if (ret < 0) {
-      std::string err = "Erro code: ";
-      err = err.append(std::to_string(ret));
-      return SetError(err);
-    }
+    if (ret < 0) return SetError(std::string("Erro code: ").append(std::to_string(ret)));
   }
 
   HDEVINFO dev_info = SetupDiGetClassDevsExW(&GUID_DEVCLASS_NET, L"SWD\\WireGuard", NULL, DIGCF_PRESENT, NULL, NULL, NULL);
@@ -220,7 +150,12 @@ void listDevices::Execute() {
       continue;
     }
 
-    if (CM_Get_DevNode_Status(&status, &problem_code, dev_info_data.DevInst, 0) == CR_SUCCESS && (status & (DN_DRIVER_LOADED | DN_STARTED)) == (DN_DRIVER_LOADED | DN_STARTED)) deviceNames[std::string(interface_name)] = "kernel";
+    if (CM_Get_DevNode_Status(&status, &problem_code, dev_info_data.DevInst, 0) == CR_SUCCESS && (status & (DN_DRIVER_LOADED | DN_STARTED)) == (DN_DRIVER_LOADED | DN_STARTED)) {
+      listInfo setInfo;
+      setInfo.tunType = "kernel";
+      deviceNames[std::string(interface_name)] = setInfo;
+    }
+    free(interface_name);
   }
   SetupDiDestroyDeviceInfoList(dev_info);
 }
@@ -232,15 +167,28 @@ void deleteInterface::Execute() {
   WireGuardCloseAdapter(Adapter);
 }
 
+/**
+ * Change point from calloc or malloc
+ *
+ * T: to
+ * C: From
+ */
+template <typename T, typename C> C* changePoint(T *x) {
+  // reinterpret_cast<WIREGUARD_ALLOWED_IP*>(((char*)x) + sizeof(WIREGUARD_PEER));
+  // std::cout << "Sizeof: " << sizeof(C) << ", " << typeid(T).name() << " -> " << typeid(C).name() << std::endl;
+  return reinterpret_cast<C*>(((char*)x) + sizeof(T));
+}
+
 void getConfig::Execute() {
   WIREGUARD_ADAPTER_HANDLE Adapter = WireGuardOpenAdapter(toLpcwstr(wgName));
   if (!Adapter) return SetError("This interface not exists in Wireguard-Tools.js addon!");
-
   NET_LUID InterfaceLuid;
   WireGuardGetAdapterLUID(Adapter, &InterfaceLuid);
   try {
     for (auto aip : getIpAddr(InterfaceLuid)) Address.push_back(aip);
-  } catch (void* err) {}
+  } catch (std::string err) {
+    return SetError(err);
+  }
 
   DWORD buf_len = 0;
   WIREGUARD_INTERFACE *wg_iface = nullptr;
@@ -252,27 +200,28 @@ void getConfig::Execute() {
     if (!wg_iface) return SetError(((std::string)"Failed get interface config, ").append(std::to_string(-errno)));
   }
 
-  if (wg_iface->Flags & WIREGUARD_INTERFACE_FLAG::WIREGUARD_INTERFACE_HAS_PRIVATE_KEY) privateKey = keyToBase64(wg_iface->PrivateKey);
-  if (wg_iface->Flags & WIREGUARD_INTERFACE_FLAG::WIREGUARD_INTERFACE_HAS_PUBLIC_KEY) publicKey = keyToBase64(wg_iface->PublicKey);
+  if (wg_iface->Flags & WIREGUARD_INTERFACE_FLAG::WIREGUARD_INTERFACE_HAS_PRIVATE_KEY) privateKey = wgKeys::toString(wg_iface->PrivateKey);
+  if (wg_iface->Flags & WIREGUARD_INTERFACE_FLAG::WIREGUARD_INTERFACE_HAS_PUBLIC_KEY) publicKey = wgKeys::toString(wg_iface->PublicKey);
   portListen = 0;
   if (wg_iface->Flags & WIREGUARD_INTERFACE_FLAG::WIREGUARD_INTERFACE_HAS_LISTEN_PORT) portListen = wg_iface->ListenPort;
 
 
-  WIREGUARD_PEER *wg_peer = reinterpret_cast<WIREGUARD_PEER*>(((char*)wg_iface) + sizeof(WIREGUARD_INTERFACE));
+  WIREGUARD_PEER *wg_peer = changePoint<WIREGUARD_INTERFACE, WIREGUARD_PEER>(wg_iface);
   for (DWORD i = 0; i < wg_iface->PeersCount; i++) {
-    auto pubKey = keyToBase64(wg_peer->PublicKey);
+    auto pubKey = wgKeys::toString(wg_peer->PublicKey);
     Peer peerConfig;
+    peerConfig.last_handshake = 0;
+    peerConfig.txBytes = 0;
+    peerConfig.rxBytes = 0;
 
-    if (wg_peer->Flags & WIREGUARD_PEER_FLAG::WIREGUARD_PEER_HAS_PRESHARED_KEY) peerConfig.presharedKey = keyToBase64(wg_peer->PresharedKey);
+    if (wg_peer->Flags & WIREGUARD_PEER_FLAG::WIREGUARD_PEER_HAS_PRESHARED_KEY) peerConfig.presharedKey = wgKeys::toString(wg_peer->PresharedKey);
     if (wg_peer->Flags & WIREGUARD_PEER_FLAG::WIREGUARD_PEER_HAS_ENDPOINT) peerConfig.endpoint = parseEndpoint(&wg_peer->Endpoint);
     if (wg_peer->Flags & WIREGUARD_PEER_FLAG::WIREGUARD_PEER_HAS_PERSISTENT_KEEPALIVE) peerConfig.keepInterval = wg_peer->PersistentKeepalive;
-    peerConfig.rxBytes = wg_peer->RxBytes;
-    peerConfig.txBytes = wg_peer->TxBytes;
-
-    peerConfig.last_handshake = 0;
     if (wg_peer->LastHandshake > 0) peerConfig.last_handshake = (wg_peer->LastHandshake / 10000000 - 11644473600LL) * 1000;
+    if (peerConfig.rxBytes > 0) peerConfig.rxBytes = wg_peer->RxBytes;
+    if (peerConfig.txBytes > 0) peerConfig.txBytes = wg_peer->TxBytes;
 
-    WIREGUARD_ALLOWED_IP* wg_aip = reinterpret_cast<WIREGUARD_ALLOWED_IP*>(((char*)wg_peer) + sizeof(WIREGUARD_PEER));
+    WIREGUARD_ALLOWED_IP* wg_aip = changePoint<WIREGUARD_PEER, WIREGUARD_ALLOWED_IP>(wg_peer);
     for (DWORD __aip = 0; __aip < wg_peer->AllowedIPsCount; __aip++) {
 			char saddr[INET6_ADDRSTRLEN];
       if (wg_aip->AddressFamily == AF_INET) {
@@ -301,12 +250,11 @@ void setConfig::Execute() {
 			buf_len += sizeof(WIREGUARD_ALLOWED_IP);
 		}
 	}
-  WIREGUARD_INTERFACE *wg_iface = NULL;
-  wg_iface = reinterpret_cast<WIREGUARD_INTERFACE*>(calloc(1, buf_len));
+  WIREGUARD_INTERFACE *wg_iface = reinterpret_cast<WIREGUARD_INTERFACE*>(calloc(1, buf_len));
   if (!wg_iface) return SetError("Cannot alloc buff");
   wg_iface->PeersCount = 0;
 
-  insertKey(wg_iface->PrivateKey, privateKey);
+  wgKeys::stringToKey(wg_iface->PrivateKey, privateKey);
   wg_iface->Flags = WIREGUARD_INTERFACE_FLAG::WIREGUARD_INTERFACE_HAS_PRIVATE_KEY;
 
   wg_iface->ListenPort = portListen;
@@ -315,20 +263,20 @@ void setConfig::Execute() {
   if (replacePeers) wg_iface->Flags = (WIREGUARD_INTERFACE_FLAG)(wg_iface->Flags|WIREGUARD_INTERFACE_FLAG::WIREGUARD_INTERFACE_REPLACE_PEERS);
 
 	WIREGUARD_ALLOWED_IP *wg_aip;
-	WIREGUARD_PEER *wg_peer = reinterpret_cast<WIREGUARD_PEER*>(reinterpret_cast<char*>(wg_iface) + sizeof(WIREGUARD_INTERFACE));
+	WIREGUARD_PEER *wg_peer = changePoint<WIREGUARD_INTERFACE, WIREGUARD_PEER>(wg_iface);
   for (auto __peer : peersVector) {
     auto peerPublicKey = __peer.first; auto peerConfig = __peer.second;
-    insertKey(wg_peer->PublicKey, peerPublicKey);
+    wgKeys::stringToKey(wg_peer->PublicKey, peerPublicKey);
     wg_peer->Flags = WIREGUARD_PEER_FLAG::WIREGUARD_PEER_HAS_PUBLIC_KEY;
     wg_peer->AllowedIPsCount = 0;
     wg_iface->PeersCount++;
 
     if (peerConfig.removeMe) {
       wg_peer->Flags = (WIREGUARD_PEER_FLAG)(wg_peer->Flags|WIREGUARD_PEER_FLAG::WIREGUARD_PEER_REMOVE);
-      wg_peer = reinterpret_cast<WIREGUARD_PEER*>(((char*)wg_peer) + sizeof(WIREGUARD_PEER));
+      wg_peer = changePoint<WIREGUARD_PEER, WIREGUARD_PEER>(wg_peer);
     } else {
-      if (peerConfig.presharedKey.size() == WG_KEY_LENGTH) {
-        insertKey(wg_peer->PresharedKey, peerConfig.presharedKey);
+      if (peerConfig.presharedKey.size() == B64_WG_KEY_LENGTH) {
+        wgKeys::stringToKey(wg_peer->PresharedKey, peerConfig.presharedKey);
         wg_peer->Flags = (WIREGUARD_PEER_FLAG)(wg_peer->Flags|WIREGUARD_PEER_FLAG::WIREGUARD_PEER_HAS_PRESHARED_KEY);
       }
 
@@ -347,7 +295,7 @@ void setConfig::Execute() {
         }
       }
 
-	    wg_aip = reinterpret_cast<WIREGUARD_ALLOWED_IP*>(((char*)wg_peer) + sizeof(WIREGUARD_PEER));
+	    wg_aip = changePoint<WIREGUARD_PEER, WIREGUARD_ALLOWED_IP>(wg_peer);
       for (auto aip : peerConfig.allowedIPs) {
         unsigned long cidr = 0;
         if (aip.find("/") != std::string::npos) {
@@ -362,7 +310,7 @@ void setConfig::Execute() {
         } else continue;
         wg_aip->Cidr = cidr;
         wg_peer->AllowedIPsCount++;
-	      wg_aip = reinterpret_cast<WIREGUARD_ALLOWED_IP*>(((char*)wg_aip) + sizeof(WIREGUARD_ALLOWED_IP));
+	      wg_aip = changePoint<WIREGUARD_ALLOWED_IP, WIREGUARD_ALLOWED_IP>(wg_aip);
         if (!(wg_peer->Flags & WIREGUARD_PEER_FLAG::WIREGUARD_PEER_REPLACE_ALLOWED_IPS)) wg_peer->Flags = (WIREGUARD_PEER_FLAG)(wg_peer->Flags|WIREGUARD_PEER_FLAG::WIREGUARD_PEER_REPLACE_ALLOWED_IPS);
       }
 	    wg_peer = reinterpret_cast<WIREGUARD_PEER*>(((char*)wg_aip));
