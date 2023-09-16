@@ -1,6 +1,7 @@
-export type keyObject = {private: string, public: string};
-export type keyObjectPreshered = keyObject & {preshared: string};
+export type keyObject = {privateKey: string, publicKey: string};
+export type keyObjectPreshered = keyObject & {presharedKey: string};
 
+export const keysConstants: { WG_KEY_LENGTH: number, B64_WG_KEY_LENGTH: number };
 export function genPreshared(): Promise<string>;
 export function genPrivate(): Promise<string>;
 export function genPublic(privateKey: string): Promise<string>;

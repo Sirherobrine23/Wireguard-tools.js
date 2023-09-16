@@ -42,7 +42,7 @@
   },
   "scripts": {
     "install": "node libs/build.mjs",
-    "test": "mocha ./src",
+    "test": "node libs/build.mjs build --clean && mocha ./src",
     "dev": "node libs/build.mjs build",
     "prebuildify": "node libs/build.mjs build --auto"
   },

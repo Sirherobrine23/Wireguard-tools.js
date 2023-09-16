@@ -154,21 +154,21 @@ class wgConfig extends Map {
   async newPeer(withPreshared) {
     let peerKey;
     while (!peerKey) {
-      peerKey = await keygen.keygen(true);
-      if (this.has(peerKey.public)) peerKey = undefined;
+      peerKey = await keygen.keygen(withPreshared);
+      if (this.has(peerKey.publicKey)) peerKey = undefined;
     }
     if (!(Array.isArray(this.Address))) throw new Error("Invalid config");
     const cidrIPv4 = this.Address.filter(s => net.isIPv4(s.split("/")[0]));
     if (cidrIPv4.length === 0) throw new Error("Set Interface IPv4 subnet");
-    const allowedIPs = Array.from(this.values()).map(s => s.allowedIPs).flat(2).filter(s => typeof s === "string" && net.isIPv4(s.split("/")[0]));
+    const allowedIPs = Array.from(this.values()).map(s => (s||{}).allowedIPs).flat(2).filter(s => typeof s === "string" && net.isIPv4(s.split("/")[0]));
     const Addr = cidrIPv4.at(cidrIPv4.length === 1 ? 0 : randomInt(0, cidrIPv4.length - 1));
     const IPv4 = ipManipulation.nextIpSequence(Addr, [Addr, ...allowedIPs]), IPv6 = ipManipulation.toV6(IPv4, true);
-    this.set(peerKey.public, {
-      privateKey: peerKey.private,
-      presharedKey: withPreshared ? peerKey.preshared : undefined,
+    this.set(peerKey.publicKey, {
+      privateKey: peerKey.privateKey,
+      presharedKey: withPreshared ? peerKey.presharedKey : undefined,
       allowedIPs: [IPv4, IPv6],
     });
-    return Object.assign({}, { publicKey: peerKey.public }, this.get(peerKey.public));
+    return Object.assign({}, { publicKey: peerKey.publicKey }, this.get(peerKey.publicKey));
   }
 
   /**
@@ -202,7 +202,7 @@ class wgConfig extends Map {
   /** Get server config JSON */
   getServerConfig() {
     const { Address, portListen, privateKey, fwmark } = this;
-    return Array.from(this.entries())((acc, [publicKey, {presharedKey, allowedIPs}]) => {
+    return Array.from(this.entries()).reduce((acc, [publicKey, {presharedKey, allowedIPs}]) => {
       acc.peers[publicKey] = { presharedKey, allowedIPs };
       return acc;
     }, { Address, portListen, privateKey, fwmark, peers: {} });

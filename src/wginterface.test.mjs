@@ -26,15 +26,15 @@ if (process.platform === "win32" || (userInfo()).gid === 0) {
     // @ts-ignore
     const peerKey = await utils.keygen(true);
     const ips = [utils.ipManipulation.randomIp(Math.random() > 0.5 ? "192.168.15.1/24" : "10.0.0.1/8"), utils.ipManipulation.randomIp(Math.random() > 0.5 ? "10.0.0.1/8" : "192.168.15.1/24")];
-    deviceConfig.peers[peerKey.public] = {
+    deviceConfig.peers[peerKey.publicKey] = {
       allowedIPs: ips.concat(ips.map(s => utils.ipManipulation.toV6(s))),
       removeMe: Math.random() > 0.7,
     };
-    if (i%2 === 0) deviceConfig.peers[peerKey.public].presharedKey = peerKey.preshared;
+    if (i%2 === 0) deviceConfig.peers[peerKey.publicKey].presharedKey = peerKey.presharedKey;
     ips.map(utils.ipManipulation.fistIp).forEach(ip => {if (deviceConfig.Address) {if (!deviceConfig.Address.find(ips => ip === ips)) deviceConfig.Address.push(ip);}});
   }
 
-  // Add IPv6 addresses
+  // @ts-ignore
   if (deviceConfig.Address) deviceConfig.Address.push(...deviceConfig.Address.map(s => utils.ipManipulation.toV6(s)));
 
   describe(`Wireguard interface (${interfaceName})`, () => {

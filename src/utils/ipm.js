@@ -382,7 +382,7 @@ module.exports.nextIpSequence = nextIpSequence;
  */
 function nextIpSequence(cidr, skips) {
     const [minIp, maxIp] = toIntRange(toCidr(cidr));
-    let index = 0;
+    let index = 1;
     while ((minIp + index) < maxIp) {
         const ip = toString(minIp + (++index));
         if (!((skips || []).includes(ip)))
