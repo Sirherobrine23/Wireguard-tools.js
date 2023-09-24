@@ -2,6 +2,10 @@
 node_modules/
 /*.tgz
 
+# Typescript
+src/**/*.ts
+!src/**/*.d.ts
+
 # vscode
 .devcontainer/
 .vscode/
@@ -15,6 +19,5 @@ node_modules/
 build/**/*
 
 # Project
-configsExamples/
 .vscode-ctags*
 *.addrs.json

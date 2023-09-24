@@ -6,7 +6,7 @@ other tools are wrappers over `wg`, `wireguard-tools.js` is not like that, it is
 
 ## Support to:
 
-- Userpsace [(wireguard-go)](https://git.zx2c4.com/wireguard-go/about/)
+- Userspace [(wireguard-go)](https://git.zx2c4.com/wireguard-go/about/) support.
 - Maneger wireguard interface (linux and windows create if not exist's).
 - Generate `pre-shared`, `private` and `public` keys.
 - [wg-quick](https://man7.org/linux/man-pages/man8/wg-quick.8.html) file support.
