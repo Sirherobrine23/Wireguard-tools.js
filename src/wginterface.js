@@ -31,7 +31,7 @@ async function connectSocket(path) {
  */
 async function listDevices() {
   let interfaceNames = [];
-  if (typeof wg_binding.listDevicesAsync === "function") interfaceNames = interfaceNames.concat(await promisify(wg_binding.listDevicesAsync)());
+  if (typeof wg_binding.listDevicesAsync === "function") interfaceNames = interfaceNames.concat(await wg_binding.listDevicesAsync());
   return interfaceNames.concat((await fs.readdir(defaultPath).catch(() => [])).map(name => ({from: "userspace", name: name.endsWith(".sock") ? name.slice(0, -5) : name})));
 }
 
@@ -44,7 +44,7 @@ async function getConfig(deviceName) {
   const info = (await listDevices()).find(int => int.name === deviceName);
   if (!info) throw new Error("Create interface, not exists");
   if (info.from === "kernel") {
-    if (typeof wg_binding.getConfigAsync === "function") return promisify(wg_binding.getConfigAsync)(deviceName);
+    if (typeof wg_binding.getConfigAsync === "function") return wg_binding.getConfigAsync(deviceName);
     else throw new Error("Cannot get config");
   }
   const client = await connectSocket(path.join(defaultPath, deviceName).concat(".sock"));
@@ -113,7 +113,7 @@ async function deleteInterface(deviceName) {
  * @param interfaceConfig - Peers and Interface config.
  */
 async function setConfig(deviceName, interfaceConfig) {
-  if (typeof wg_binding.setConfigAsync === "function") return promisify(wg_binding.setConfigAsync)(deviceName, interfaceConfig);
+  if (typeof wg_binding.setConfigAsync === "function") return wg_binding.setConfigAsync(deviceName, interfaceConfig);
   const client = await connectSocket(path.join(defaultPath, deviceName).concat(".sock"));
   const writel = (...data) => client.write(("").concat(...(data.map(String)), "\n"));
   // Init set config in interface

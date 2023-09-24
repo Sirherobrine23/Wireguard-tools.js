@@ -36,7 +36,7 @@ export type wireguardInterface = {
 };
 
 
-export function listDevices(): {from: "userspace"|"kernel", name: string, path?: string}[];
+export function listDevices(): Promise<{from: "userspace"|"kernel", name: string, path?: string}[]>;
 export function getConfig(deviceName: string): Promise<wireguardInterface>;
 export function deleteInterface(deviceName: string): Promise<void>
 export function setConfig(deviceName: string, interfaceConfig: wireguardInterface): Promise<void>;

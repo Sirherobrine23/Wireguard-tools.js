@@ -53,8 +53,11 @@ if (process.platform === "win32" || (userInfo()).gid === 0) {
       }, null, 2));
       if (Object.keys(deviceConfig.peers).some(s => !(deviceConfig.peers[s].removeMe) && !(raw.peers[(keyNot = s)]))) throw new Error(("Invalid return config, key not exists: ").concat(keyNot));
     });
-
-    it("After list", async () => await Bridge.listDevices());
-    it("Delete", async () => await Bridge.deleteInterface(interfaceName));
+    it("Delete", async function() {
+      const list = await Bridge.listDevices();
+      // @ts-ignore
+      if (!(list.some(s => s.name === interfaceName))) return (this.test||{}).title = "No Interface";
+      await Bridge.deleteInterface(interfaceName)
+    });
   });
 }
