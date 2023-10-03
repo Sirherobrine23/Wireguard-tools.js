@@ -11,7 +11,6 @@ unsigned long maxName();
 // Get wireguard version
 std::string versionDrive();
 
-
 // On start module call this function
 std::string startAddon(const Napi::Env env);
 
@@ -19,19 +18,17 @@ class deleteInterface : public Napi::AsyncWorker {
   private:
     std::string wgName;
   public:
-  deleteInterface(const Napi::Env env, std::string name): AsyncWorker(env), deletePromise(Napi::Promise::Deferred::New(env)), wgName(name) {}
+  deleteInterface(const Napi::Env env, std::string name): AsyncWorker(env), deletePromise{env}, wgName{name} {}
   ~deleteInterface() {}
   const Napi::Promise::Deferred deletePromise;
 
   void OnError(const Napi::Error &e) override {
     Napi::HandleScope scope(Env());
-    // Callback().Call({ e.Value() });
     deletePromise.Reject(e.Value());
   }
 
   void OnOK() override {
     Napi::HandleScope scope(Env());
-    // Callback().Call({ Env().Undefined() });
     deletePromise.Resolve(Env().Undefined());
   };
 
@@ -49,12 +46,11 @@ class listDevices : public Napi::AsyncWorker {
     std::map<std::string, listInfo> deviceNames;
   public:
   ~listDevices() {}
-  listDevices(const Napi::Env env) : AsyncWorker(env), listDevicesPromise(Napi::Promise::Deferred::New(env)) {}
+  listDevices(const Napi::Env env) : AsyncWorker(env), listDevicesPromise{env} {}
   const Napi::Promise::Deferred listDevicesPromise;
 
   void OnError(const Napi::Error& e) override {
     Napi::HandleScope scope(Env());
-    // Callback().Call({ e.Value() });
     listDevicesPromise.Reject(e.Value());
   }
 
@@ -62,17 +58,14 @@ class listDevices : public Napi::AsyncWorker {
     Napi::HandleScope scope(Env());
     const Napi::Env env = Env();
     const auto deviceArray = Napi::Array::New(env);
-    if (deviceNames.size() > 0) {
-      for (auto it : deviceNames) {
-        auto name = it.first; auto infoSrc = it.second;
-        auto info = Napi::Object::New(env);
-        info.Set("name", name);
-        info.Set("from", infoSrc.tunType);
-        if (infoSrc.pathSock.size() > 0) info.Set("path", infoSrc.pathSock);
-        deviceArray.Set(deviceArray.Length(), info);
-      }
+    for (auto it : deviceNames) {
+      auto name = it.first; auto infoSrc = it.second;
+      auto info = Napi::Object::New(env);
+      info.Set("name", name);
+      info.Set("from", infoSrc.tunType);
+      if (infoSrc.pathSock.size() > 0) info.Set("path", infoSrc.pathSock);
+      deviceArray.Set(deviceArray.Length(), info);
     }
-    // Callback().Call({ Env().Undefined(), deviceArray });
     listDevicesPromise.Resolve(deviceArray);
   };
   void Execute() override;
@@ -170,7 +163,7 @@ class setConfig : public Napi::AsyncWorker {
   }
 
   ~setConfig() {}
-  setConfig(const Napi::Env env, std::string name, const Napi::Object &config) : AsyncWorker(env), setPromise(Napi::Promise::Deferred(env)), wgName(name) {
+  setConfig(const Napi::Env env, std::string name, const Napi::Object &config) : AsyncWorker(env), setPromise{env}, wgName{name} {
     // Wireguard public key
     const auto sppk = config.Get("publicKey");
     if (sppk.IsString()) {
@@ -285,12 +278,11 @@ class getConfig : public Napi::AsyncWorker {
     std::map<std::string, Peer> peersVector;
   public:
   ~getConfig() {}
-  getConfig(const Napi::Env env, std::string name): AsyncWorker(env), getPromise(Napi::Promise::Deferred::New(env)), wgName(name) {}
+  getConfig(const Napi::Env env, std::string name): AsyncWorker(env), getPromise{env}, wgName{name} {}
   const Napi::Promise::Deferred getPromise;
 
   void OnError(const Napi::Error& e) override {
     Napi::HandleScope scope(Env());
-    // Callback().Call({ e.Value() });
     getPromise.Reject(e.Value());
   }
 
@@ -333,8 +325,7 @@ class getConfig : public Napi::AsyncWorker {
     }
     config.Set("peers", PeersObject);
 
-    // Done and callack call
-    // Callback().Call({ Env().Undefined(), config });
+    // Resolve config json
     getPromise.Resolve(config);
   };
 

@@ -24,7 +24,7 @@ Napi::Object Init(Napi::Env initEnv, Napi::Object exports) {
 
   // Function's
   #ifdef SETCONFIG
-  exports.Set("setConfigAsync", Napi::Function::New(initEnv, [&](const Napi::CallbackInfo &info) -> Napi::Value {
+  exports.Set("setConfig", Napi::Function::New(initEnv, [&](const Napi::CallbackInfo &info) -> Napi::Value {
     const Napi::Env env = info.Env();
     const auto wgName = info[0];
     const auto wgConfig = info[1];
@@ -52,7 +52,7 @@ Napi::Object Init(Napi::Env initEnv, Napi::Object exports) {
   #endif
 
   #ifdef DELIFACE
-  exports.Set("deleteInterfaceAsync", Napi::Function::New(initEnv, [&](const Napi::CallbackInfo &info) -> Napi::Value {
+  exports.Set("deleteInterface", Napi::Function::New(initEnv, [&](const Napi::CallbackInfo &info) -> Napi::Value {
     const Napi::Env env = info.Env();
     const auto wgName = info[0];
     if (!(wgName.IsString())) {
@@ -70,7 +70,7 @@ Napi::Object Init(Napi::Env initEnv, Napi::Object exports) {
   #endif
 
   #ifdef GETCONFIG
-  exports.Set("getConfigAsync", Napi::Function::New(initEnv, [&](const Napi::CallbackInfo &info) -> Napi::Value {
+  exports.Set("getConfig", Napi::Function::New(initEnv, [&](const Napi::CallbackInfo &info) -> Napi::Value {
     const Napi::Env env = info.Env();
     const auto wgName = info[0];
     if (!(wgName.IsString())) {
@@ -93,17 +93,11 @@ Napi::Object Init(Napi::Env initEnv, Napi::Object exports) {
   #endif
 
   #ifdef LISTDEV
-  exports.Set("listDevicesAsync", Napi::Function::New(initEnv, [&](const Napi::CallbackInfo &info) -> Napi::Value {
+  exports.Set("listDevices", Napi::Function::New(initEnv, [&](const Napi::CallbackInfo &info) -> Napi::Value {
     const Napi::Env env = info.Env();
-
-    try {
-      auto worker = new listDevices(env);
-      worker->Queue();
-      return worker->listDevicesPromise.Promise();
-    } catch (const Napi::Error &err) {
-      err.ThrowAsJavaScriptException();
-    }
-    return env.Undefined();
+    auto worker = new listDevices(env);
+    worker->Queue();
+    return worker->listDevicesPromise.Promise();
   }));
   #endif
   return exports;
