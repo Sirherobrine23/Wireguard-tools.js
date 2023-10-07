@@ -1,113 +1,21 @@
 #include <napi.h>
+#include <iostream>
 #include "wginterface.hh"
 
-/** Wireguard function to exec async set config */
-Napi::Value setConfigAsync(const Napi::CallbackInfo &info) {
-  const Napi::Env env = info.Env();
-  const auto wgName = info[0];
-  const auto wgConfig = info[1];
-  const auto callback = info[2];
-  if (!(wgName.IsString())) {
-    Napi::Error::New(env, "Require wireguard interface name").ThrowAsJavaScriptException();
-    return env.Undefined();
-  } else if (wgName.ToString().Utf8Value().length() >= maxName()) {
-    Napi::Error::New(env, "interface name is so long").ThrowAsJavaScriptException();
-    return env.Undefined();
-  } else if (!(wgConfig.IsObject())) {
-    Napi::Error::New(env, "Require wireguard config object").ThrowAsJavaScriptException();
-    return env.Undefined();
-  } else if (!(callback.IsFunction())) {
-    Napi::Error::New(env, "Require callback").ThrowAsJavaScriptException();
-    return env.Undefined();
-  }
-
-  try {
-    const auto ssconfig = new setConfig(env, callback.As<Napi::Function>(), wgName.ToString().Utf8Value(), wgConfig.ToObject());
-    ssconfig->Queue();
-  } catch (const Napi::Error &err) {
-    err.ThrowAsJavaScriptException();
-  }
-  return env.Undefined();
-}
-
-Napi::Value deleteInterfaceAsync(const Napi::CallbackInfo &info) {
-  const Napi::Env env = info.Env();
-  const auto wgName = info[0];
-  const auto callback = info[1];
-  if (!(wgName.IsString())) {
-    Napi::Error::New(env, "Require wireguard interface name").ThrowAsJavaScriptException();
-    return env.Undefined();
-  } else if (wgName.ToString().Utf8Value().length() >= maxName()) {
-    Napi::Error::New(env, "interface name is so long").ThrowAsJavaScriptException();
-    return env.Undefined();
-  } else if (!(callback.IsFunction())) {
-    Napi::Error::New(env, "Require callback").ThrowAsJavaScriptException();
-    return env.Undefined();
-  }
-
-  try {
-    const auto delInterWorker = new deleteInterface(callback.As<Napi::Function>(), wgName.ToString().Utf8Value());
-    delInterWorker->Queue();
-  } catch (const Napi::Error &err) {
-    err.ThrowAsJavaScriptException();
-  }
-  return env.Undefined();
-}
-
-Napi::Value getConfigAsync(const Napi::CallbackInfo &info) {
-  const Napi::Env env = info.Env();
-  const auto wgName = info[0];
-  const auto callback = info[1];
-  if (!(wgName.IsString())) {
-    Napi::Error::New(env, "Require wireguard interface name").ThrowAsJavaScriptException();
-    return env.Undefined();
-  } else if (wgName.ToString().Utf8Value().length() >= maxName()) {
-    Napi::Error::New(env, "interface name is so long").ThrowAsJavaScriptException();
-    return env.Undefined();
-  } else if (!(callback.IsFunction())) {
-    Napi::Error::New(env, "Require callback").ThrowAsJavaScriptException();
-    return env.Undefined();
-  }
-
-  try {
-    const auto ssconfig = new getConfig(callback.As<Napi::Function>(), wgName.ToString().Utf8Value());
-    ssconfig->Queue();
-  } catch (const Napi::Error &err) {
-    err.ThrowAsJavaScriptException();
-  }
-  return env.Undefined();
-}
-
-Napi::Value listDevicesAsync(const Napi::CallbackInfo &info) {
-  const Napi::Env env = info.Env();
-  const auto callback = info[0];
-  if (!(callback.IsFunction())) {
-    Napi::Error::New(env, "Require callback").ThrowAsJavaScriptException();
-    return env.Undefined();
-  }
-
-  try {
-    const auto devicesFind = new listDevices(callback.As<Napi::Function>());
-    devicesFind->Queue();
-  } catch (const Napi::Error &err) {
-    err.ThrowAsJavaScriptException();
-  }
-  return env.Undefined();
-}
-
-Napi::Object Init(Napi::Env env, Napi::Object exports) {
+Napi::Object Init(Napi::Env initEnv, Napi::Object exports) {
   /// Call Addon
   #ifdef ONSTARTADDON
-  auto status = startAddon(env);
+  auto status = startAddon(initEnv);
   if (status.length() >= 1) {
-    Napi::Error::New(env, status).ThrowAsJavaScriptException();
+    Napi::Error::New(initEnv, status).ThrowAsJavaScriptException();
     return exports;
   }
   #endif
 
   // Wireguard constants set
-  const Napi::Object constants = Napi::Object::New(env);
-  constants.Set("WG_B64_LENGTH", WG_KEY_LENGTH);
+  const Napi::Object constants = Napi::Object::New(initEnv);
+  constants.Set("WG_B64_LENGTH", B64_WG_KEY_LENGTH);
+  constants.Set("WG_LENGTH", WG_KEY_LENGTH);
   constants.Set("MAX_NAME_LENGTH", maxName());
   constants.Set("driveVersion", versionDrive());
 
@@ -116,19 +24,81 @@ Napi::Object Init(Napi::Env env, Napi::Object exports) {
 
   // Function's
   #ifdef SETCONFIG
-  exports.Set("setConfigAsync", Napi::Function::New(env, setConfigAsync));
+  exports.Set("setConfig", Napi::Function::New(initEnv, [&](const Napi::CallbackInfo &info) -> Napi::Value {
+    const Napi::Env env = info.Env();
+    const auto wgName = info[0];
+    const auto wgConfig = info[1];
+    Napi::Value ret = env.Undefined();
+    if (!(wgName.IsString())) {
+      Napi::Error::New(env, "Require wireguard interface name").ThrowAsJavaScriptException();
+      return env.Undefined();
+    } else if (wgName.ToString().Utf8Value().length() >= maxName()) {
+      Napi::Error::New(env, "interface name is so long").ThrowAsJavaScriptException();
+      return env.Undefined();
+    } else if (!(wgConfig.IsObject())) {
+      Napi::Error::New(env, "Require wireguard config object").ThrowAsJavaScriptException();
+      return env.Undefined();
+    }
+
+    try {
+      auto worker = new setConfig(env, wgName.ToString().Utf8Value(), wgConfig.ToObject());
+      worker->Queue();
+      return worker->setPromise.Promise();
+    } catch (const Napi::Error &err) {
+      err.ThrowAsJavaScriptException();
+    }
+    return ret;
+  }));
   #endif
 
   #ifdef DELIFACE
-  exports.Set("deleteInterfaceAsync", Napi::Function::New(env, deleteInterfaceAsync));
+  exports.Set("deleteInterface", Napi::Function::New(initEnv, [&](const Napi::CallbackInfo &info) -> Napi::Value {
+    const Napi::Env env = info.Env();
+    const auto wgName = info[0];
+    if (!(wgName.IsString())) {
+      Napi::Error::New(env, "Require wireguard interface name").ThrowAsJavaScriptException();
+      return env.Undefined();
+    } else if (wgName.ToString().Utf8Value().length() >= maxName()) {
+      Napi::Error::New(env, "interface name is so long").ThrowAsJavaScriptException();
+      return env.Undefined();
+    }
+
+    auto worker = new deleteInterface(env, wgName.ToString().Utf8Value());
+    worker->Queue();
+    return worker->deletePromise.Promise();
+  }));
   #endif
 
   #ifdef GETCONFIG
-  exports.Set("getConfigAsync", Napi::Function::New(env, getConfigAsync));
+  exports.Set("getConfig", Napi::Function::New(initEnv, [&](const Napi::CallbackInfo &info) -> Napi::Value {
+    const Napi::Env env = info.Env();
+    const auto wgName = info[0];
+    if (!(wgName.IsString())) {
+      Napi::Error::New(env, "Require wireguard interface name").ThrowAsJavaScriptException();
+      return env.Undefined();
+    } else if (wgName.ToString().Utf8Value().length() >= maxName()) {
+      Napi::Error::New(env, "interface name is so long").ThrowAsJavaScriptException();
+      return env.Undefined();
+    }
+
+    try {
+      auto worker = new getConfig(env, wgName.ToString().Utf8Value());
+      worker->Queue();
+      return worker->getPromise.Promise();
+    } catch (const Napi::Error &err) {
+      err.ThrowAsJavaScriptException();
+    }
+    return env.Undefined();
+  }));
   #endif
 
   #ifdef LISTDEV
-  exports.Set("listDevicesAsync", Napi::Function::New(env, listDevicesAsync));
+  exports.Set("listDevices", Napi::Function::New(initEnv, [&](const Napi::CallbackInfo &info) -> Napi::Value {
+    const Napi::Env env = info.Env();
+    auto worker = new listDevices(env);
+    worker->Queue();
+    return worker->listDevicesPromise.Promise();
+  }));
   #endif
   return exports;
 }

@@ -163,7 +163,7 @@ void listDevices::Execute() {
 void deleteInterface::Execute() {
   WIREGUARD_ADAPTER_HANDLE Adapter = WireGuardOpenAdapter(toLpcwstr(wgName));
   if (!Adapter) return SetError("This interface not exists in Wireguard-Tools.js addon!");
-  if (!(WireGuardSetAdapterState(Adapter, WIREGUARD_ADAPTER_STATE::WIREGUARD_ADAPTER_STATE_DOWN))) return SetError(((std::string)"Failed to set down interface, ").append(getErrorString(GetLastError())));
+  if (!(WireGuardSetAdapterState(Adapter, WIREGUARD_ADAPTER_STATE::WIREGUARD_ADAPTER_STATE_DOWN))) return SetError(std::string("Failed to set down interface, ").append(getErrorString(GetLastError())));
   WireGuardCloseAdapter(Adapter);
 }
 
@@ -211,15 +211,13 @@ void getConfig::Execute() {
     auto pubKey = wgKeys::toString(wg_peer->PublicKey);
     Peer peerConfig;
     peerConfig.last_handshake = 0;
-    peerConfig.txBytes = 0;
-    peerConfig.rxBytes = 0;
+    peerConfig.txBytes = wg_peer->TxBytes;
+    peerConfig.rxBytes = wg_peer->RxBytes;
 
     if (wg_peer->Flags & WIREGUARD_PEER_FLAG::WIREGUARD_PEER_HAS_PRESHARED_KEY) peerConfig.presharedKey = wgKeys::toString(wg_peer->PresharedKey);
     if (wg_peer->Flags & WIREGUARD_PEER_FLAG::WIREGUARD_PEER_HAS_ENDPOINT) peerConfig.endpoint = parseEndpoint(&wg_peer->Endpoint);
     if (wg_peer->Flags & WIREGUARD_PEER_FLAG::WIREGUARD_PEER_HAS_PERSISTENT_KEEPALIVE) peerConfig.keepInterval = wg_peer->PersistentKeepalive;
     if (wg_peer->LastHandshake > 0) peerConfig.last_handshake = (wg_peer->LastHandshake / 10000000 - 11644473600LL) * 1000;
-    if (peerConfig.rxBytes > 0) peerConfig.rxBytes = wg_peer->RxBytes;
-    if (peerConfig.txBytes > 0) peerConfig.txBytes = wg_peer->TxBytes;
 
     WIREGUARD_ALLOWED_IP* wg_aip = changePoint<WIREGUARD_PEER, WIREGUARD_ALLOWED_IP>(wg_peer);
     for (DWORD __aip = 0; __aip < wg_peer->AllowedIPsCount; __aip++) {
@@ -266,7 +264,12 @@ void setConfig::Execute() {
 	WIREGUARD_PEER *wg_peer = changePoint<WIREGUARD_INTERFACE, WIREGUARD_PEER>(wg_iface);
   for (auto __peer : peersVector) {
     auto peerPublicKey = __peer.first; auto peerConfig = __peer.second;
-    wgKeys::stringToKey(wg_peer->PublicKey, peerPublicKey);
+    try {
+      wgKeys::stringToKey(wg_peer->PublicKey, peerPublicKey);
+    } catch (std::string &err) {
+      SetError(err);
+      goto outEnd;
+    }
     wg_peer->Flags = WIREGUARD_PEER_FLAG::WIREGUARD_PEER_HAS_PUBLIC_KEY;
     wg_peer->AllowedIPsCount = 0;
     wg_iface->PeersCount++;
@@ -276,14 +279,17 @@ void setConfig::Execute() {
       wg_peer = changePoint<WIREGUARD_PEER, WIREGUARD_PEER>(wg_peer);
     } else {
       if (peerConfig.presharedKey.size() == B64_WG_KEY_LENGTH) {
-        wgKeys::stringToKey(wg_peer->PresharedKey, peerConfig.presharedKey);
-        wg_peer->Flags = (WIREGUARD_PEER_FLAG)(wg_peer->Flags|WIREGUARD_PEER_FLAG::WIREGUARD_PEER_HAS_PRESHARED_KEY);
+        try {
+          wgKeys::stringToKey(wg_peer->PresharedKey, peerConfig.presharedKey);
+          wg_peer->Flags = (WIREGUARD_PEER_FLAG)(wg_peer->Flags|WIREGUARD_PEER_FLAG::WIREGUARD_PEER_HAS_PRESHARED_KEY);
+        } catch (std::string &err) {
+          SetError(err);
+          goto outEnd;
+        }
       }
 
-      if (peerConfig.keepInterval > 0) {
-        wg_peer->PersistentKeepalive = peerConfig.keepInterval;
-        wg_peer->Flags = (WIREGUARD_PEER_FLAG)(wg_peer->Flags|WIREGUARD_PEER_FLAG::WIREGUARD_PEER_HAS_PERSISTENT_KEEPALIVE);
-      }
+      wg_peer->PersistentKeepalive = peerConfig.keepInterval;
+      if (peerConfig.keepInterval >= 0) wg_peer->Flags = (WIREGUARD_PEER_FLAG)(wg_peer->Flags|WIREGUARD_PEER_FLAG::WIREGUARD_PEER_HAS_PERSISTENT_KEEPALIVE);
 
       if (peerConfig.endpoint.size() > 0) {
         try {

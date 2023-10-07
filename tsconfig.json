@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "target": "ESNext",
+    "forceConsistentCasingInFileNames": true,
+    "declaration": true,
+    "strict": false,
+    "noUnusedLocals": true,
+    "isolatedModules": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "allowJs": true,
+    "composite": true,
+    "lib": [
+      "ESNext"
+    ]
+  },
+  "exclude": [
+    "**/*.test.*",
+    "**/test*/**",
+    "**/libs/**",
+    "**/docs/**",
+    "node_modules/"
+  ],
+  "ts-node": {
+    "files": true,
+    "esm": true,
+    "transpileOnly": true
+  }
+}

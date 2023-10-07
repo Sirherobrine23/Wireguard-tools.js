@@ -28,6 +28,7 @@
     "*.dsc": "ini",
     "*.gyp": "python",
     "random": "cpp",
-    "limits": "cpp"
+    "limits": "cpp",
+    "xstring": "cpp"
   }
 }

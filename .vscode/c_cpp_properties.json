@@ -16,9 +16,11 @@
       ],
       "defines": [
         "NAPI_DISABLE_CPP_EXCEPTIONS",
-        "DELIFACE",
+        "ONSTARTADDON",
+        "LISTDEV",
+        "GETCONFIG",
         "SETCONFIG",
-        "ONSTARTADDON"
+        "DELIFACE"
       ],
       "includePath": [
         "${env:appdata}/../Local/node-gyp/Cache/18.17.0/include/node",
