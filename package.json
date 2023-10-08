@@ -6,11 +6,11 @@
   "type": "commonjs",
   "main": "./src/index.js",
   "types": "./src/index.d.ts",
-  "default": "./src/index.mjs",
+  "default": "./index.mjs",
   "exports": {
     ".": {
       "require": "./src/index.js",
-      "default": "./src/index.mjs",
+      "default": "./index.mjs",
       "types": "./src/index.d.ts"
     }
   },
@@ -44,10 +44,12 @@
     "install": "node libs/build.mjs",
     "test": "node libs/build.mjs build --clean && mocha ./testPackage.test.cjs",
     "dev": "node libs/build.mjs build",
-    "prebuildify": "node libs/build.mjs build --auto"
+    "prebuildify": "node libs/build.mjs build --auto",
+    "prepack": "tsc --build --clean && tsc --build && node libs/build.mjs",
+    "postpack": "tsc --build --clean"
   },
   "devDependencies": {
-    "@types/node": "^20.8.2",
+    "@types/node": "^20.8.3",
     "mocha": "^10.2.0",
     "ts-node": "^10.9.1",
     "typescript": "^5.2.2"

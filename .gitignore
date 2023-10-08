@@ -10,3 +10,8 @@ node_modules/
 *.addrs.json
 .DS_Store
 *.log
+
+# Typescript
+*.tsbuildinfo
+src/**/*.d.ts
+src/**/*.js

@@ -4,7 +4,9 @@ import { promises as fs } from "fs"
 import { isIPv4, createConnection as netConnection } from "net";
 import { finished } from "stream/promises";
 if (process.platform === "win32") global.WIREGUARD_DLL_PATH = path.join(__dirname, "../addons/tools/win/wireguard-nt/bin", process.arch === "x64" ? "amd64" : process.arch, "wireguard.dll");
-export const addon = require("../libs/prebuildifyLoad.cjs")("wginterface", path.resolve(__dirname, "../"));
+const addon = require("../libs/prebuildifyLoad.cjs")("wginterface", path.resolve(__dirname, "../"));
+
+export const { constants } = addon as { constants: { WG_B64_LENGTH: number, WG_LENGTH: number, MAX_NAME_LENGTH: number, driveVersion: string } };
 
 /** default location to run socket's */
 const defaultPath = (process.env.WIRWGUARD_GO_RUN||"").length > 0 ? path.resolve(process.cwd(), process.env.WIRWGUARD_GO_RUN) : process.platform === "win32" ? "\\\\.\\pipe\\WireGuard" : "/var/run/wireguard";
@@ -14,8 +16,9 @@ async function exists(path: string) {
 }
 
 export type WgConfig = {
-  /** PrivateKey specifies a private key configuration */
+  /** privateKey specifies a private key configuration */
   privateKey?: string;
+  /** publicKey specifies a public key configuration */
   publicKey?: string;
   /** ListenPort specifies a device's listening port, 0 is random */
   portListen?: number;
@@ -59,7 +62,7 @@ export type WgConfig = {
  */
 export async function listDevices() {
   let devices: {from: "userspace"|"kernel", name: string, path?: string}[] = [];
-  if (typeof addon.listDevicesAsync === "function") devices = devices.concat(await addon.listDevicesAsync());
+  if (typeof addon.listDevices === "function") devices = devices.concat(await addon.listDevices());
   if (await exists(defaultPath)) (await fs.readdir(defaultPath)).forEach(file => devices.push({ from: "userspace", name: file.endsWith(".sock") ? file.slice(0, -5) : file, path: path.join("/var/run/wireguard", file) }));
   return devices;
 }

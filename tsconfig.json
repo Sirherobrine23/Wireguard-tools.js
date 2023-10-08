@@ -23,7 +23,8 @@
     "**/test*/**",
     "**/libs/**",
     "**/docs/**",
-    "node_modules/"
+    "node_modules/",
+    "index.mjs"
   ],
   "ts-node": {
     "files": true,
