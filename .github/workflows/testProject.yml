@@ -60,7 +60,7 @@ jobs:
         node-version: ${{ matrix.node_version }}
 
     - name: Setup Go environment
-      uses: actions/setup-go@v4.1.0
+      uses: actions/setup-go@v5.0.0
 
     - name: Setup wireguard-go
       run: |
