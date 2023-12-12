@@ -10,6 +10,7 @@
 #include <iphlpapi.h>
 #include <chrono>
 #include <thread>
+#include <iostream>
 
 // Function to check if the current user has administrator privileges
 bool IsRunAsAdmin()
