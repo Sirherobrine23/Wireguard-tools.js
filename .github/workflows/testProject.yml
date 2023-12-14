@@ -33,13 +33,13 @@ jobs:
       run: npm run prebuildify -- -v && sudo -E ./node_modules/.bin/mocha ./src
 
     - name: Upload generate interface
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: addrs_${{ runner.os }}_${{ matrix.node_version }}
         path: "*.addrs.json"
 
     - name: Upload prebuilds interface
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         retention-days: 7
         name: prebuilds_${{ runner.os }}
@@ -78,13 +78,13 @@ jobs:
       run: npm run prebuildify -- -v && sudo -E ./node_modules/.bin/mocha ./src
 
     - name: Upload generate interface
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: addrs_${{ runner.os }}_${{ matrix.node_version }}
         path: "*.addrs.json"
 
     - name: Upload prebuilds interface
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         retention-days: 7
         name: prebuilds_${{ runner.os }}
@@ -111,13 +111,13 @@ jobs:
       run: npm run prebuildify -- -v && ./node_modules/.bin/mocha ./src
 
     - name: Upload generate interface
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: addrs_${{ runner.os }}_${{ matrix.node_version }}
         path: "*.addrs.json"
 
     - name: Upload prebuilds interface
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         retention-days: 7
         name: prebuilds_${{ runner.os }}
@@ -148,7 +148,7 @@ jobs:
     - run: npm pack
 
     - name: Upload npm package
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: Package_Pack
         path: "*.tgz"

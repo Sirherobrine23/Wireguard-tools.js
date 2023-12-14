@@ -43,7 +43,7 @@ jobs:
       run: npm run prebuildify -- -v
 
     - name: Upload prebuilds interface
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         retention-days: 7
         name: prebuilds_${{ runner.os }}
@@ -68,7 +68,7 @@ jobs:
       run: npm run prebuildify -- -v
 
     - name: Upload prebuilds interface
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         retention-days: 7
         name: prebuilds_${{ runner.os }}
@@ -93,7 +93,7 @@ jobs:
       run: npm run prebuildify -- -v
 
     - name: Upload prebuilds interface
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         retention-days: 7
         name: prebuilds_${{ runner.os }}
