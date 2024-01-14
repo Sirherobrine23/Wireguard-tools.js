@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node_version: [ 16.x, 17.x, 18.x, 19.x, 20.x ]
+        node_version: [ 16.x, 18.x, 19.x, 20.x, 21.x ]
     steps:
     - uses: actions/checkout@v4
       name: Checkout
@@ -29,8 +29,11 @@ jobs:
         sudo apt install -y binutils-multiarch gcc-*aarch64-linux-gnu gcc-*aarch64-linux-gnu-base g++-*aarch64-linux-gnu libc6-arm64-cross
         npm install --no-save --ignore-scripts
 
+    - name: Build addon
+      run: npm run prebuildify -- -v
+
     - name: Test
-      run: npm run prebuildify -- -v && sudo -E ./node_modules/.bin/mocha ./src
+      run: sudo -E node --require ts-node/register --loader ts-node/esm ./src/index_test.ts
 
     - name: Upload generate interface
       uses: actions/upload-artifact@v3
@@ -49,7 +52,7 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        node_version: [ 16.x, 17.x, 18.x, 19.x, 20.x ]
+        node_version: [ 16.x, 18.x, 19.x, 20.x, 21.x ]
     steps:
     - uses: actions/checkout@v4
       name: Checkout
@@ -74,8 +77,11 @@ jobs:
     - name: Install dependencies
       run: npm install --no-save --ignore-scripts
 
+    - name: Build addon
+      run: npm run prebuildify -- -v
+
     - name: Test
-      run: npm run prebuildify -- -v && sudo -E ./node_modules/.bin/mocha ./src
+      run: sudo -E node --require ts-node/register --loader ts-node/esm ./src/index_test.ts
 
     - name: Upload generate interface
       uses: actions/upload-artifact@v3
@@ -94,7 +100,7 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        node_version: [ 16.x, 17.x, 18.x, 19.x, 20.x ]
+        node_version: [ 16.x, 18.x, 19.x, 20.x, 21.x ]
     steps:
     - uses: actions/checkout@v4
       name: Checkout
@@ -107,8 +113,11 @@ jobs:
     - name: Install dependencies
       run: npm install --no-save --ignore-scripts
 
+    - name: Build addon
+      run: npm run prebuildify -- -v
+
     - name: Test
-      run: npm run prebuildify -- -v && ./node_modules/.bin/mocha ./src
+      run: node --require ts-node/register --loader ts-node/esm ./src/index_test.ts
 
     - name: Upload generate interface
       uses: actions/upload-artifact@v3

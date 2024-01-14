@@ -1,8 +1,0 @@
-exit: true
-colors: true
-full-trace: true
-recursive: true
-parallel: false
-timeout: 0
-spec: [ "testPackage.test.cjs" ]
-require: [ts-node/esm, ts-node/register]

@@ -3,6 +3,7 @@ node_modules/
 /*.tgz
 
 # Typescript
+src/**/*_test.*
 src/**/*.ts
 !src/**/*.d.ts
 

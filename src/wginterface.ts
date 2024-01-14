@@ -1,10 +1,10 @@
+import { promises as fs } from "fs";
+import { isIPv4, createConnection as netConnection } from "net";
 import path from "path";
 import readline from "readline";
-import { promises as fs } from "fs"
-import { isIPv4, createConnection as netConnection } from "net";
 import { finished } from "stream/promises";
 if (process.platform === "win32") global.WIREGUARD_DLL_PATH = path.join(__dirname, "../addons/tools/win/wireguard-nt/bin", process.arch === "x64" ? "amd64" : process.arch, "wireguard.dll");
-const addon = require("../libs/prebuildifyLoad.cjs")("wginterface", path.resolve(__dirname, "../"));
+const addon = require("../libs/prebuildifyLoad.cjs")("wginterface");
 
 export const { constants } = addon as { constants: { WG_B64_LENGTH: number, WG_LENGTH: number, MAX_NAME_LENGTH: number, driveVersion: string } };
 
@@ -15,7 +15,37 @@ async function exists(path: string) {
   return fs.open(path).then(o => o && (o.close().then(() => true, () => true))||true, () => false);
 }
 
-export type WgConfig = {
+export interface Peer {
+  /** Preshared key to peer */
+  presharedKey?: string;
+
+  /** keepInterval specifies the persistent keepalive interval for this peer */
+  keepInterval?: number;
+
+  /** Remote address or hostname to Wireguard connect or endpoint is the most recent source address used for communication by peer. */
+  endpoint?: string;
+
+  /** AllowedIPs specifies a list of allowed IP addresses in CIDR notation (`0.0.0.0/0`, `::/0`) */
+  allowedIPs?: string[];
+};
+
+export interface PeerSet extends Peer {
+  /** Mark this peer to be removed, any changes remove this option */
+  removeMe?: boolean;
+}
+
+export interface PeerGet extends Peer {
+  /** ReceiveBytes indicates the number of bytes received from this peer. */
+  rxBytes?: number;
+
+  /** TransmitBytes indicates the number of bytes transmitted to this peer. */
+  txBytes?: number;
+
+  /** Last peer Handshake */
+  lastHandshake?: Date;
+}
+
+export interface WgConfigBase<T extends Peer> {
   /** privateKey specifies a private key configuration */
   privateKey?: string;
   /** publicKey specifies a public key configuration */
@@ -26,36 +56,16 @@ export type WgConfig = {
   fwmark?: number;
   /** Interface IP address'es */
   Address?: string[];
+
+  /** Interface peers */
+  peers: Record<string, T>;
+}
+
+export interface WgConfigGet extends WgConfigBase<PeerGet> {}
+export interface WgConfigSet extends WgConfigBase<PeerSet> {
   /** this option will remove all peers if `true` and add new peers */
   replacePeers?: boolean;
-  peers: {
-    [peerPublicKey: string]: {
-      /** Mark this peer to be removed, any changes remove this option */
-      removeMe?: boolean;
-
-      /** Preshared key to peer */
-      presharedKey?: string;
-
-      /** keepInterval specifies the persistent keepalive interval for this peer */
-      keepInterval?: number;
-
-      /** Remote address or hostname to Wireguard connect or endpoint is the most recent source address used for communication by peer. */
-      endpoint?: string;
-
-      /** ReceiveBytes indicates the number of bytes received from this peer. */
-      rxBytes?: number;
-
-      /** TransmitBytes indicates the number of bytes transmitted to this peer. */
-      txBytes?: number;
-
-      /** Last peer Handshake */
-      lastHandshake?: Date;
-
-      /** AllowedIPs specifies a list of allowed IP addresses in CIDR notation (`0.0.0.0/0`, `::/0`) */
-      allowedIPs?: string[];
-    };
-  }
-};
+}
 
 /**
  * Get Wireguard devices and locations
@@ -67,17 +77,33 @@ export async function listDevices() {
   return devices;
 }
 
+/**
+ * Delete wireguard interface if present
+ * @param wgName - Interface name
+ * @returns
+ */
 export async function deleteInterface(wgName: string): Promise<void> {
   if (typeof addon.deleteInterface === "function") return addon.deleteInterface(wgName);
-  return fs.rm(path.join(defaultPath, (wgName).concat(".sock")), { force: true });
+  const dev = (await listDevices()).find(s => s.name === wgName);
+  if (dev && dev.path) return fs.rm(dev.path, { force: true });
 }
 
 /**
  * Set Wireguard config in interface
+ *
+ * in the Linux and Windows create if not exist interface
+ *
  * @param wgName - Interface name
  * @param config - Interface config
  */
-export async function setConfig(wgName: string, config: WgConfig) {
+export async function setConfig(wgName: string, config: WgConfigSet): Promise<void> {
+  if (process.platform === "darwin") {
+    if (!(wgName.match(/^tun([0-9]+)$/))) throw new Error("Invalid name, example to valid: tun0");
+    // Replace to tun name
+    // const devNames = Object.keys(networkInterfaces()).filter(s => s.toLowerCase().startsWith("tun"));
+    // for (let i = 0n; i < BigInt(Number.MAX_SAFE_INTEGER); i++) if (devNames.indexOf((wgName = ("tun").concat(i.toString())))) break;
+  }
+
   if (typeof addon.setConfig === "function") return addon.setConfig(wgName, config);
   const client = netConnection(path.join(defaultPath, (wgName).concat(".sock")));
   const writel = (...data: any[]) => client.write(data.map(String).join("").concat("\n"));
@@ -140,12 +166,12 @@ export async function setConfig(wgName: string, config: WgConfig) {
  * @param wgName - Interface name
  * @returns
  */
-export async function getConfig(wgName: string) {
+export async function getConfig(wgName: string): Promise<WgConfigGet> {
   if (typeof addon.getConfig === "function") return addon.getConfig(wgName);
   const info = (await listDevices()).find(int => int.name === wgName);
   if (!info) throw new Error("Create interface, not exists");
   const client = netConnection(path.join(defaultPath, wgName.concat(".sock")));
-  const config: WgConfig = Object();
+  const config: WgConfigGet = Object();
   let latestPeer: string, previewKey: string;
 
   const tetrisBreak = readline.createInterface(client);

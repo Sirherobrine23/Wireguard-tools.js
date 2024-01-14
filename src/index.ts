@@ -1,7 +1,6 @@
-import * as key from "./key";
-import * as wgQuick from "./quick";
-import * as wginterface from "./wginterface";
-
+export * as key_experimental from "./experimental/key";
+export * as key from "./key";
+export * as wgQuick from "./quick";
 export * from "./wginterface";
-export { key, wgQuick, wginterface };
-export default Object.assign({}, wginterface, { key, wgQuick, wginterface });
+export * as wginterface from "./wginterface";
+export * as default from "./wginterface";

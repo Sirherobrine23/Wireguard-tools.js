@@ -1,5 +1,3 @@
-import path from "path";
-
 export interface keyObject {
   privateKey: string;
   publicKey: string;
@@ -49,4 +47,4 @@ export const {
   privateKey,
   publicKey,
   genKey
-}: KeyAddon = require("../libs/prebuildifyLoad.cjs")("keygen", path.resolve(__dirname, "../"));
+}: KeyAddon = require("../libs/prebuildifyLoad.cjs")("keygen");

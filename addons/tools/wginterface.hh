@@ -262,7 +262,7 @@ class getConfig : public Napi::AsyncWorker {
     std::string publicKey;
 
     // Wireguard port listen
-    uint32_t portListen;
+    unsigned int portListen;
 
     // FirewallMark specifies a device's firewall mark
     // else set to 0, the firewall mark will be cleared.
@@ -305,24 +305,28 @@ class getConfig : public Napi::AsyncWorker {
     const auto PeersObject = Napi::Object::New(env);
     for (auto &peer : peersVector) {
       const auto PeerObject = Napi::Object::New(env);
-      const std::string peerPubKey = peer.first;
       auto peerConfig = peer.second;
 
       if (peerConfig.presharedKey.length() == B64_WG_KEY_LENGTH) PeerObject.Set("presharedKey", peerConfig.presharedKey);
       if (peerConfig.keepInterval > 0 && peerConfig.keepInterval <= 65535) PeerObject.Set("keepInterval", peerConfig.keepInterval);
       if (peerConfig.endpoint.length() > 0) PeerObject.Set("endpoint", peerConfig.endpoint);
-      if (peerConfig.last_handshake >= 0) PeerObject.Set("lastHandshake", Napi::Date::New(env, peerConfig.last_handshake));
-      // if (peerConfig.last_handshake >= 0) PeerObject.Set("lastHandshake", peerConfig.last_handshake);
-      if (peerConfig.rxBytes >= 0) PeerObject.Set("rxBytes", peerConfig.rxBytes);
-      if (peerConfig.txBytes >= 0) PeerObject.Set("txBytes", peerConfig.txBytes);
+      if (peerConfig.rxBytes >= 0) PeerObject.Set("rxBytes", Napi::BigInt::New(env, (uint64_t)peerConfig.rxBytes));
+      if (peerConfig.txBytes >= 0) PeerObject.Set("txBytes", Napi::BigInt::New(env, (uint64_t)peerConfig.txBytes));
+      if (peerConfig.last_handshake >= 0) {
+        PeerObject.Set("lastHandshake", Napi::Date::New(env, peerConfig.last_handshake));
+        PeerObject.Set("lastHandshakeBigint", peerConfig.last_handshake); // Debug to windows
+      }
       if (peerConfig.allowedIPs.size() > 0) {
         const auto allowedIPs = Napi::Array::New(env);
         for (auto &ip : peerConfig.allowedIPs) allowedIPs.Set(allowedIPs.Length(), ip);
         PeerObject.Set("allowedIPs", allowedIPs);
       }
 
-      PeersObject.Set(peerPubKey, PeerObject);
+      // const std::string peerPubKey = peer.first;
+      PeersObject.Set(peer.first, PeerObject);
     }
+
+    // Set peers to object
     config.Set("peers", PeersObject);
 
     // Resolve config json

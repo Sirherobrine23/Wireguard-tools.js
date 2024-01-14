@@ -1,7 +1,7 @@
 {
   "name": "wireguard-tools.js",
   "version": "1.8.1",
-  "description": "Control your wireguard interface from node.js, not a wireguard-tools wrapper!",
+  "description": "Control your wireguard interface from node.js, not a wireguard-tools/wg wrapper!",
   "private": false,
   "type": "commonjs",
   "main": "./src/index.js",
@@ -14,12 +14,12 @@
       "types": "./src/index.d.ts"
     }
   },
-  "homepage": "https://github.com/Sirherobrine23/Wireguard-tools.js#readme",
+  "homepage": "https://sirherobrine23.org/Wireguard/Wireguard-tools.js#readme",
   "author": "Matheus Sampaio Queiroga <srherobrine20@gmail.com> (https://sirherobrine23.org/)",
   "license": "GPL-3.0-or-later",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Sirherobrine23/Wireguard-tools.js.git"
+    "url": "git+https://sirherobrine23.org/Wireguard/Wireguard-tools.js.git"
   },
   "keywords": [
     "wireguard",
@@ -29,7 +29,7 @@
     "wireguard-utils"
   ],
   "bugs": {
-    "url": "https://github.com/Sirherobrine23/Wireguard-tools.js/issues/new"
+    "url": "https://sirherobrine23.org/Wireguard/Wireguard-tools.js/issues/new"
   },
   "sponsor": {
     "url": "https://github.com/sponsors/Sirherobrine23"
@@ -42,20 +42,19 @@
   },
   "scripts": {
     "install": "node libs/build.mjs",
-    "test": "node libs/build.mjs build --clean && mocha ./testPackage.test.cjs",
+    "test": "node libs/build.mjs build --clean && node --require ts-node/register --loader ts-node/esm --test src/**/*_test.ts",
     "dev": "node libs/build.mjs build",
     "prebuildify": "node libs/build.mjs build --auto",
     "prepack": "tsc --build --clean && tsc --build && node libs/build.mjs",
     "postpack": "tsc --build --clean"
   },
   "devDependencies": {
-    "@types/node": "^20.8.3",
-    "mocha": "^10.2.0",
-    "ts-node": "^10.9.1",
-    "typescript": "^5.2.2"
+    "@types/node": "^20.11.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
   },
   "dependencies": {
     "node-addon-api": "^7.0.0",
-    "node-gyp": "^10.0.0"
+    "node-gyp": "^10.0.1"
   }
 }

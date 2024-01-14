@@ -9,13 +9,13 @@ module.exports = main;
  * @returns {any}
  */
 function main(name, pathLocation) {
-  if (!pathLocation) pathLocation = process.cwd();
+  if (!pathLocation) pathLocation = path.resolve(__dirname, "..");
   else pathLocation = path.resolve(process.cwd(), pathLocation);
   const folders = [
     path.join(pathLocation, "build", "Release"),
     path.join(pathLocation, "build", "Debug"),
+    path.join(pathLocation, "prebuilds", `${process.platform}_${process.arch}`),
     path.join(pathLocation, "prebuilds", `${process.platform}-${process.arch}`),
-    path.join(pathLocation, "prebuilds", `${process.platform}_${process.arch}`)
   ];
   for (const folder of folders) {
     if (fs.existsSync(folder)) {

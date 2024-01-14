@@ -13,14 +13,11 @@
     "noFallthroughCasesInSwitch": true,
     "skipLibCheck": true,
     "allowJs": true,
-    "composite": true,
     "lib": [
       "ESNext"
     ]
   },
   "exclude": [
-    "**/*.test.*",
-    "**/test*/**",
     "**/libs/**",
     "**/docs/**",
     "node_modules/",

@@ -1,9 +1,9 @@
 import { isIP } from "net";
-import { WgConfig, constants } from "./wginterface";
+import { WgConfigSet, constants } from "./wginterface";
 import { genKey, publicKey, keyObjectWithPreshared } from "./key";
 import { randomInt } from "crypto";
 
-export interface QuickConfig extends WgConfig {
+export interface QuickConfig extends WgConfigSet {
   DNS?: string[];
 }
 
