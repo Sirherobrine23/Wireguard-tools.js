@@ -35,12 +35,6 @@ jobs:
     - name: Test
       run: sudo -E node --require ts-node/register --loader ts-node/esm ./src/index_test.ts
 
-    - name: Upload generate interface
-      uses: actions/upload-artifact@v3
-      with:
-        name: addrs_${{ runner.os }}_${{ matrix.node_version }}
-        path: "*.addrs.json"
-
     - name: Upload prebuilds interface
       uses: actions/upload-artifact@v3
       with:
@@ -83,12 +77,6 @@ jobs:
     - name: Test
       run: sudo -E node --require ts-node/register --loader ts-node/esm ./src/index_test.ts
 
-    - name: Upload generate interface
-      uses: actions/upload-artifact@v3
-      with:
-        name: addrs_${{ runner.os }}_${{ matrix.node_version }}
-        path: "*.addrs.json"
-
     - name: Upload prebuilds interface
       uses: actions/upload-artifact@v3
       with:
@@ -118,12 +106,6 @@ jobs:
 
     - name: Test
       run: node --require ts-node/register --loader ts-node/esm ./src/index_test.ts
-
-    - name: Upload generate interface
-      uses: actions/upload-artifact@v3
-      with:
-        name: addrs_${{ runner.os }}_${{ matrix.node_version }}
-        path: "*.addrs.json"
 
     - name: Upload prebuilds interface
       uses: actions/upload-artifact@v3
