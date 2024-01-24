@@ -18,7 +18,7 @@ class deleteInterface : public Napi::AsyncWorker {
   private:
     std::string wgName;
   public:
-  deleteInterface(const Napi::Env env, std::string name): AsyncWorker(env), deletePromise{env}, wgName{name} {}
+  deleteInterface(const Napi::Env env, std::string name): AsyncWorker(env), wgName{name}, deletePromise{env} {}
   ~deleteInterface() {}
   const Napi::Promise::Deferred deletePromise;
 
@@ -163,7 +163,7 @@ class setConfig : public Napi::AsyncWorker {
   }
 
   ~setConfig() {}
-  setConfig(const Napi::Env env, std::string name, const Napi::Object &config) : AsyncWorker(env), setPromise{env}, wgName{name} {
+  setConfig(const Napi::Env env, std::string name, const Napi::Object &config) : AsyncWorker(env), wgName{name}, setPromise{env} {
     // Wireguard public key
     const auto sppk = config.Get("publicKey");
     if (sppk.IsString()) {
@@ -278,7 +278,7 @@ class getConfig : public Napi::AsyncWorker {
     std::map<std::string, Peer> peersVector;
   public:
   ~getConfig() {}
-  getConfig(const Napi::Env env, std::string name): AsyncWorker(env), getPromise{env}, wgName{name} {}
+  getConfig(const Napi::Env env, std::string name): AsyncWorker(env), wgName{name}, getPromise{env} {}
   const Napi::Promise::Deferred getPromise;
 
   void OnError(const Napi::Error& e) override {

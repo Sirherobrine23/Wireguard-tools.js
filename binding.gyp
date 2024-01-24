@@ -44,24 +44,6 @@
   },
   "targets": [
     {
-      "target_name": "keygen",
-      "sources": [
-        "addons/genKey/wgkeys.cpp",
-        "addons/genKey/key_gen.cpp"
-      ],
-      "conditions": [
-        ["OS=='mac'", {
-          "cflags!": [ "-fno-exceptions" ],
-          "cflags_cc!": [ "-fno-exceptions" ],
-          "cflags_cc": [ "-fexceptions" ],
-          "cflags": [ "-fexceptions" ],
-          "xcode_settings": {
-            "GCC_ENABLE_CPP_EXCEPTIONS": "YES"
-          }
-        }]
-      ]
-    },
-    {
       "target_name": "wginterface",
       "include_dirs": [
         "addons/genKey",
