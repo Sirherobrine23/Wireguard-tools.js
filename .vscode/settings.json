@@ -12,8 +12,7 @@
     "source.organizeImports": "explicit"
   },
   "files.exclude": {
-    "**/node_modules/": true,
-    "**/build/": true
+    "**/node_modules/": true
   },
   "terminal.integrated.env.windows": {
     "PATH": "${workspaceFolder}/node_modules/.bin;${env:PATH}"

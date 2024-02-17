@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import test from "node:test";
-import { presharedKey, privateKey, publicKey } from "./key";
+import { presharedKey, privateKey, publicKey } from "./key.js";
 const max = 100, keysArray = Array(max).fill(null);
 
 test("Generate key in javascript", async (t) => {

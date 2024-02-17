@@ -5,7 +5,7 @@
 Napi::Object Init(Napi::Env initEnv, Napi::Object exports) {
   /// Call Addon
   #ifdef ONSTARTADDON
-  auto status = startAddon(initEnv);
+  auto status = startAddon(initEnv, exports);
   if (status.length() >= 1) {
     Napi::Error::New(initEnv, status).ThrowAsJavaScriptException();
     return exports;

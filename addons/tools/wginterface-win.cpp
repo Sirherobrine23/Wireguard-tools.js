@@ -24,7 +24,6 @@
 #include <setupapi.h>
 #include <cfgmgr32.h>
 #include <devguid.h>
-#include <ndisguid.h>
 #include "wginterface.hh"
 #include <wgkeys.hh>
 
@@ -61,14 +60,14 @@ std::string getErrorString(DWORD errorMessageID) {
   return std::string("Error code: ").append(std::to_string(errorMessageID)).append(", Message: ").append(message);
 }
 
-std::string startAddon(const Napi::Env env) {
+std::string startAddon(const Napi::Env env, Napi::Object exports) {
   if (!IsRunAsAdmin()) return "Run nodejs with administrator privilegies";
-  auto DLLPATH = env.Global().ToObject().Get("WIREGUARD_DLL_PATH");
-  if (!(DLLPATH.IsString())) return "Require WIREGUARD_DLL_PATH in Global process";
+  auto DLLPATH = exports.Get("WIREGUARD_DLL_PATH");
+  if (!(DLLPATH.IsString())) return "Require WIREGUARD_DLL_PATH in addon load!";
   LPCWSTR dllPath = toLpcwstr(DLLPATH.ToString());
 
   HMODULE WireGuardDll = LoadLibraryExW(dllPath, NULL, LOAD_LIBRARY_SEARCH_APPLICATION_DIR | LOAD_LIBRARY_SEARCH_SYSTEM32);
-  if (!WireGuardDll) return ((std::string)"Failed to initialize WireGuardNT, ").append(getErrorString(GetLastError()));;
+  if (!WireGuardDll) return std::string("Failed to initialize WireGuardNT, ").append(getErrorString(GetLastError()));;
   #define X(Name) ((*(FARPROC *)&Name = GetProcAddress(WireGuardDll, #Name)) == NULL)
   if (X(WireGuardCreateAdapter) || X(WireGuardOpenAdapter) || X(WireGuardCloseAdapter) || X(WireGuardGetAdapterLUID) || X(WireGuardGetRunningDriverVersion) || X(WireGuardDeleteDriver) || X(WireGuardSetLogger) || X(WireGuardSetAdapterLogging) || X(WireGuardGetAdapterState) || X(WireGuardSetAdapterState) || X(WireGuardGetConfiguration) || X(WireGuardSetConfiguration))
   #undef X
@@ -76,7 +75,7 @@ std::string startAddon(const Napi::Env env) {
     DWORD LastError = GetLastError();
     FreeLibrary(WireGuardDll);
     SetLastError(LastError);
-    return ((std::string)"Failed to set Functions from WireGuardNT DLL, ").append(getErrorString(GetLastError()));;
+    return std::string("Failed to set Functions from WireGuardNT DLL, ").append(getErrorString(GetLastError()));;
   }
 
   return "";
@@ -89,10 +88,10 @@ std::string versionDrive() {
     auto statusErr = GetLastError();
     WireGuardCloseAdapter(Adapter);
     if (statusErr == ERROR_FILE_NOT_FOUND) return "Driver not loaded";
-    return ((std::string)"Cannot get version drive, ").append(getErrorString(GetLastError()));
+    return std::string("Cannot get version drive, ").append(getErrorString(GetLastError()));
   }
   WireGuardCloseAdapter(Adapter);
-  return ((std::string)"WireGuardNT v").append(std::to_string((Version >> 16) & 0xff)).append(".").append(std::to_string((Version >> 0) & 0xff));
+  return std::string("WireGuardNT v").append(std::to_string((Version >> 16) & 0xff)).append(".").append(std::to_string((Version >> 0) & 0xff));
 }
 
 void listDevices::Execute() {
@@ -197,7 +196,7 @@ void getConfig::Execute() {
     free(wg_iface);
     if (GetLastError() != ERROR_MORE_DATA) return SetError((std::string("Failed get interface config, code: ")).append(std::to_string(GetLastError())));
     wg_iface = (WIREGUARD_INTERFACE *)malloc(buf_len);
-    if (!wg_iface) return SetError(((std::string)"Failed get interface config, ").append(std::to_string(-errno)));
+    if (!wg_iface) return SetError(std::string("Failed get interface config, ").append(std::to_string(-errno)));
   }
 
   if (wg_iface->Flags & WIREGUARD_INTERFACE_FLAG::WIREGUARD_INTERFACE_HAS_PRIVATE_KEY) privateKey = wgKeys::toString(wg_iface->PrivateKey);
@@ -268,7 +267,8 @@ void setConfig::Execute() {
       wgKeys::stringToKey(wg_peer->PublicKey, peerPublicKey);
     } catch (std::string &err) {
       SetError(err);
-      goto outEnd;
+      free(wg_iface);
+      return;
     }
     wg_peer->Flags = WIREGUARD_PEER_FLAG::WIREGUARD_PEER_HAS_PUBLIC_KEY;
     wg_peer->AllowedIPsCount = 0;
@@ -284,7 +284,8 @@ void setConfig::Execute() {
           wg_peer->Flags = (WIREGUARD_PEER_FLAG)(wg_peer->Flags|WIREGUARD_PEER_FLAG::WIREGUARD_PEER_HAS_PRESHARED_KEY);
         } catch (std::string &err) {
           SetError(err);
-          goto outEnd;
+          free(wg_iface);
+          return;
         }
       }
 
@@ -297,7 +298,8 @@ void setConfig::Execute() {
           wg_peer->Flags = (WIREGUARD_PEER_FLAG)(wg_peer->Flags|WIREGUARD_PEER_FLAG::WIREGUARD_PEER_HAS_ENDPOINT);
         } catch (std::string &err) {
           SetError(std::string("Cannot parse endpoint, ").append(err));
-          goto outEnd;
+          free(wg_iface);
+          return;
         }
       }
 
@@ -325,7 +327,7 @@ void setConfig::Execute() {
 
   WIREGUARD_ADAPTER_HANDLE Adapter = WireGuardOpenAdapter(toLpcwstr(wgName));
   if (!Adapter) Adapter = WireGuardCreateAdapter(toLpcwstr(wgName), L"Wireguard-tools.js", NULL);
-  if (!Adapter) SetError(((std::string)"Failed to create adapter, ").append(getErrorString(GetLastError())));
+  if (!Adapter) SetError(std::string("Failed to create adapter, ").append(getErrorString(GetLastError())));
   else if (!WireGuardSetConfiguration(Adapter, reinterpret_cast<WIREGUARD_INTERFACE*>(wg_iface), buf_len)) {
     auto status = GetLastError();
     SetError(std::string("Failed to set interface config, ").append(getErrorString(status)));
@@ -357,6 +359,5 @@ void setConfig::Execute() {
       }
     }
   }
-  outEnd:
   free(wg_iface);
 }

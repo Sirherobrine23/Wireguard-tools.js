@@ -1,2 +1,2 @@
-import "./quick_test";
-import "./key_test";
+import "./quick_test.js";
+import "./key_test.js";

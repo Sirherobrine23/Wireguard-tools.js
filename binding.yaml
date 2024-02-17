@@ -1,0 +1,67 @@
+- name: wginterface
+  ncflags:
+    - "-fno-exceptions"
+  nflags_cc:
+    - "-fno-exceptions"
+  defines:
+    - "NAPI_DISABLE_CPP_EXCEPTIONS"
+    - "NODE_VERSION=4"
+  cflags:
+    - "-fpermissive"
+    - "-fexceptions"
+    - "-w"
+    - "-fpermissive"
+  flags_cc:
+    - "-fpermissive"
+    - "-fexceptions"
+    - "-w"
+    - "-fpermissive"
+  includes:
+    - addons/genKey
+    - addons/tools
+    - node_modules/node-addon-api
+  sources:
+    - "addons/genKey/wgkeys.cpp"
+    - "addons/tools/wginterface.cpp"
+    - "addons/tools/wginterface-dummy.cpp"
+  target:
+    linux:
+      sources:
+        - "addons/tools/linux/wireguard.c"
+        - "addons/tools/wginterface-linux.cpp"
+        - "!addons/tools/wginterface-dummy.cpp"
+      defines:
+        - "LISTDEV"
+        - "GETCONFIG"
+        - "SETCONFIG"
+        - "DELIFACE"
+      cflags:
+        - "-fPIC"
+      flags_cc:
+        - "-fPIC"
+    macos:
+      cflags_cc:
+        - "-fexceptions"
+      cflags:
+        - "-fexceptions"
+    windows:
+      sources:
+        - "addons/tools/wginterface-win.cpp"
+        - "!addons/tools/wginterface-dummy.cpp"
+      includes:
+        - "addons/tools/win"
+      defines:
+        - "ONSTARTADDON"
+        - "LISTDEV"
+        - "GETCONFIG"
+        - "SETCONFIG"
+        - "DELIFACE"
+        - "_HAS_EXCEPTIONS=1"
+      libraries:
+        - "bcrypt.lib"
+        - "crypt32.lib"
+        - "iphlpapi.lib"
+        - "kernel32.lib"
+        - "ntdll.lib"
+        - "ws2_32.lib"
+        - "setupapi.lib"

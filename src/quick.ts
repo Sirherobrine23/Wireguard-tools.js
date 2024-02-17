@@ -1,6 +1,6 @@
 import { isIP } from "net";
 import { format } from "util";
-import { Peer, WgConfigBase } from "./wginterface";
+import { Peer, WgConfigBase } from "./wginterface.js";
 
 export interface QuickConfig extends WgConfigBase<Peer>, Partial<Record<`${"Post" | "Pre"}${"Up" | "Down"}`, string[]>> {
   DNS?: string[];

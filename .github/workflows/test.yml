@@ -13,9 +13,19 @@ jobs:
     strategy:
       matrix:
         node_version: [ 16.x, 18.x, 19.x, 20.x, 21.x ]
+        target_arch: [ "x86_64", "aarch64" ]
+        target_os:
+          - "linux"
+          # - "windows"
+          # - "macos"
     steps:
     - uses: actions/checkout@v4
       name: Checkout
+
+    - name: "Setup zig"
+      uses: korandoru/setup-zig@v1
+      with:
+        zig-version: "master"
 
     - uses: actions/setup-node@v4
       name: Setup Node.js
@@ -26,96 +36,24 @@ jobs:
       run: |
         export DEBIAN_FRONTEND=noninteractive
         sudo apt update
-        sudo apt install -y binutils-multiarch gcc-*aarch64-linux-gnu gcc-*aarch64-linux-gnu-base g++-*aarch64-linux-gnu libc6-arm64-cross
+        sudo apt install -y "binutils-multiarch" "build-essential"
         npm install --no-save --ignore-scripts
 
     - name: Build addon
-      run: npm run prebuildify -- -v
-
-    - name: Test
-      run: sudo -E node --require ts-node/register --loader ts-node/esm ./src/index_test.ts
+      run: npm run dev -- --target_zig=${{ matrix.target_arch }}-${{ matrix.target_os }}
 
     - name: Upload prebuilds interface
       uses: actions/upload-artifact@v3
       with:
         retention-days: 7
-        name: prebuilds_${{ runner.os }}
+        name: prebuilds_${{ matrix.target_arch }}-${{ matrix.target_os }}_${{ matrix.node_version }}
         path: "prebuilds/**"
-
-  macos_test:
-    runs-on: macos-latest
-    strategy:
-      matrix:
-        node_version: [ 16.x, 18.x, 19.x, 20.x, 21.x ]
-    steps:
-    - uses: actions/checkout@v4
-      name: Checkout
-
-    - uses: actions/setup-node@v4
-      name: Setup Node.js
-      with:
-        node-version: ${{ matrix.node_version }}
-
-    - name: Setup Go environment
-      uses: actions/setup-go@v5.0.0
-
-    - name: Setup wireguard-go
-      run: |
-        cd ..
-        git clone https://git.zx2c4.com/wireguard-go
-        cd wireguard-go
-        echo "WG_INETRFACE=utun15" >> $GITHUB_ENV
-        go build -v -o "wireguard-go"
-        sudo ./wireguard-go utun15
-
-    - name: Install dependencies
-      run: npm install --no-save --ignore-scripts
-
-    - name: Build addon
-      run: npm run prebuildify -- -v
-
-    - name: Test
-      run: sudo -E node --require ts-node/register --loader ts-node/esm ./src/index_test.ts
-
-    - name: Upload prebuilds interface
-      uses: actions/upload-artifact@v3
-      with:
-        retention-days: 7
-        name: prebuilds_${{ runner.os }}
-        path: "prebuilds/**"
-
-  win_test:
-    runs-on: windows-latest
-    strategy:
-      matrix:
-        node_version: [ 16.x, 18.x, 19.x, 20.x, 21.x ]
-    steps:
-    - uses: actions/checkout@v4
-      name: Checkout
-
-    - uses: actions/setup-node@v4
-      name: Setup Node.js
-      with:
-        node-version: ${{ matrix.node_version }}
-
-    - name: Install dependencies
-      run: npm install --no-save --ignore-scripts
-
-    - name: Build addon
-      run: npm run prebuildify -- -v
 
     - name: Test
       run: node --require ts-node/register --loader ts-node/esm ./src/index_test.ts
 
-    - name: Upload prebuilds interface
-      uses: actions/upload-artifact@v3
-      with:
-        retention-days: 7
-        name: prebuilds_${{ runner.os }}
-        path: "prebuilds/**"
-
   pack_package:
-    needs: [ linux_test, macos_test, win_test ]
+    needs: linux_test
     runs-on: ubuntu-latest
     name: Pack npm package
     env:

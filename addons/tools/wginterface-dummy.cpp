@@ -1,9 +1,8 @@
 #include <napi.h>
 #include <wginterface.hh>
-#include <net/if.h>
 
 unsigned long maxName() {
-  return IFNAMSIZ;
+  return 16;
 }
 
 std::string versionDrive() {

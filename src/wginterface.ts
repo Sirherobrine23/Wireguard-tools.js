@@ -3,10 +3,27 @@ import { isIPv4, createConnection as netConnection } from "net";
 import path from "path";
 import readline from "readline";
 import { finished } from "stream/promises";
-if (process.platform === "win32") global.WIREGUARD_DLL_PATH = path.join(__dirname, "../addons/tools/win/wireguard-nt/bin", process.arch === "x64" ? "amd64" : process.arch, "wireguard.dll");
-const addon = require("../libs/prebuildifyLoad.cjs")("wginterface");
+import rebory from "rebory";
+import { fileURLToPath } from "url";
 
-export const { constants } = addon as { constants: { WG_B64_LENGTH: number, WG_LENGTH: number, MAX_NAME_LENGTH: number, driveVersion: string } };
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const addon = rebory.loadAddon(path.join(__dirname, "../binding.yaml")).wginterface.loadRelease<{
+  listDevices?: () => Promise<{from: "userspace"|"kernel", name: string, path?: string}[]>;
+  deleteInterface?: (wgName: string) => Promise<void>;
+  setConfig?: (wgName: string, config: WgConfigSet) => Promise<void>;
+  getConfig?: (wgName: string) => Promise<WgConfigGet>;
+  constants: {
+    WG_B64_LENGTH: number;
+    WG_LENGTH: number;
+    MAX_NAME_LENGTH: number;
+    driveVersion: string;
+  };
+}>({
+  WIREGUARD_DLL_PATH: path.resolve(__dirname, "../addons/tools/win/wireguard-nt/bin", ((process.arch === "x64" && "amd64") || (process.arch === "ia32" && "i386"))||process.arch, "wireguard.dll")
+});
+export const { constants } = addon;
+
+console.log(addon);
 
 /** default location to run socket's */
 const defaultPath = (process.env.WIRWGUARD_GO_RUN||"").length > 0 ? path.resolve(process.cwd(), process.env.WIRWGUARD_GO_RUN) : process.platform === "win32" ? "\\\\.\\pipe\\WireGuard" : "/var/run/wireguard";

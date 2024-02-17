@@ -12,7 +12,7 @@ unsigned long maxName();
 std::string versionDrive();
 
 // On start module call this function
-std::string startAddon(const Napi::Env env);
+std::string startAddon(const Napi::Env env, Napi::Object exports);
 
 class deleteInterface : public Napi::AsyncWorker {
   private:

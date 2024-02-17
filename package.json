@@ -3,17 +3,9 @@
   "version": "1.8.3",
   "description": "Control your wireguard interface from node.js, not a wireguard-tools/wg wrapper!",
   "private": false,
-  "type": "commonjs",
+  "type": "module",
   "main": "./src/index.js",
   "types": "./src/index.d.ts",
-  "default": "./index.mjs",
-  "exports": {
-    ".": {
-      "require": "./src/index.js",
-      "default": "./index.mjs",
-      "types": "./src/index.d.ts"
-    }
-  },
   "homepage": "https://sirherobrine23.org/Wireguard/Wireguard-tools.js#readme",
   "author": "Matheus Sampaio Queiroga <srherobrine20@gmail.com> (https://sirherobrine23.org/)",
   "license": "GPL-3.0-or-later",
@@ -41,20 +33,18 @@
     "node": ">=16.0.0"
   },
   "scripts": {
-    "install": "node libs/build.mjs",
-    "test": "node libs/build.mjs build --clean && node --require ts-node/register --loader ts-node/esm --test src/**/*_test.ts",
-    "dev": "node libs/build.mjs build",
-    "prebuildify": "node libs/build.mjs build --auto",
-    "prepack": "tsc --build --clean && tsc --build && node libs/build.mjs",
+    "install": "rebory prebuild",
+    "dev": "rebory build -DP",
+    "prepack": "tsc --build --clean && tsc --build",
     "postpack": "tsc --build --clean"
   },
   "devDependencies": {
-    "@types/node": "^20.11.0",
+    "@types/node": "^20.11.19",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3"
   },
   "dependencies": {
-    "node-addon-api": "^7.0.0",
-    "node-gyp": "^10.0.1"
+    "node-addon-api": "^7.1.0",
+    "rebory": "^0.1.10"
   }
 }
