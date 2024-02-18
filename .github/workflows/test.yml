@@ -8,7 +8,39 @@ on:
     - main
 
 jobs:
-  linux_test:
+  test_js:
+    name: Test Javascript code
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      name: Checkout
+
+    - name: "Setup zig"
+      uses: korandoru/setup-zig@v1
+      with:
+        zig-version: "master"
+
+    - uses: actions/setup-node@v4
+      name: Setup Node.js
+      with:
+        node-version: 20.x
+
+    - name: Install dependencies
+      run: |
+        export DEBIAN_FRONTEND=noninteractive
+        sudo apt update
+        sudo apt install -y "binutils-multiarch" "build-essential"
+        npm install --no-save --ignore-scripts
+
+    - name: Build addon
+      run: npm run dev
+
+    - name: Run tests
+      env:
+        FORCE_COLOR: "true"
+      run: node --no-warnings --loader ts-node/esm src/index_test.ts
+
+  build_addon:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -16,7 +48,6 @@ jobs:
         target_arch: [ "x86_64", "aarch64" ]
         target_os:
           - "linux"
-          # - "windows"
           # - "macos"
     steps:
     - uses: actions/checkout@v4
@@ -40,44 +71,11 @@ jobs:
         npm install --no-save --ignore-scripts
 
     - name: Build addon
-      run: npm run dev -- --target_zig=${{ matrix.target_arch }}-${{ matrix.target_os }}
+      run: npm run dev -- --target ${{ matrix.target_arch }}-${{ matrix.target_os }}
 
     - name: Upload prebuilds interface
       uses: actions/upload-artifact@v3
       with:
         retention-days: 7
         name: prebuilds_${{ matrix.target_arch }}-${{ matrix.target_os }}_${{ matrix.node_version }}
-        path: "prebuilds/**"
-
-    - name: Test
-      run: node --require ts-node/register --loader ts-node/esm ./src/index_test.ts
-
-  pack_package:
-    needs: linux_test
-    runs-on: ubuntu-latest
-    name: Pack npm package
-    env:
-      PACKAGE_VERSION: ${{ github.ref }}
-    steps:
-    - uses: actions/checkout@v4
-      name: Code checkout
-
-    - uses: actions/setup-node@v4
-      name: Setup node.js
-      with:
-        node-version: 20.x
-        registry-url: https://registry.npmjs.org/
-
-    - name: Download all artefacts
-      uses: actions/download-artifact@v3
-      with:
-        path: ./prebuilds
-
-    - run: npm install --no-save --ignore-scripts
-    - run: npm pack
-
-    - name: Upload npm package
-      uses: actions/upload-artifact@v3
-      with:
-        name: Package_Pack
-        path: "*.tgz"
+        path: "build/*"

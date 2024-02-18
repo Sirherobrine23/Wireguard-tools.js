@@ -8,16 +8,14 @@ test:
       export DEBIAN_FRONTEND=noninteractive
       sudo apt update
       wget -qO- https://deb.nodesource.com/setup_current.x | sudo bash -
-      packages=( "binutils-multiarch" "wget" "curl" "nodejs" );
-      if [[ $(uname -m) == "x86_64" ]];then
-        packages+=( "gcc-*aarch64-linux-gnu" "gcc-*aarch64-linux-gnu-base" "g++-*aarch64-linux-gnu" "libc6-arm64-cross" )
-      else
-        packages+=( "libc6-amd64-cross" "g++-*x86-64-linux-gnu" "g++-*x86-64-linux-gnux32" "gcc-*x86-64-linux-gnu" "gcc-*x86-64-linux-gnux32" )
-        if [[ $(uname -m) != "aarch64" ]];then
-          packages+=( "gcc-*aarch64-linux-gnu" "gcc-*aarch64-linux-gnu-base" "g++-*aarch64-linux-gnu" "libc6-arm64-cross" )
-        fi
-      fi
+      packages=( "binutils-multiarch" "wget" "curl" "nodejs" "build-essential" );
       sudo apt install -y ${packages[@]}
+
+      ZIGURL="https://ziglang.org/download/0.11.0/zig-linux-x86_64-0.11.0.tar.xz"
+      wget -qO- "${ZIGURL}" | sudo tar -xvJ -C /usr/local
+      sudo mv -v /usr/local/zig-* /usr/local/zig
+      sudo ln -vs /usr/local/zig/bin/zig /usr/bin/zig
+
     - npm install --no-save --ignore-scripts
-    - npm run prebuildify -- -v
-    - sudo node --require ts-node/register --loader ts-node/esm ./src/index_test.ts
+    - npm run dev
+    - sudo node --no-warnings --loader ts-node/esm ./src/index_test.ts
