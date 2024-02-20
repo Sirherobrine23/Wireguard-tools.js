@@ -28,10 +28,79 @@ extern "C" {
   #include "linux/wireguard.h"
 }
 
-#define SETCONFIG 1
-#define GETCONFIG 1
-#define LISTDEV 1
-#define DELIFACE 1
+#define EPERM            1      /* Operation not permitted */
+#define ENOENT           2      /* No such file or directory */
+#define ESRCH            3      /* No such process */
+#define EINTR            4      /* Interrupted system call */
+#define EIO              5      /* I/O error */
+#define ENXIO            6      /* No such device or address */
+#define E2BIG            7      /* Argument list too long */
+#define ENOEXEC          8      /* Exec format error */
+#define EBADF            9      /* Bad file number */
+#define ECHILD          10      /* No child processes */
+#define EAGAIN          11      /* Try again */
+#define ENOMEM          12      /* Out of memory */
+#define EACCES          13      /* Permission denied */
+#define EFAULT          14      /* Bad address */
+#define ENOTBLK         15      /* Block device required */
+#define EBUSY           16      /* Device or resource busy */
+#define EEXIST          17      /* File exists */
+#define EXDEV           18      /* Cross-device link */
+#define ENODEV          19      /* No such device */
+#define ENOTDIR         20      /* Not a directory */
+#define EISDIR          21      /* Is a directory */
+#define EINVAL          22      /* Invalid argument */
+#define ENFILE          23      /* File table overflow */
+#define EMFILE          24      /* Too many open files */
+#define ENOTTY          25      /* Not a typewriter */
+#define ETXTBSY         26      /* Text file busy */
+#define EFBIG           27      /* File too large */
+#define ENOSPC          28      /* No space left on device */
+#define ESPIPE          29      /* Illegal seek */
+#define EROFS           30      /* Read-only file system */
+#define EMLINK          31      /* Too many links */
+#define EPIPE           32      /* Broken pipe */
+#define EDOM            33      /* Math argument out of domain of func */
+#define ERANGE          34      /* Math result not representable */
+
+std::string getKernelMesage(int errStatus) {
+  std::string message = std::string("Error code: ").append(std::to_string(errStatus));
+  if (errStatus == -EPERM) message = std::string("Operation not permitted, code: ").append(std::to_string(errStatus));
+  else if (errStatus == -ENOENT) message = std::string("No such file or directory, code: ").append(std::to_string(errStatus));
+  else if (errStatus == -ESRCH) message = std::string("No such process, code: ").append(std::to_string(errStatus));
+  else if (errStatus == -EINTR) message = std::string("Interrupted system call, code: ").append(std::to_string(errStatus));
+  else if (errStatus == -EIO) message = std::string("I/O error, code: ").append(std::to_string(errStatus));
+  else if (errStatus == -ENXIO) message = std::string("No such device or address, code: ").append(std::to_string(errStatus));
+  else if (errStatus == -E2BIG) message = std::string("Argument list too long, code: ").append(std::to_string(errStatus));
+  else if (errStatus == -ENOEXEC) message = std::string("Exec format error, code: ").append(std::to_string(errStatus));
+  else if (errStatus == -EBADF) message = std::string("Bad file number, code: ").append(std::to_string(errStatus));
+  else if (errStatus == -ECHILD) message = std::string("No child processes, code: ").append(std::to_string(errStatus));
+  else if (errStatus == -EAGAIN) message = std::string("Try again, code: ").append(std::to_string(errStatus));
+  else if (errStatus == -ENOMEM) message = std::string("Out of memory, code: ").append(std::to_string(errStatus));
+  else if (errStatus == -EACCES) message = std::string("Permission denied, code: ").append(std::to_string(errStatus));
+  else if (errStatus == -EFAULT) message = std::string("Bad address, code: ").append(std::to_string(errStatus));
+  else if (errStatus == -ENOTBLK) message = std::string("Block device required, code: ").append(std::to_string(errStatus));
+  else if (errStatus == -EBUSY) message = std::string("Device or resource busy, code: ").append(std::to_string(errStatus));
+  else if (errStatus == -EEXIST) message = std::string("File exists, code: ").append(std::to_string(errStatus));
+  else if (errStatus == -EXDEV) message = std::string("Cross-device link, code: ").append(std::to_string(errStatus));
+  else if (errStatus == -ENODEV) message = std::string("No such device, code: ").append(std::to_string(errStatus));
+  else if (errStatus == -ENOTDIR) message = std::string("Not a directory, code: ").append(std::to_string(errStatus));
+  else if (errStatus == -EISDIR) message = std::string("Is a directory, code: ").append(std::to_string(errStatus));
+  else if (errStatus == -EINVAL) message = std::string("Invalid argument, code: ").append(std::to_string(errStatus));
+  else if (errStatus == -ENFILE) message = std::string("File table overflow, code: ").append(std::to_string(errStatus));
+  else if (errStatus == -EMFILE) message = std::string("Too many open files, code: ").append(std::to_string(errStatus));
+  else if (errStatus == -ENOTTY) message = std::string("Not a typewriter, code: ").append(std::to_string(errStatus));
+  else if (errStatus == -ETXTBSY) message = std::string("Text file busy, code: ").append(std::to_string(errStatus));
+  else if (errStatus == -EFBIG) message = std::string("File too large, code: ").append(std::to_string(errStatus));
+  else if (errStatus == -ENOSPC) message = std::string("No space left on device, code: ").append(std::to_string(errStatus));
+  else if (errStatus == -ESPIPE) message = std::string("Illegal seek, code: ").append(std::to_string(errStatus));
+  else if (errStatus == -EROFS) message = std::string("Read-only file system, code: ").append(std::to_string(errStatus));
+  else if (errStatus == -EMLINK) message = std::string("Too many links, code: ").append(std::to_string(errStatus));
+  else if (errStatus == -EPIPE) message = std::string("Broken pipe, code: ").append(std::to_string(errStatus));
+  else if (errStatus == -EDOM) message = std::string("Math argument out of domain of func, code: ").append(std::to_string(errStatus));
+  else if (errStatus == -ERANGE) message = std::string("Math result not representable, code: ").append(std::to_string(errStatus));
+  return message;
+}
 
 unsigned long maxName() {
   return IFNAMSIZ;
@@ -78,13 +147,7 @@ void deleteInterface::Execute() {
   if (!!devicesList) {
     for ((device_name) = (devicesList), (len) = 0; ((len) = strlen(device_name)); (device_name) += (len) + 1) {
       if (device_name == wgName.c_str()) {
-        if ((len = wg_add_device(wgName.c_str())) < 0) {
-          std::string err = "Error code: ";
-          err = err.append(std::to_string(len));
-          if (len == -ENOMEM) err = "Out of memory";
-          else if (len == -errno) err = ((std::string)"Cannot add device, code: ").append(std::to_string(len));
-          SetError(err);
-        }
+        if ((len = wg_add_device(wgName.c_str())) < 0) SetError(getKernelMesage(len));
         break;
       }
     }
@@ -94,12 +157,8 @@ void deleteInterface::Execute() {
 
 void setConfig::Execute() {
   int res = setInterface(wgName);
-  if (res < 0) {
-    std::string err = "Error code: ";
-    err = err.append(std::to_string(res));
-    if (res == -ENOMEM) err = "Out of memory";
-    else if (res == -errno) err = ((std::string)"Cannot add device, code: ").append(std::to_string(res));
-    SetError(err);
+  if (res < 0 && res != EEXIST) {
+    SetError(getKernelMesage(res));
     return;
   }
 
@@ -270,12 +329,7 @@ void setConfig::Execute() {
 
   // Set interface config
   if ((res = wg_set_device(deviceStruct)) < 0) {
-    std::string err = "Set wireguard config Error code: ";
-    err = err.append(std::to_string(res));
-    if (res == -ENODEV) err = "No such device";
-    else if (res == -EINVAL) err = "Invalid argument";
-    else if (res == -ENOSPC) err = "No space left on device";
-    SetError(err);
+    SetError(getKernelMesage(res));
   }
 
   if (res >= 0) {
@@ -313,9 +367,7 @@ std::string keyTo64(const uint8_t *key) {
 void getConfig::Execute() {
   int res; wg_device *device;
   if ((res = wg_get_device(&device, strdup(wgName.c_str()))) < 0) {
-    std::string err = "Cannot get wireguard device, Error code ";
-    err = err.append(std::to_string(res));
-    SetError(err);
+    SetError(getKernelMesage(res));
     return;
   }
 

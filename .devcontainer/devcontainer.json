@@ -1,0 +1,13 @@
+{
+  "name": "rebory linux devcontainer",
+  "updateRemoteUserUID": false,
+  "containerUser": "develop",
+  "remoteUser": "develop",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "args": {
+      "USERNAME": "develop",
+      "USER_UID": "1000"
+    }
+  }
+}

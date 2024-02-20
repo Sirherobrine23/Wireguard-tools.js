@@ -62,7 +62,7 @@ std::string getErrorString(DWORD errorMessageID) {
 
 std::string startAddon(const Napi::Env env, Napi::Object exports) {
   if (!IsRunAsAdmin()) return "Run nodejs with administrator privilegies";
-  auto DLLPATH = exports.Get("WIREGUARD_DLL_PATH");
+  auto DLLPATH = exports.Get("WIN32DLLPATH");
   if (!(DLLPATH.IsString())) return "Require WIREGUARD_DLL_PATH in addon load!";
   LPCWSTR dllPath = toLpcwstr(DLLPATH.ToString());
 

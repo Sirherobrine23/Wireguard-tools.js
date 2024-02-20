@@ -23,6 +23,9 @@ sources:
   - "addons/tools/wginterface.cpp"
   - "addons/tools/wginterface-dummy.cpp"
 target:
+  macos:
+    defines:
+      - USERSPACE_GO
   linux:
     sources:
       - "addons/tools/linux/wireguard.c"
@@ -47,6 +50,9 @@ target:
         flagsCC:
           - "-fPIC"
   windows:
+    flags:
+      - "-undefined"
+      - "dynamic_lookup"
     target:
       x86_64:
         release: true

@@ -12,18 +12,26 @@ const addon = rebory.loadAddon(path.join(__dirname, "../binding.yaml")).wginterf
   deleteInterface?: (wgName: string) => Promise<void>;
   setConfig?: (wgName: string, config: WgConfigSet) => Promise<void>;
   getConfig?: (wgName: string) => Promise<WgConfigGet>;
+
+  createTun?: () => Promise<number|string>;
+  deleteTun?: () => void;
+  checkTun?: () => Promise<boolean>;
+  getTun?: () => Promise<number|string>;
+
+  /** Wireguard addon constants */
   constants: {
-    WG_B64_LENGTH: number;
-    WG_LENGTH: number;
-    MAX_NAME_LENGTH: number;
     driveVersion: string;
+    base64Length: number;
+    keyLength: number;
+    nameLength: number;
   };
 }>({
-  WIREGUARD_DLL_PATH: path.resolve(__dirname, "../addons/tools/win/wireguard-nt/bin", ((process.arch === "x64" && "amd64") || (process.arch === "ia32" && "i386"))||process.arch, "wireguard.dll")
+  WIN32DLLPATH: path.resolve(__dirname, "../addons/tools/win/wireguard-nt/bin", ((process.arch === "x64" && "amd64") || (process.arch === "ia32" && "i386"))||process.arch, "wireguard.dll")
 });
-export const { constants } = addon;
 
-console.log(addon);
+export const {
+  constants
+} = addon;
 
 /** default location to run socket's */
 const defaultPath = (process.env.WIRWGUARD_GO_RUN||"").length > 0 ? path.resolve(process.cwd(), process.env.WIRWGUARD_GO_RUN) : process.platform === "win32" ? "\\\\.\\pipe\\WireGuard" : "/var/run/wireguard";
@@ -64,15 +72,19 @@ export interface PeerGet extends Peer {
 
 export interface WgConfigBase<T extends Peer> {
   /** privateKey specifies a private key configuration */
-  privateKey?: string;
+  privateKey: string;
+
   /** publicKey specifies a public key configuration */
   publicKey?: string;
+
   /** ListenPort specifies a device's listening port, 0 is random */
   portListen?: number;
+
   /** FirewallMark specifies a device's firewall mark */
   fwmark?: number;
+
   /** Interface IP address'es */
-  Address?: string[];
+  address?: string[];
 
   /** Interface peers */
   peers: Record<string, T>;
@@ -83,6 +95,8 @@ export interface WgConfigSet extends WgConfigBase<PeerSet> {
   /** this option will remove all peers if `true` and add new peers */
   replacePeers?: boolean;
 }
+
+export type WgGlobalConfig = WgConfigSet & WgConfigGet;
 
 /**
  * Get Wireguard devices and locations
@@ -106,21 +120,24 @@ export async function deleteInterface(wgName: string): Promise<void> {
 }
 
 /**
- * Set Wireguard config in interface
+ * Add the settings to the Wireguard interface, if it does not exist and the interface will be created automatically.
  *
- * in the Linux and Windows create if not exist interface
+ * To update the interface settings, first get the interface settings to update!
+ *
+ * @param wgName - Interface name
+ * @param config - Interface config
+ */
+export async function setConfig(wgName: string, config: WgConfigGet): Promise<void>;
+/**
+ * Add the settings to the Wireguard interface, if it does not exist and the interface will be created automatically.
+ *
+ * To update the interface settings, first get the interface settings to update!
  *
  * @param wgName - Interface name
  * @param config - Interface config
  */
 export async function setConfig(wgName: string, config: WgConfigSet): Promise<void> {
-  if (process.platform === "darwin") {
-    if (!(wgName.match(/^tun([0-9]+)$/))) throw new Error("Invalid name, example to valid: tun0");
-    // Replace to tun name
-    // const devNames = Object.keys(networkInterfaces()).filter(s => s.toLowerCase().startsWith("tun"));
-    // for (let i = 0n; i < BigInt(Number.MAX_SAFE_INTEGER); i++) if (devNames.indexOf((wgName = ("tun").concat(i.toString())))) break;
-  }
-
+  if (wgName.length > constants.nameLength) throw new Error("Interface name more then allowed", { cause: constants.nameLength });
   if (typeof addon.setConfig === "function") return addon.setConfig(wgName, config);
   const client = netConnection(path.join(defaultPath, (wgName).concat(".sock")));
   const writel = (...data: any[]) => client.write(data.map(String).join("").concat("\n"));

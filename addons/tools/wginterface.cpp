@@ -14,15 +14,26 @@ Napi::Object Init(Napi::Env initEnv, Napi::Object exports) {
 
   // Wireguard constants set
   const Napi::Object constants = Napi::Object::New(initEnv);
-  constants.Set("WG_B64_LENGTH", B64_WG_KEY_LENGTH);
-  constants.Set("WG_LENGTH", WG_KEY_LENGTH);
-  constants.Set("MAX_NAME_LENGTH", maxName());
+  // Set wireguard version if present
   constants.Set("driveVersion", versionDrive());
 
-  // Constants
+  // Wireguard max name length
+  constants.Set("nameLength", maxName());
+
+  constants.Set("base64Length", B64_WG_KEY_LENGTH);
+  constants.Set("keyLength", WG_KEY_LENGTH);
+
+  // Set addon constants
   exports.Set("constants", constants);
 
   // Function's
+  #ifdef USERSPACE_GO
+  exports.Set("createTun", Napi::Function::New(initEnv, [&](const Napi::CallbackInfo &info) -> Napi::Value { return info.Env().Undefined(); }));
+  exports.Set("deleteTun", Napi::Function::New(initEnv, [&](const Napi::CallbackInfo &info) -> Napi::Value { return info.Env().Undefined(); }));
+  exports.Set("checkTun", Napi::Function::New(initEnv, [&](const Napi::CallbackInfo &info) -> Napi::Value { return info.Env().Undefined(); }));
+  exports.Set("getTun", Napi::Function::New(initEnv, [&](const Napi::CallbackInfo &info) -> Napi::Value { return info.Env().Undefined(); }));
+  #endif
+
   #ifdef SETCONFIG
   exports.Set("setConfig", Napi::Function::New(initEnv, [&](const Napi::CallbackInfo &info) -> Napi::Value {
     const Napi::Env env = info.Env();

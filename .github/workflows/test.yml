@@ -18,7 +18,7 @@ jobs:
     - name: "Setup zig"
       uses: korandoru/setup-zig@v1
       with:
-        zig-version: "master"
+        zig-version: "0.11.0"
 
     - uses: actions/setup-node@v4
       name: Setup Node.js
@@ -28,8 +28,7 @@ jobs:
     - name: Install dependencies
       run: |
         export DEBIAN_FRONTEND=noninteractive
-        sudo apt update
-        sudo apt install -y "binutils-multiarch" "build-essential"
+        sudo apt update && sudo apt install -y "build-essential"
         npm install --no-save --ignore-scripts
 
     - name: Build addon
@@ -44,11 +43,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node_version: [ 16.x, 18.x, 19.x, 20.x, 21.x ]
-        target_arch: [ "x86_64", "aarch64" ]
-        target_os:
-          - "linux"
-          # - "macos"
+        node_version: [ 16.x, 17.x, 18.x, 19.x, 20.x, 21.x ]
     steps:
     - uses: actions/checkout@v4
       name: Checkout
@@ -56,7 +51,7 @@ jobs:
     - name: "Setup zig"
       uses: korandoru/setup-zig@v1
       with:
-        zig-version: "master"
+        zig-version: "0.11.0"
 
     - uses: actions/setup-node@v4
       name: Setup Node.js
@@ -66,16 +61,21 @@ jobs:
     - name: Install dependencies
       run: |
         export DEBIAN_FRONTEND=noninteractive
-        sudo apt update
-        sudo apt install -y "binutils-multiarch" "build-essential"
+        sudo apt update && sudo apt install -y "build-essential"
         npm install --no-save --ignore-scripts
 
-    - name: Build addon
-      run: npm run dev -- --target ${{ matrix.target_arch }}-${{ matrix.target_os }}
+    - name: Build addon linux
+      run: npm run dev -- --target x86_64-linux --target aarch64-linux
+
+    - name: Build addon macos
+      run: npm run dev -- --target x86_64-macos --target aarch64-macos
+
+    - name: Build addon windows
+      run: npm run dev -- --target x86_64-windows --target aarch64-windows
 
     - name: Upload prebuilds interface
       uses: actions/upload-artifact@v3
       with:
         retention-days: 7
-        name: prebuilds_${{ matrix.target_arch }}-${{ matrix.target_os }}_${{ matrix.node_version }}
+        name: build-${{ matrix.node_version }}
         path: "build/*"

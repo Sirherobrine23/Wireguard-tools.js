@@ -186,17 +186,17 @@ class setConfig : public Napi::AsyncWorker {
     if (sfw.IsNumber() && (sfw.ToNumber().Uint32Value() >= 0)) fwmark = sfw.ToNumber().Uint32Value();
     else fwmark = -1;
 
-    const auto saddr = config.Get("Address");
-    if (saddr.IsArray()) {
-      const Napi::Array addrs = saddr.As<Napi::Array>();
+    const auto setAddress = config.Get("address");
+    if (setAddress.IsArray()) {
+      const Napi::Array addrs = setAddress.As<Napi::Array>();
       for (unsigned int i = 0; i < addrs.Length(); i++) {
         if (addrs.Get(i).IsString()) Address.push_back(addrs.Get(i).ToString().Utf8Value());
       }
     }
 
     // Replace peers
-    const auto srpee = config.Get("replacePeers");
-    if (srpee.IsBoolean()) replacePeers = srpee.ToBoolean().Value();
+    const auto setReplace = config.Get("replacePeers");
+    if (setReplace.IsBoolean()) replacePeers = setReplace.ToBoolean().Value();
 
     // Peers
     const auto speers = config.Get("peers");
@@ -298,7 +298,7 @@ class getConfig : public Napi::AsyncWorker {
     if (Address.size() > 0) {
       const auto Addrs = Napi::Array::New(env);
       for (auto &addr : Address) Addrs.Set(Addrs.Length(), addr);
-      config.Set("Address", Addrs);
+      config.Set("address", Addrs);
     }
 
     // Peer object
