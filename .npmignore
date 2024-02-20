@@ -16,9 +16,6 @@ src/**/*.ts
 .github/
 .git*
 
-# node-gyp
-build/**/*
-
 # Project
 .vscode-ctags*
 *.addrs.json

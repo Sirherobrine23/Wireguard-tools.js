@@ -4,7 +4,6 @@
 #include <map>
 #include <iostream>
 #include <wireguard-nt/include/wireguard.h>
-#include <win/shared.cpp>
 #include <windows.h>
 #include <tlhelp32.h>
 #include <accctrl.h>
@@ -25,6 +24,7 @@
 #include <cfgmgr32.h>
 #include <devguid.h>
 #include "wginterface.hh"
+#include "win/shared.cpp"
 #include <wgkeys.hh>
 
 const DEVPROPKEY devpkey_name = { { 0x65726957, 0x7547, 0x7261, { 0x64, 0x4e, 0x61, 0x6d, 0x65, 0x4b, 0x65, 0x79 } }, DEVPROPID_FIRST_USABLE + 1 };

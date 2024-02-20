@@ -1,8 +1,23 @@
 {
-  "name": "rebory linux devcontainer",
+  "name": "wg.js devcontainer",
   "updateRemoteUserUID": false,
   "containerUser": "develop",
   "remoteUser": "develop",
+  "runArgs": [
+    "--init"
+  ],
+  "privileged": true,
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "github.vscode-github-actions",
+        "ms-vscode.cpptools",
+        "eamodio.gitlens",
+        "euskadi31.json-pretty-printer",
+        "redhat.vscode-yaml"
+      ]
+    }
+  },
   "build": {
     "dockerfile": "Dockerfile",
     "args": {

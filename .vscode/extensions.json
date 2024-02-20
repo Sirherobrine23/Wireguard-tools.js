@@ -1,5 +1,9 @@
 {
   "recommendations": [
-    "ms-vscode.cpptools"
+    "github.vscode-github-actions",
+    "ms-vscode.cpptools",
+    "eamodio.gitlens",
+    "euskadi31.json-pretty-printer",
+    "redhat.vscode-yaml"
   ]
 }

@@ -1,7 +1,6 @@
 {
   "files.eol": "\n",
   "files.encoding": "utf8",
-  "files.defaultLanguage": "javascript",
   "files.trimFinalNewlines": true,
   "files.trimTrailingWhitespace": true,
   "editor.tabSize": 2,
@@ -24,8 +23,6 @@
     "PATH": "${workspaceFolder}/node_modules/.bin:${env:PATH}"
   },
   "files.associations": {
-    "*.dsc": "ini",
-    "*.gyp": "python",
     "random": "cpp",
     "limits": "cpp",
     "xstring": "cpp"

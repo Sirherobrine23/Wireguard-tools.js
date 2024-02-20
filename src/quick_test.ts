@@ -32,7 +32,7 @@ const StaticConfigJson: QuickConfig = {
   PreDown: [
     "iptables -D OUTPUT ! -o %i -m mark ! --mark $(wg show %i fwmark) -m addrtype ! --dst-type LOCAL -j REJECT"
   ],
-  Address: [
+  address: [
     "10.144.0.1/32",        "192.160.0.1/32",
     "10.80.0.1/32",         "10.48.0.1/32",
     "10.0.0.1/32",          "10.208.0.1/32",

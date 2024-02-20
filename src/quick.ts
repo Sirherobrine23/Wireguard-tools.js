@@ -53,7 +53,7 @@ export function parse(configString: string) {
   if (Array.isArray(interfaceConfig.postdown)) config.PostDown = interfaceConfig.postdown;
   if (Array.isArray(interfaceConfig.preup)) config.PreUp = interfaceConfig.preup;
   if (Array.isArray(interfaceConfig.predown)) config.PreDown = interfaceConfig.predown;
-  if (Array.isArray(interfaceConfig.address)) config.Address = interfaceConfig.address;
+  if (Array.isArray(interfaceConfig.address)) config.address = interfaceConfig.address;
 
   config.peers = {};
   peers.forEach(({ publickey, presharedkey, endpoint, keepinterval, allowedips }) => {
@@ -76,7 +76,7 @@ export function stringify(wgConfig: QuickConfig): string {
   let configStr: string[] = ["[Interface]"];
 
   if (wgConfig.portListen >= 0) configStr.push(format("ListenPort = %s", wgConfig.portListen));
-  if (wgConfig.Address) configStr.push(format("Address = %s", wgConfig.Address.join(", ")));
+  if (wgConfig.address) configStr.push(format("Address = %s", wgConfig.address.join(", ")));
   if (wgConfig.privateKey) configStr.push(format("PrivateKey = %s", wgConfig.privateKey));
   if (wgConfig.publicKey) configStr.push(format("PublicKey = %s", wgConfig.publicKey));
   if (wgConfig.Table > 0) configStr.push(format("Table = %s", wgConfig.Table));

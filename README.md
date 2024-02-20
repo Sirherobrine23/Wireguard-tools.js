@@ -4,6 +4,10 @@ Efficiently manage your Wireguard interface right from nodejs, no `wg` required.
 
 other tools are wrappers over `wg`, `wireguard-tools.js` is not like that, it is a `C/C++` addon in which you don't need to have `wg` installed, as this module has full compatibility of its own `wg`.
 
+## CommonJS droping support
+
+With a small disappointment I come to inform you that CommonJS will be ignored in the next updates and will be completely an ESM module, if you don't want to migrate to ESM I recommend staying on version `1.8.1` or even `1.8.3`, which will be the last versions but recent in CommonJS.
+
 ## Support to:
 
 - Userspace [(wireguard-go)](https://git.zx2c4.com/wireguard-go/about/) support.
@@ -12,15 +16,11 @@ other tools are wrappers over `wg`, `wireguard-tools.js` is not like that, it is
 - [wg-quick](https://man7.org/linux/man-pages/man8/wg-quick.8.html) file support.
 - More info and example check [`wiki`](https://sirherobrine23.org/Wireguard/Wireguard-tools.js/wiki).
 
-> **Note**
+> [!NOTE]
 >
 > we have pre-copiled files for:
-> - `Windows`: x64, arm64
-> - `MacOS`: x64/intel, arm64/Apple silicon
 > - `Linux`: x64/amd64, arm64/aarch64
->
-> else arch and system require copiler supported by `node-gyp` installed to compile Node addon.
+> - `Windows`: x64, arm64
 >
 > 1. To manage the Wireguard interfaces in linux, root access is required.
-> 1. Windows user are `wireguard-nt` dll files includes in module
 > 1. Another system's require `wireguard-go` [(check this page)](https://github.com/WireGuard/wireguard-go)
