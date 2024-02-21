@@ -1031,7 +1031,7 @@ static int add_del_iface(const char *ifname, bool add)
 
 	nlh = mnl_nlmsg_put_header(rtnl_buffer);
 	nlh->nlmsg_type = add ? RTM_NEWLINK : RTM_DELLINK;
-	nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK | (add ? NLM_F_CREATE | NLM_F_EXCL : 0);
+	nlh->nlmsg_flags = NLM_F_REQUEST | NLM_F_ACK | (add ? NLM_F_CREATE | NLM_F_EXCL : RTM_DELLINK);
 	nlh->nlmsg_seq = time(NULL);
 	ifm = mnl_nlmsg_put_extra_header(nlh, sizeof(*ifm));
 	ifm->ifi_family = AF_UNSPEC;
@@ -1049,7 +1049,7 @@ static int add_del_iface(const char *ifname, bool add)
 		goto cleanup;
 	}
 	if (mnl_cb_run(rtnl_buffer, len, nlh->nlmsg_seq, mnl_socket_get_portid(nl), NULL, NULL) < 0) {
-		ret = -errno;
+    ret = -errno;
 		goto cleanup;
 	}
 	ret = 0;
