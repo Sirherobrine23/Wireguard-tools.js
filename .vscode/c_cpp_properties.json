@@ -1,77 +1,16 @@
 {
-  "version": 4,
   "configurations": [
-    {
-      "name": "Win32",
-      "cStandard": "c17",
-      "cppStandard": "c++17",
-      "intelliSenseMode": "windows-msvc-x64",
-      "compilerArgs": [
-        "-fpermissive",
-        "-fexceptions",
-        "-w",
-        "-fpermissive",
-        "-fPIC",
-        "-static"
-      ],
-      "defines": [
-        "NAPI_DISABLE_CPP_EXCEPTIONS",
-        "ONSTARTADDON",
-        "LISTDEV",
-        "GETCONFIG",
-        "SETCONFIG",
-        "DELIFACE"
-      ],
-      "includePath": [
-        "${env:appdata}/../Local/node-gyp/Cache/18.17.0/include/node",
-        "${workspaceFolder}/node_modules/node-addon-api",
-        "${workspaceFolder}/addons/genKey/**",
-        "${workspaceFolder}/addons/tools/**"
-      ]
-    },
-    {
-      "name": "Linux",
-      "compilerPath": "/usr/bin/clang",
-      "cStandard": "c17",
-      "cppStandard": "c++17",
-      "intelliSenseMode": "linux-clang-x64",
-      "compilerArgs": [
-        "-fpermissive",
-        "-fexceptions",
-        "-w",
-        "-fpermissive",
-        "-fPIC",
-        "-static"
-      ],
-      "defines": [
-        "NAPI_DISABLE_CPP_EXCEPTIONS"
-      ],
-      "includePath": [
-        "/usr/include/node",
-        "${workspaceFolder}/node_modules/node-addon-api/**",
-        "${workspaceFolder}/node_modules/**",
-        "${workspaceFolder}/addons/genKey/**",
-        "${workspaceFolder}/addons/tools/**"
-      ]
-    },
     {
       "name": "Mac",
       "includePath": [
-        "${workspaceFolder}/node_modules/node-addon-api",
         "/usr/local/include/node",
-        "${workspaceFolder}/addons/genKey/**",
-        "${workspaceFolder}/addons/tools/**"
+        "/usr/local/lib/zig//libc/include/any-linux-any",
+        "${workspaceFolder}/node_modules/node-addon-api",
+        "${workspaceFolder}/**",
+        "${workspaceFolder}/addon"
       ],
       "defines": [
-        "NAPI_DISABLE_CPP_EXCEPTIONS"
-      ],
-      "compilerArgs": [
-        "-fpermissive",
-        "-fexceptions",
-        "-w",
-        "-fpermissive",
-        "-fPIC",
-        "-static"
+        "AF_NETLINK=16"
       ],
       "macFrameworkPath": [
         "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks"
@@ -80,6 +19,28 @@
       "cStandard": "c17",
       "cppStandard": "c++17",
       "intelliSenseMode": "macos-clang-x64"
+    },
+    {
+      "name": "Linux",
+      "includePath": [
+        "${workspaceFolder}/node_modules/node-addon-api",
+        "/usr/include/node",
+        "${workspaceFolder}/**",
+        "${workspaceFolder}/addon"
+      ]
+    },
+    {
+      "name": "Win32",
+      "includePath": [
+        "${env:appdata}/../.cache/rebory/latest/node/include/node",
+        "${workspaceFolder}/node_modules/node-addon-api",
+        "${workspaceFolder}/addon"
+      ],
+      "defines": [],
+      "intelliSenseMode": "windows-msvc-x64",
+      "cStandard": "c17",
+      "cppStandard": "c++17"
     }
-  ]
+  ],
+  "version": 4
 }

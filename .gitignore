@@ -11,6 +11,9 @@ node_modules/
 .DS_Store
 *.log
 
+# Addon
+addon/userspace/wg-go.*
+
 # Typescript
 *.tsbuildinfo
 src/**/*.d.ts

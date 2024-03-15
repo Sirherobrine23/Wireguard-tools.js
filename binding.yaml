@@ -1,80 +1,56 @@
 name: wginterface
-flags:
-  - "!-fno-exceptions"
-  - "-fpermissive"
-  - "-fexceptions"
-  - "-w"
-  - "-fpermissive"
-flagsCC:
-  - "!-fno-exceptions"
-  - "-fpermissive"
-  - "-fexceptions"
-  - "-w"
-  - "-fpermissive"
 defines:
-  - "NAPI_DISABLE_CPP_EXCEPTIONS"
-  - "NODE_VERSION=4"
+  - "NODE_VERSION=8"
+  - "NAPI_CPP_EXCEPTIONS"
 includes:
-  - addons/genKey
-  - addons/tools
   - node_modules/node-addon-api
+  - ./addon
 sources:
-  - "addons/genKey/wgkeys.cpp"
-  - "addons/tools/wginterface.cpp"
-  - "addons/tools/wginterface-dummy.cpp"
+  - "addon/main.cpp"
+  - "addon/genKey/wgkeys.cpp"
+  - "addon/userspace/wginterface.cpp"
+prebuild:
+  - shell: bash
+    cwd: ./addon/userspace/go
+    env:
+      CGO_ENABLED: "1"
+      LDFLAGS: "-w"
+    run: |
+      go build -trimpath -v -o ../wg-go.o -buildmode c-archive .
+      mv -fv ../wg-go.o "${BUILDDIR}"
 target:
-  macos:
-    defines:
-      - USERSPACE_GO
   linux:
     sources:
-      - "addons/tools/linux/wireguard.c"
-      - "addons/tools/wginterface-linux.cpp"
-      - "!addons/tools/wginterface-dummy.cpp"
-    defines:
-      - "LISTDEV"
-      - "GETCONFIG"
-      - "SETCONFIG"
-      - "DELIFACE"
-    target:
-      x86_64:
-        release: true
-        flags:
-          - "-fPIC"
-        flagsCC:
-          - "-fPIC"
-      aarch64:
-        release: true
-        flags:
-          - "-fPIC"
-        flagsCC:
-          - "-fPIC"
-  windows:
+      - "!addon/userspace/wginterface.cpp"
+      - "addon/linux/wginterface.cpp"
+      - "addon/linux/wireguard.c"
     flags:
-      - "-undefined"
-      - "dynamic_lookup"
-    target:
-      x86_64:
-        release: true
-      aarch64:
-        release: true
+      - "!-fno-exceptions"
+      - "-fpermissive"
+      - "-fexceptions"
+      - "-w"
+      - "-fpermissive"
+      - "-fPIC"
+  windows:
     sources:
-      - "addons/tools/wginterface-win.cpp"
-      - "!addons/tools/wginterface-dummy.cpp"
-    includes:
-      - "addons/tools/win"
-    defines:
-      - "ONSTARTADDON"
-      - "LISTDEV"
-      - "GETCONFIG"
-      - "SETCONFIG"
-      - "DELIFACE"
-      - "_HAS_EXCEPTIONS=1"
+      - "!addon/userspace/wginterface.cpp"
+      - "addon/win/wginterface.cpp"
     libraries:
-      - "bcrypt.lib"
-      - "crypt32.lib"
-      - "iphlpapi.lib"
-      - "kernel32.lib"
-      - "ntdll.lib"
-      - "ws2_32.lib"
-      - "setupapi.lib"
+      - wbemuuid.lib
+      - bcrypt.lib
+      - crypt32.lib
+      - iphlpapi.lib
+      - kernel32.lib
+      - ntdll.lib
+      - ws2_32.lib
+      - setupapi.lib
+    defines:
+      - "_HAS_EXCEPTIONS=1"
+      - "ONSTARTADDON"
+  macos:
+    flags:
+      - "!-fno-exceptions"
+      - "-fpermissive"
+      - "-fexceptions"
+      - "-w"
+      - "-fpermissive"
