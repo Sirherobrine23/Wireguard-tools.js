@@ -11,7 +11,7 @@
   "license": "GPL-3.0-or-later",
   "repository": {
     "type": "git",
-    "url": "git+https://sirherobrine23.org/Wireguard/Wireguard-tools.js.git"
+    "url": "https://sirherobrine23.org/Wireguard/Wireguard-tools.js.git"
   },
   "keywords": [
     "wireguard",
@@ -34,18 +34,18 @@
   },
   "scripts": {
     "install": "rebory prebuild",
-    "dev": "rebory build -DP",
-    "test": "rebory build -D && node --no-warnings --loader ts-node/esm src/index_test.js",
-    "prepack": "tsc --build --clean && tsc --build",
+    "dev": "rebory build",
+    "test": "rebory build && node --no-warnings --loader ts-node/esm src/index_test.js",
+    "prepack": "tsc --build --clean && tsc --build && rebory build --release",
     "postpack": "tsc --build --clean"
   },
   "devDependencies": {
-    "@types/node": "^20.11.19",
+    "@types/node": "^20.11.26",
     "ts-node": "^10.9.2",
-    "typescript": "^5.3.3"
+    "typescript": "^5.4.2"
   },
   "dependencies": {
-    "node-addon-api": "^7.1.0",
-    "rebory": "^0.1.12"
+    "node-addon-api": "^8.0.0",
+    "rebory": "^0.2.5"
   }
 }

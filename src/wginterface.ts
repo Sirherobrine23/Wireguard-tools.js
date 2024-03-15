@@ -1,46 +1,10 @@
-import { promises as fs } from "fs";
-import { isIPv4, createConnection as netConnection } from "net";
-import path from "path";
-import readline from "readline";
-import { finished } from "stream/promises";
-import rebory from "rebory";
-import { fileURLToPath } from "url";
+import path from "node:path";
+import { loadAddon } from "rebory";
+import { key } from "./index.js";
+import { isIP } from "node:net";
+const __dirname = import.meta.dirname || path.dirname((await import("node:url")).fileURLToPath(import.meta.url));
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const addon = rebory.loadAddon(path.join(__dirname, "../binding.yaml")).wginterface.loadRelease<{
-  listDevices?: () => Promise<{from: "userspace"|"kernel", name: string, path?: string}[]>;
-  deleteInterface?: (wgName: string) => Promise<void>;
-  setConfig?: (wgName: string, config: WgConfigSet) => Promise<void>;
-  getConfig?: (wgName: string) => Promise<WgConfigGet>;
-
-  createTun?: () => Promise<number|string>;
-  deleteTun?: () => void;
-  checkTun?: () => Promise<boolean>;
-  getTun?: () => Promise<number|string>;
-
-  /** Wireguard addon constants */
-  constants: {
-    driveVersion: string;
-    base64Length: number;
-    keyLength: number;
-    nameLength: number;
-  };
-}>({
-  WIN32DLLPATH: path.resolve(__dirname, "../addons/tools/win/wireguard-nt/bin", ((process.arch === "x64" && "amd64") || (process.arch === "ia32" && "i386"))||process.arch, "wireguard.dll")
-});
-
-export const {
-  constants
-} = addon;
-
-/** default location to run socket's */
-const defaultPath = (process.env.WIRWGUARD_GO_RUN||"").length > 0 ? path.resolve(process.cwd(), process.env.WIRWGUARD_GO_RUN) : process.platform === "win32" ? "\\\\.\\pipe\\WireGuard" : "/var/run/wireguard";
-
-async function exists(path: string) {
-  return fs.open(path).then(o => o && (o.close().then(() => true, () => true))||true, () => false);
-}
-
-export interface Peer {
+interface Peer {
   /** Preshared key to peer */
   presharedKey?: string;
 
@@ -54,23 +18,26 @@ export interface Peer {
   allowedIPs?: string[];
 };
 
-export interface PeerSet extends Peer {
-  /** Mark this peer to be removed, any changes remove this option */
+export interface SetPeer extends Peer {
+  /** Remove this peer */
   removeMe?: boolean;
 }
 
-export interface PeerGet extends Peer {
+export interface GetPeer extends Peer {
   /** ReceiveBytes indicates the number of bytes received from this peer. */
-  rxBytes?: number;
+  rxBytes: bigint;
 
   /** TransmitBytes indicates the number of bytes transmitted to this peer. */
-  txBytes?: number;
+  txBytes: bigint;
 
   /** Last peer Handshake */
-  lastHandshake?: Date;
+  lastHandshake: Date;
 }
 
-export interface WgConfigBase<T extends Peer> {
+interface Config<T extends Peer> {
+  /** Wireguard interface name */
+  name: string;
+
   /** privateKey specifies a private key configuration */
   privateKey: string;
 
@@ -86,164 +53,341 @@ export interface WgConfigBase<T extends Peer> {
   /** Interface IP address'es */
   address?: string[];
 
-  /** Interface peers */
+  /** Interface Peers */
   peers: Record<string, T>;
-}
+};
 
-export interface WgConfigGet extends WgConfigBase<PeerGet> {}
-export interface WgConfigSet extends WgConfigBase<PeerSet> {
+export interface GetConfig extends Config<GetPeer> { };
+export interface SetConfig extends Config<SetPeer> {
   /** this option will remove all peers if `true` and add new peers */
   replacePeers?: boolean;
+};
+
+export const addon = (await loadAddon(path.resolve(__dirname, "../binding.yaml"))).wginterface.load_addon<{
+  /** Current Wireguard drive version */
+  driveVersion?: string;
+
+  /**
+   * Delete interface if exists
+   * @param name - Interface name
+   */
+  deleteInterface(name: string): Promise<void>;
+
+  /**
+   * Get Wireguard interfaces list
+   *
+   * if running in userspace return socket (UAPI) path's
+   */
+  listDevices(): Promise<string[]>;
+
+  /**
+   * Get current config from Wireguard interface
+   * @param name - Interface name
+   */
+  getConfig(name: string): Promise<GetConfig>;
+
+  /**
+   * Set new config to Wireguard interface or create new interface if not exists
+   * @param config - Interface config
+   */
+  setConfig(config: SetConfig): Promise<void>;
+}>({
+  WIN32DLLPATH: path.resolve(__dirname, "../addon/win", (process.arch === "x64" && "amd64") || (process.arch === "ia32" && "x86") || process.arch, "wireguard.dll")
+});
+
+export const {
+  driveVersion,
+  listDevices,
+  getConfig,
+  setConfig,
+  deleteInterface
+} = addon;
+
+export class WireGuardPeer {
+  constructor(public publicKey: string, private __Wg: Wireguard) { }
+
+  async getStats() {
+    const { rxBytes, txBytes, lastHandshake } = await getConfig(this.__Wg.name).then((config) => config.peers[this.publicKey]);
+    return {
+      rxBytes,
+      txBytes,
+      lastHandshake
+    };
+  }
+
+  addNewAddress(address: string) {
+    if (isIP(address.split("/")[0]) === 0) throw new Error("Invalid IP address");
+    if (!this.__Wg._peers) this.__Wg._peers = new Map();
+    const _addr = new Set(this.__Wg._peers.get(this.publicKey).allowedIPs);
+    _addr.add(address.split("/")[0]);
+    this.__Wg._peers.get(this.publicKey).allowedIPs = Array.from(_addr);
+    return this;
+  }
+
+  removeAddress(address: string) {
+    if (isIP(address.split("/")[0]) === 0) throw new Error("Invalid IP address");
+    if (!this.__Wg._peers) this.__Wg._peers = new Map();
+    const _addr = new Set(this.__Wg._peers.get(this.publicKey).allowedIPs);
+    _addr.delete(address.split("/")[0]);
+    this.__Wg._peers.get(this.publicKey).allowedIPs = Array.from(_addr);
+    return this;
+  }
+
+  setKeepInterval(keepInterval: number) {
+    if (typeof keepInterval !== "number" || keepInterval < 0) throw new Error("Invalid keepInterval");
+    if (!this.__Wg._peers) this.__Wg._peers = new Map();
+    if (keepInterval > 0) this.__Wg._peers.get(this.publicKey).keepInterval = keepInterval;
+    else delete this.__Wg._peers.get(this.publicKey).keepInterval;
+    return this;
+  }
+
+  setEndpoint(endpoint: string) {
+    if (typeof endpoint !== "string") throw new Error("Invalid endpoint");
+    if (!this.__Wg._peers) this.__Wg._peers = new Map();
+    if (endpoint.length > 0) this.__Wg._peers.get(this.publicKey).endpoint = endpoint;
+    else delete this.__Wg._peers.get(this.publicKey).endpoint;
+    return this;
+  }
+
+  /**
+   * Sets the preshared key for the peer.
+   * @param presharedKey - The preshared key to set. If not provided, a new preshared key will be generated.
+   * @returns The updated WireGuard interface object.
+   * @throws {Error} If the provided preshared key is invalid.
+   */
+  setPresharedKey(): Promise<this> & this;
+  /**
+   * Sets the preshared key for the peer.
+   * @param presharedKey - The preshared key to set. If not provided, a new preshared key will be generated.
+   * @returns The updated WireGuard interface object.
+   * @throws {Error} If the provided preshared key is invalid.
+   */
+  setPresharedKey(presharedKey: string): this;
+  /**
+   * Sets the preshared key for the peer.
+   * @param presharedKey - The preshared key to set. If not provided, a new preshared key will be generated.
+   * @returns The updated WireGuard interface object.
+   * @throws {Error} If the provided preshared key is invalid.
+   */
+  setPresharedKey(presharedKey?: string) {
+    if (!this.__Wg._peers) this.__Wg._peers = new Map();
+    if (!presharedKey) return Object.assign(key.presharedKey().then((presharedKey) => this.__Wg._peers.get(this.publicKey).presharedKey = presharedKey), this);
+    if (typeof presharedKey !== "string" || presharedKey.length !== key.Base64Length) throw new Error("Invalid presharedKey");
+    if (!this.__Wg._peers) this.__Wg._peers = new Map();
+    this.__Wg._peers.get(this.publicKey).presharedKey = presharedKey;
+    return this;
+  }
+
+  /**
+   * Removes the peer from the WireGuard interface.
+   * @returns The updated WireGuard interface.
+   */
+  remove() {
+    if (!this.__Wg._peers) this.__Wg._peers = new Map();
+    this.__Wg._peers.get(this.publicKey)["removeMe"] = true;
+    return this;
+  }
+
+  /**
+   * Converts the `WireGuard Peer` object to a JSON representation.
+   * @returns The JSON representation of the `WireGuard Peer` object.
+   */
+  toJSON(): [string, SetPeer] {
+    if (!this.__Wg._peers) this.__Wg._peers = new Map();
+    const { keepInterval, endpoint, presharedKey, allowedIPs } = this.__Wg._peers.get(this.publicKey);
+    const peer: SetPeer = Object.create({});
+    if (presharedKey) peer.presharedKey = presharedKey;
+    if (keepInterval) peer.keepInterval = keepInterval;
+    if (endpoint) peer.endpoint = endpoint;
+    if (allowedIPs) peer.allowedIPs = allowedIPs;
+    return [this.publicKey, peer];
+  }
 }
 
-export type WgGlobalConfig = WgConfigSet & WgConfigGet;
-
 /**
- * Get Wireguard devices and locations
+ * Maneger Wireguard interface and peers simple and fast
  */
-export async function listDevices() {
-  let devices: {from: "userspace"|"kernel", name: string, path?: string}[] = [];
-  if (typeof addon.listDevices === "function") devices = devices.concat(await addon.listDevices());
-  if (await exists(defaultPath)) (await fs.readdir(defaultPath)).forEach(file => devices.push({ from: "userspace", name: file.endsWith(".sock") ? file.slice(0, -5) : file, path: path.join("/var/run/wireguard", file) }));
-  return devices;
-}
-
-/**
- * Delete wireguard interface if present
- * @param wgName - Interface name
- * @returns
- */
-export async function deleteInterface(wgName: string): Promise<void> {
-  if (typeof addon.deleteInterface === "function") return addon.deleteInterface(wgName);
-  const dev = (await listDevices()).find(s => s.name === wgName);
-  if (dev && dev.path) return fs.rm(dev.path, { force: true });
-}
-
-/**
- * Add the settings to the Wireguard interface, if it does not exist and the interface will be created automatically.
- *
- * To update the interface settings, first get the interface settings to update!
- *
- * @param wgName - Interface name
- * @param config - Interface config
- */
-export async function setConfig(wgName: string, config: WgConfigGet): Promise<void>;
-/**
- * Add the settings to the Wireguard interface, if it does not exist and the interface will be created automatically.
- *
- * To update the interface settings, first get the interface settings to update!
- *
- * @param wgName - Interface name
- * @param config - Interface config
- */
-export async function setConfig(wgName: string, config: WgConfigSet): Promise<void> {
-  if (wgName.length > constants.nameLength) throw new Error("Interface name more then allowed", { cause: constants.nameLength });
-  if (typeof addon.setConfig === "function") return addon.setConfig(wgName, config);
-  const client = netConnection(path.join(defaultPath, (wgName).concat(".sock")));
-  const writel = (...data: any[]) => client.write(data.map(String).join("").concat("\n"));
-  // Init set config in interface
-  writel("set=1");
-
-  // Port listening
-  if (config.portListen !== undefined && Math.floor(config.portListen) >= 0) writel(("listen_port="), ((Math.floor(config.portListen))));
-
-  // fwmark
-  if (Math.floor(config.fwmark) >= 0) writel(("fwmark="), ((Math.floor(config.fwmark))));
-
-  // Replace peer's
-  if (config.replacePeers) writel("replace_peers=true");
-
-  // Keys
-  if (typeof config.privateKey === "string" && config.privateKey.length > 0) writel(("private_key="), (Buffer.from(config.privateKey, "base64").toString("hex")));
-
-  // Mount peer
-  for (const publicKey of Object.keys(config.peers||{})) {
-    const { presharedKey, endpoint, keepInterval, removeMe, allowedIPs = [] } = config.peers[publicKey];
-
-    // Public key
-    writel(("public_key="), (Buffer.from(publicKey, "base64").toString("hex")));
-    if (removeMe) {
-      writel("remove=true"); // Remove peer
-      continue;
-    }
-
-    if (typeof endpoint === "string" && endpoint.length > 0) writel(("endpoint="), (endpoint));
-    if (typeof presharedKey === "string" && presharedKey.length > 3) writel(("preshared_key="), (Buffer.from(presharedKey, "base64").toString("hex")));
-    if (typeof keepInterval === "number" && Math.floor(keepInterval) > 0) writel(("persistent_keepalive_interval="), (String(Math.floor(keepInterval))));
-    if (allowedIPs.length > 0) {
-      writel("replace_allowed_ips=true");
-      const fixed = allowedIPs.map(i => i.indexOf("/") === -1 ? i.concat("/", (isIPv4(i) ? "32" : "128")) : i)
-      for (const IIP of fixed) writel(("allowed_ip="), (IIP));
+export class Wireguard {
+  constructor(config?: SetConfig | GetConfig | Config<Peer>) {
+    // super({});
+    if (!config) return;
+    if (typeof config === "object") {
+      if (config instanceof Wireguard) return config;
     }
   }
 
-  let payload = "";
-  client.once("data", function processBuff(buff) {
-    payload = payload.concat(buff.toString("utf8"));
-    if (payload[payload.length - 1] === "\n" && payload[payload.length - 2] === "\n") {
-      client.end(); // Close conenction
-      return;
+  private _name: string;
+  get name() {
+    return this._name;
+  }
+
+  /**
+   * Set Wireguard interface name
+   * @param name - Interface name
+   * @returns Wireguard
+   */
+  set name(name: string) {
+    if (typeof name !== "string" || name.length === 0) throw new Error("Invalid name");
+    this._name = name;
+  }
+
+  private _portListen: number;
+  /**
+   * Sets the port to listen on.
+   * @param port - The port number to listen on.
+   * @returns The current instance of the `Wireguard` class.
+   * @throws {Error} If the provided port is not a number or is less than 0.
+   */
+  setPortListen(port: number) {
+    if (typeof port !== "number" || port < 0) throw new Error("Invalid port");
+    this._portListen = port;
+    return this;
+  }
+
+  private _fwmark: number;
+
+  /**
+   * Sets the fwmark value for the WireGuard interface.
+   *
+   * @param fwmark - The fwmark value to set.
+   * @returns The current instance of the `Wireguard` class.
+   * @throws {Error} If the `fwmark` value is not a number or is less than 0.
+   */
+  setFwmark(fwmark: number) {
+    if (typeof fwmark !== "number" || fwmark < 0) throw new Error("Invalid fwmark");
+    this._fwmark = fwmark;
+    return this;
+  }
+
+  private _privateKey: string;
+
+  /**
+   * Get interface public key
+   */
+  public get publicKey() {
+    return key.publicKey(this._privateKey);
+  }
+
+  /**
+   * Generate new private key and set to Wireguard interface
+   */
+  setPrivateKey(): Promise<this> & this;
+  /**
+   * Set private key to Wireguard interface
+   * @param privateKey - Private key
+   * @returns Wireguard
+   */
+  setPrivateKey(privateKey: string): this;
+  setPrivateKey(privateKey?: string): this {
+    if (!privateKey) return Object.assign(key.privateKey().then((privateKey) => this._privateKey = privateKey), this);
+    else this._privateKey = privateKey;
+    return this;
+  }
+
+  private _address: string[];
+
+  addNewAddress(address: string) {
+    if (isIP(address.split("/")[0]) === 0) throw new Error("Invalid IP address");
+    const _addr = new Set(this._address);
+    _addr.add(address.split("/")[0]);
+    this._address = Array.from(_addr);
+    return this;
+  }
+
+  removeAddress(address: string) {
+    if (isIP(address.split("/")[0]) === 0) throw new Error("Invalid IP address");
+    const _addr = new Set(this._address);
+    _addr.delete(address.split("/")[0]);
+    this._address = Array.from(_addr);
+    return this;
+  }
+
+  _peers: Map<string, Peer>;
+
+  /**
+   * Adds a new peer to the Wireguard interface.
+   *
+   * @param publicKey - The public key of the peer.
+   * @param peer - other configuration options for the peer.
+   * @throws Error if the peer is invalid.
+   */
+  addNewPeer(publicKey: string, peer: Peer) {
+    if (!this._peers) this._peers = new Map();
+    if (!((typeof publicKey === "string" && publicKey.length === key.Base64Length) && typeof peer === "object")) throw new Error("Invalid peer");
+    let { allowedIPs, endpoint, keepInterval, presharedKey } = peer;
+    this._peers.set(publicKey, {});
+    if ((typeof presharedKey === "string" && presharedKey.length === key.Base64Length)) this._peers.get(publicKey).presharedKey = presharedKey;
+    if (typeof keepInterval === "number") this._peers.get(publicKey).keepInterval = keepInterval;
+    if (typeof endpoint === "string") this._peers.get(publicKey).endpoint = endpoint;
+    if (Array.isArray(allowedIPs)) this._peers.get(publicKey).allowedIPs = allowedIPs.filter((ip) => isIP(ip.split("/")[0]) !== 0);
+    return new WireGuardPeer(publicKey, this);
+  }
+
+  /**
+   * Removes a peer from the WireGuard interface.
+   * @param publicKey - The public key of the peer to remove.
+   * @returns The updated WireGuard interface.
+   */
+  removePeer(publicKey: string) {
+    if (this._peers) this._peers.delete(publicKey);
+    return this;
+  }
+
+
+
+  /**
+   * Converts the `Wireguard Interface` object to a JSON representation.
+   * @returns The JSON representation of the `Wireguard Interface` object.
+   */
+  toJSON(): SetConfig {
+    const config: SetConfig = Object.create({});
+    config.name = this._name;
+    config.privateKey = this._privateKey;
+    if (this._portListen) config.portListen = this._portListen;
+    if (this._fwmark) config.fwmark = this._fwmark;
+    if (this._address) config.address = this._address;
+    if (this._peers) config.peers = Array.from(this._peers||[]).map(([pubKey]) => new WireGuardPeer(pubKey, this).toJSON()).reduce((obj, [pubKey, peer]) => (obj[pubKey] = peer, obj), {});
+    return config;
+  }
+
+  /**
+   * Set new config to Wireguard interface or create new interface if not exists
+   * @returns Promise<void>
+   */
+  async deploy() {
+    return setConfig({
+      ...(this.toJSON()),
+      replacePeers: true,
+    });
+  }
+
+  /**
+   * Deletes the WireGuard interface.
+   * @returns A promise that resolves when the interface is successfully deleted.
+   */
+  async delete() {
+    return deleteInterface(this._name);
+  }
+
+  /**
+   * Retrieves the configuration for the Wireguard interface.
+   */
+  async getConfig() {
+    const { peers, privateKey, address, fwmark, portListen } = await getConfig(this._name);
+    this._privateKey = privateKey;
+    this._portListen = portListen;
+    this._address = address;
+    this._fwmark = fwmark;
+
+    this._peers = new Map(Object.entries(peers));
+    for (const [publicKey, { allowedIPs, endpoint, keepInterval, presharedKey }] of this._peers) {
+      this._peers.set(publicKey, { allowedIPs, endpoint, keepInterval, presharedKey });
+      if (keepInterval === 0) delete this._peers.get(publicKey).keepInterval;
+      if (!presharedKey) delete this._peers.get(publicKey).presharedKey;
+      if (!endpoint) delete this._peers.get(publicKey).endpoint;
+      if (!allowedIPs) delete this._peers.get(publicKey).allowedIPs;
+      else if (allowedIPs.length === 0) delete this._peers.get(publicKey).allowedIPs;
     }
-    client.once("data", processBuff);
-  });
-  client.write("\n");
-  await finished(client, { error: true });
-  const payloadKeys = payload.split("\n").filter(i => i.length > 3).map(line => { const iit = line.indexOf("="); return [ line.slice(0, iit), line.slice(iit+1) ]; })
-  if (payloadKeys.at(-1)[1] !== "0") {
-    const err = new Error("Invalid send config, check log");
-    throw err;
   }
 }
-
-/**
- * Get wireguard interface config
- * @param wgName - Interface name
- * @returns
- */
-export async function getConfig(wgName: string): Promise<WgConfigGet> {
-  if (typeof addon.getConfig === "function") return addon.getConfig(wgName);
-  const info = (await listDevices()).find(int => int.name === wgName);
-  if (!info) throw new Error("Create interface, not exists");
-  const client = netConnection(path.join(defaultPath, wgName.concat(".sock")));
-  const config: WgConfigGet = Object();
-  let latestPeer: string, previewKey: string;
-
-  const tetrisBreak = readline.createInterface(client);
-  tetrisBreak.on("line", function lineProcess(line) {
-    if (line === "") tetrisBreak.removeListener("line", lineProcess).close();
-    const findout = line.indexOf("="), keyName = line.slice(0, findout), value = line.slice(findout+1);
-    if (findout <= 0) return;
-    if (keyName === "errno" && value !== "0") throw new Error(("wireguard-go error, code: ").concat(value));
-
-    // Drop
-    if ((["last_handshake_time_nsec", "protocol_version", "errno"]).includes(keyName)) return;
-    else if (keyName === "private_key") config.privateKey = Buffer.from(value, "hex").toString("base64");
-    else if (keyName === "listen_port") config.portListen = Number(value);
-    else if (keyName === "endpoint") ((config.peers||(config.peers = {}))[latestPeer]).endpoint = value;
-    else if (keyName === "persistent_keepalive_interval") ((config.peers||(config.peers = {}))[latestPeer]).keepInterval = Number(value);
-    else if (keyName === "rx_bytes") ((config.peers||(config.peers = {}))[latestPeer]).rxBytes = Number(value);
-    else if (keyName === "tx_bytes") ((config.peers||(config.peers = {}))[latestPeer]).txBytes = Number(value);
-    else if (keyName === "last_handshake_time_sec") ((config.peers||(config.peers = {}))[latestPeer]).lastHandshake = new Date(Number(value) * 1000);
-    else if (keyName === "allowed_ip") {
-      if (!value) return;
-      ((config.peers||(config.peers = {}))[latestPeer]).allowedIPs = (((config.peers||(config.peers = {}))[latestPeer]).allowedIPs||[]).concat(value);
-    } else if (keyName === "preshared_key") {
-      if (value === "0000000000000000000000000000000000000000000000000000000000000000") return;
-      ((config.peers||(config.peers = {}))[latestPeer]).presharedKey = Buffer.from(value, "hex").toString("base64");
-    } else if (keyName === "public_key") {
-      const keyDecode = Buffer.from(value, "hex").toString("base64");
-      if (previewKey !== "public_key") (config.peers||(config.peers = {}))[latestPeer] = {};
-      else {
-        config.publicKey = latestPeer;
-        (config.peers||(config.peers = {}))[keyDecode] = (config.peers||(config.peers = {}))[latestPeer];
-        delete (config.peers||(config.peers = {}))[latestPeer];
-        latestPeer = keyDecode;
-      }
-    }
-    previewKey = keyName;
-  });
-  client.write("get=1\n\n");
-  await new Promise((done, reject) => tetrisBreak.on("error", reject).once("close", done));
-  await finished(client.end());
-  return config;
-}
+export default Wireguard;

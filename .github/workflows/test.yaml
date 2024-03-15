@@ -1,0 +1,49 @@
+name: Test
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test_linux:
+    name: Test Linux
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [ 16.x, 18.x, 20.x, latest ]
+    steps:
+      - name: Disable sudo PATH replace
+        run: |
+          sudo cat /etc/sudoers | grep -v "secure_path=" > /tmp/.sudoers.tmp
+          cat /tmp/.sudoers.tmp | sudo tee /etc/sudoers
+          rm /tmp/.sudoers.tmp
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - uses: actions/setup-go@v4
+        with:
+          go-version-file: addon/userspace/go/go.mod
+          go-version: ">=1.22.0"
+
+      - name: "Setup zig"
+        uses: korandoru/setup-zig@v1
+        with:
+          zig-version: "master"
+
+      - name: Install build dependencies
+        run: sudo apt update && sudo apt install -y build-essential
+
+      - name: Install node dependencies
+        run: npm install --no-save --no-audit --no-fund --ignore-scripts
+
+      - name: Run tests
+        run: ./node_modules/.bin/rebory build && sudo node --no-warnings --loader ts-node/esm src/index_test.js

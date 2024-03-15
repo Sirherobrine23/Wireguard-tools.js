@@ -1,5 +1,7 @@
 import crypto from "node:crypto";
 
+export const KeyLength = 32, Base64Length = 44;
+
 type BinArray = Float64Array|Uint8Array|number[];
 
 function gf(init?: number[]) {
@@ -94,37 +96,29 @@ function clamp(z: BinArray) {
   z[0] &= 248;
 }
 
-/**
- * Generate preshared key blocking loop event
- *
- * @deprecated - use presharedKey
- */
-export function presharedKeySync() {
-  var privateKey = new Uint8Array(32);
-  crypto.randomFillSync(privateKey);
-  return keyToBase64(privateKey);
+function Base64ToKey(keyInput: string): Uint8Array {
+  if (keyInput.length !== Base64Length) throw new Error("Invalid key length", { cause: { Required: Base64Length, Input: keyInput.length } });
+  return new Uint8Array(Buffer.from(keyInput, "base64"));
+}
+
+function keyToBase64(key: Uint8Array): string {
+  if (key.length !== KeyLength) throw new Error("Invalid key length", { cause: { Required: KeyLength, Input: key.length } });
+  return Buffer.from(key).toString("base64");
+}
+
+export function keyToHex(key: string): string {
+  return Buffer.from(key, "base64").toString("hex");
 }
 
 /**
  * Generate preshared key
  */
 export async function presharedKey(): Promise<string> {
-  var privateKey = new Uint8Array(32);
+  var privateKey = new Uint8Array(KeyLength);
   return new Promise((done, reject) => crypto.randomFill(privateKey, (err) => {
     if (err) return reject(err);
     done(keyToBase64(privateKey));
   }));
-}
-
-/**
- * Create private key
- *
- * @deprecated - Use privateKey
- */
-export function privateKeySync() {
-  var privateKey = Base64ToKey(presharedKeySync());
-  clamp(privateKey);
-  return keyToBase64(privateKey);
 }
 
 /**
@@ -136,14 +130,6 @@ export async function privateKey() {
   return keyToBase64(privateKey);
 }
 
-export function keyToBase64(key: Uint8Array): string {
-  return Buffer.from(key).toString("base64");
-}
-
-export function Base64ToKey(keyInput: string): Uint8Array {
-  return new Uint8Array(Buffer.from(keyInput, "base64"));
-}
-
 /**
  * Get Public key from Private key
  *
@@ -151,7 +137,7 @@ export function Base64ToKey(keyInput: string): Uint8Array {
  */
 export function publicKey(privKey: string) {
   var privateKey: Uint8Array = Base64ToKey(privKey);
-  var r: number, z = new Uint8Array(32);
+  var r: number, z = new Uint8Array(KeyLength);
   var a = gf([1]),
     b = gf([9]),
     c = gf(),

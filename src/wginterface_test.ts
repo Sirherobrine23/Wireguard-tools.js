@@ -1,54 +1,51 @@
 import test from "node:test";
-import { setConfig, deleteInterface, WgConfigSet, getConfig } from "./wginterface.js";
-import { publicKey } from "./key.js";
-import { userInfo } from "os";
+import { Wireguard, getConfig, setConfig } from "./wginterface.js";
+import { presharedKey, privateKey, publicKey } from "./key.js";
+import assert from "node:assert";
 
-if (process.platform === "win32" || process.platform === "linux" && (userInfo().uid === 0)) {
-  test("Wireguard configuration", async t => {
-    // Config base
-    const peer1Key = 'EKgSatFzZtsv1qFJ6gE8HqfuA+tXzW+7vDeVc7Xaa2E=', peer2Key = '4BSvgiM9j5jjuR0Vg3gbqTFD5+CyuOU2K2kJE5+cakQ=',
-    config: WgConfigSet = {
-      privateKey: "4GTKsUfzodunTXaHtY/u+JhQN1D2CP1Sc+4D1VmpylY=",
-      address: [
-        "10.66.124.1/32"
-      ],
-      peers: {}
-    };
+await test("Wireguard interface", async t => {
+  const config = new Wireguard;
+  config.name = "wg23";
+  if (process.platform === "darwin") config.name = "utun23";
 
-    config.peers[publicKey(peer1Key)] = {
-      allowedIPs: [
-        "10.66.124.2"
-      ]
-    }
+  config.setPrivateKey(await privateKey());
+  config.addNewAddress("10.66.66.1/32");
+  config.addNewAddress("fd42:42:42::1/128");
 
-    await t.test("Set config in interface", async () => {
-      await setConfig("wg23", config);
-    });
-
-    await t.test("Get config in interface", async () => {
-      const __config = await getConfig("wg23");
-      if (!__config.peers[publicKey(peer1Key)]) throw new Error("Not exist peer 1!");
-    });
-
-    config.peers[publicKey(peer1Key)].removeMe = true;
-    config.peers[publicKey(peer2Key)] = {
-      allowedIPs: [
-        "10.66.124.3"
-      ]
-    }
-
-    await t.test("Set config in interface", async () => {
-      await setConfig("wg23", config);
-    });
-
-    await t.test("Get config in interface", async () => {
-      const __config = await getConfig("wg23");
-      if (__config.peers[publicKey(peer1Key)]) throw new Error("Invalid config get!");
-      if (!__config.peers[publicKey(peer2Key)]) throw new Error("Not exist peer 2!");
-    });
-
-    await t.test("Delete interface", async () => {
-      await deleteInterface("wg23");
-    });
+  const peer1 = await privateKey();
+  config.addNewPeer(publicKey(peer1), {
+    keepInterval: 15,
+    presharedKey: await presharedKey(),
+    allowedIPs: [
+      "10.66.66.2/32"
+    ]
   });
-}
+
+  const peer2 = await privateKey();
+  config.addNewPeer(publicKey(peer2), {
+    keepInterval: 0,
+    allowedIPs: [
+      "10.66.66.3/32"
+    ]
+  });
+
+  const jsonConfig = config.toJSON();
+
+  let skip: string;
+  await t.test("Create and Set config in interface", async () => setConfig(jsonConfig).catch(err => { skip = "Cannot set wireguard config"; return Promise.reject(err); }));
+  await t.test("Get config from interface", { skip }, async () => {
+    const config = await getConfig(jsonConfig.name);
+    // console.dir(config, { depth: null });
+
+    if (!config.peers[publicKey(peer1)]) throw new Error("Peer not exists in interface");
+    if (!config.peers[publicKey(peer2)]) throw new Error("Peer not exists in interface");
+
+    assert.equal(config.peers[publicKey(peer1)].keepInterval, jsonConfig.peers[publicKey(peer1)].keepInterval);
+    assert.equal(config.peers[publicKey(peer1)].presharedKey, jsonConfig.peers[publicKey(peer1)].presharedKey);
+
+    assert.deepEqual(config.peers[publicKey(peer1)].allowedIPs, jsonConfig.peers[publicKey(peer1)].allowedIPs);
+    assert.deepEqual(config.peers[publicKey(peer2)].allowedIPs, jsonConfig.peers[publicKey(peer2)].allowedIPs);
+  });
+
+  await t.test("Delete interface if exists", { skip }, async () => config.delete());
+});
