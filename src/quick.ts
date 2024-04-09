@@ -1,8 +1,8 @@
 import { isIP } from "net";
 import { format } from "util";
-import { Peer, WgConfigBase } from "./wginterface.js";
+import { SetConfig } from "./wginterface.js";
 
-export interface QuickConfig extends WgConfigBase<Peer>, Partial<Record<`${"Post" | "Pre"}${"Up" | "Down"}`, string[]>> {
+export interface QuickConfig extends SetConfig, Partial<Record<`${"Post" | "Pre"}${"Up" | "Down"}`, string[]>> {
   DNS?: string[];
   Table?: number;
   MTU?: number;
@@ -92,7 +92,7 @@ export function stringify(wgConfig: QuickConfig): string {
     const peerConfig = wgConfig.peers[pubKey];
     configStr.push("", "[Peer]", format("PublicKey = %s", pubKey));
     if (peerConfig.presharedKey) configStr.push(format("PresharedKey = %s", peerConfig.presharedKey));
-    if (peerConfig.keepInterval > 0) configStr.push(format("PersistentKeepalive = %n", peerConfig.keepInterval));
+    if (peerConfig.keepInterval > 0) configStr.push(format("PersistentKeepalive = %d", peerConfig.keepInterval));
     if (peerConfig.endpoint) configStr.push(format("Endpoint = %s", peerConfig.endpoint));
     if (peerConfig.allowedIPs) configStr.push(format("AllowedIPs = %s", peerConfig.allowedIPs.join(", ")));
   }

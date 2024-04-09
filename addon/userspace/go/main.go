@@ -6,17 +6,29 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"runtime"
 	"runtime/debug"
 	"strings"
 	"syscall"
+	_ "unsafe"
 
 	"golang.zx2c4.com/wireguard/conn"
 	"golang.zx2c4.com/wireguard/device"
 	"golang.zx2c4.com/wireguard/ipc"
 	"golang.zx2c4.com/wireguard/tun"
+
 )
 
 const levelLog = device.LogLevelError
+
+//go:linkname socketDirectory golang.xz2c4.com/wireguard/ipc.socketDirectory
+var socketDirectory = "/var/run/wireguard"
+
+func init() {
+	if runtime.GOOS == "windows" {
+		socketDirectory = `\\.\pipe\ProtectedPrefix\Administrators\WireGuard`
+	}
+}
 
 // End process function callbacks
 var TunsEndProcess = make(map[string]func())

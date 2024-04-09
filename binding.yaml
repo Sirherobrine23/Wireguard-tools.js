@@ -12,6 +12,9 @@ sources:
 prebuild:
   - shell: bash
     cwd: ./addon/userspace/go
+    ifOs:
+      - "!win32"
+      - "!linux"
     env:
       CGO_ENABLED: "1"
       LDFLAGS: "-w"
@@ -31,7 +34,7 @@ target:
       - "-w"
       - "-fpermissive"
       - "-fPIC"
-  windows:
+  win32:
     sources:
       - "!addon/userspace/wginterface.cpp"
       - "addon/win/wginterface.cpp"
@@ -47,7 +50,7 @@ target:
     defines:
       - "_HAS_EXCEPTIONS=1"
       - "ONSTARTADDON"
-  macos:
+  darwin:
     flags:
       - "!-fno-exceptions"
       - "-fpermissive"
