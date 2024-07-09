@@ -32,6 +32,9 @@
   "engines": {
     "node": ">=16.0.0"
   },
+  "binary": {
+    "napi_versions": [8]
+  },
   "scripts": {
     "install": "cmake-js compile",
     "build": "cmake-js rebuild",

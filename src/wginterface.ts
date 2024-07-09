@@ -88,7 +88,7 @@ export const addon = await LoadAddon<{
    */
   setConfig(config: SetConfig): Promise<void>;
 }>("wg", {
-  WIN32DLLPATH: path.resolve(projectRoot, "addon/win", (process.arch === "x64" && "amd64") || (process.arch === "ia32" && "x86") || process.arch, "wireguard.dll")
+  WIN32DLLPATH: !process.env.WGWIN32DLL ? path.resolve(projectRoot, "addon/win", (process.arch === "x64" && "amd64") || (process.arch === "ia32" && "x86") || process.arch, "wireguard.dll") : path.resolve(process.env.WGWIN32DLL),
 });
 
 export const {
