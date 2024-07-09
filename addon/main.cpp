@@ -36,18 +36,6 @@ Napi::Object StartAddon(const Napi::Env env, const Napi::Object exports) {
     }
   }));
 
-  exports.Set("listDevices", Napi::Function::New(env, [](const Napi::CallbackInfo &info) -> Napi::Value {
-    const Napi::Env env = info.Env();
-    try {
-      ListDevices *worker = new ListDevices(env);
-      worker->Queue();
-      return worker->NodePromise.Promise();
-    } catch (std::string &err) {
-      Napi::Error::New(env, err).ThrowAsJavaScriptException();
-      return env.Undefined();
-    }
-  }));
-
   exports.Set("setConfig", Napi::Function::New(env, [](const Napi::CallbackInfo &info) -> Napi::Value {
     const Napi::Env env = info.Env();
     if (!(info[0].IsObject())) Napi::Error::New(env, "Set wireguard config!").ThrowAsJavaScriptException();

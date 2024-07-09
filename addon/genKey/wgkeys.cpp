@@ -1,7 +1,9 @@
 #include "wgkeys.hh"
 #include <errno.h>
 #include <fcntl.h>
+#include <iostream>
 #include <random>
+#include <sstream>
 #include <string.h>
 
 #ifdef __linux__
@@ -263,7 +265,7 @@ void wgKeys::generatePublic(wg_key public_key, const wg_key private_key) {
   memzero_explicit(f, sizeof(f));
 }
 
-std::string wgKeys::generatePublic(const std::string private_key) {
+std::string wgKeys::generatePublic(const std::string &private_key) {
   wg_key public_key;
   wg_key private_key_;
   stringToKey(private_key_, private_key);
@@ -282,7 +284,7 @@ bool key_is_zero(const uint8_t key[32]) {
 }
 
 void wgKeys::stringToKey(wg_key key, std::string keyBase64) {
-  auto base64 = keyBase64.c_str();
+  const char* base64 = keyBase64.c_str();
   if (keyBase64.length() != B64_WG_KEY_LENGTH ||
       base64[B64_WG_KEY_LENGTH - 1] != '=')
     throw std::string("invalid key, length: ")
@@ -315,8 +317,7 @@ std::string wgKeys::toString(const wg_key key) {
   wg_key_b64_string base64;
   unsigned int i;
 
-  for (i = 0; i < 32 / 3; ++i)
-    encode_base64(&base64[i * 4], &key[i * 3]);
+  for (i = 0; i < 32 / 3; ++i) encode_base64(&base64[i * 4], &key[i * 3]);
   const uint8_t tempKey[3] = {key[i * 3 + 0], key[i * 3 + 1], 0};
   encode_base64(&base64[i * 4], tempKey);
   base64[sizeof(wg_key_b64_string) - 2] = '=';
@@ -325,7 +326,7 @@ std::string wgKeys::toString(const wg_key key) {
   return std::string(base64);
 }
 
-std::string wgKeys::toHex(const std::string keyBase64) {
+std::string wgKeys::toHex(const std::string &keyBase64) {
   wg_key key;
   wgKeys::stringToKey(key, keyBase64);
   char hex[65];
@@ -334,8 +335,11 @@ std::string wgKeys::toHex(const std::string keyBase64) {
   return std::string(hex);
 }
 
-std::string wgKeys::HextoBase64(const std::string keyHex) {
+std::string wgKeys::HextoBase64(const std::string &s_hex) {
   wg_key key;
-  for (int i = 0; i < 32; ++i) sscanf(keyHex.c_str() + i * 2, "%02x", &key[i]);
+  for(unsigned i = 0, uchr ; i < s_hex.length() ; i += 2) {
+    sscanf( s_hex.c_str()+ i, "%2x", &uchr); // conversion
+    key[i/2] = uchr; // save as char
+  }
   return wgKeys::toString(key);
 }

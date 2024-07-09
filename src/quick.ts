@@ -2,7 +2,7 @@ import { isIP } from "net";
 import { format } from "util";
 import { SetConfig } from "./wginterface.js";
 
-export interface QuickConfig extends SetConfig, Partial<Record<`${"Post" | "Pre"}${"Up" | "Down"}`, string[]>> {
+export interface QuickConfig extends Omit<SetConfig, "name">, Partial<Record<`${"Post" | "Pre"}${"Up" | "Down"}`, string[]>> {
   DNS?: string[];
   Table?: number;
   MTU?: number;

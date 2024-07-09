@@ -2,15 +2,19 @@
 node_modules/
 /*.tgz
 
+# Builder dir
+build/
+
 # Typescript
 src/**/*_test.*
 src/**/*.ts
 !src/**/*.d.ts
 
-# vscode
+# IDEs
 .devcontainer/
-.vscode/
 .vscode-ctags
+.vscode/
+.zed/
 
 # Github and Git
 .github/

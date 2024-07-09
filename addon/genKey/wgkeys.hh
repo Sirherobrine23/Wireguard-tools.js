@@ -14,10 +14,10 @@ namespace wgKeys {
   std::string toString(const wg_key key);
 
   // Convert base64 to hex key
-  std::string toHex(const std::string keyBase64);
+  std::string toHex(const std::string &keyBase64);
 
   // Convert hex to base64
-  std::string HextoBase64(const std::string keyHex);
+  std::string HextoBase64(const std::string &keyHex);
 
   // Convert base64 to wg_key
   void stringToKey(wg_key key, std::string keyBase64);
@@ -31,7 +31,7 @@ namespace wgKeys {
   // Get public key from private key
   void generatePublic(wg_key public_key, const wg_key private_key);
 
-  std::string generatePublic(const std::string private_key);
+  std::string generatePublic(const std::string &private_key);
 }
 
 #endif

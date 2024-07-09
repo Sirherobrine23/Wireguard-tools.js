@@ -33,19 +33,19 @@
     "node": ">=16.0.0"
   },
   "scripts": {
-    "install": "rebory prebuild",
-    "dev": "rebory build",
-    "test": "rebory build && node --no-warnings --loader ts-node/esm src/index_test.js",
-    "prepack": "tsc --build --clean && tsc --build && rebory build --release",
+    "install": "cmake-js compile",
+    "build": "cmake-js rebuild",
+    "test": "cmake-js compile && node --no-warnings --loader ts-node/esm src/index_test.js",
+    "prepack": "tsc --build --clean && tsc --build",
     "postpack": "tsc --build --clean"
   },
   "devDependencies": {
-    "@types/node": "^20.11.26",
+    "@types/node": "^20.14.10",
     "ts-node": "^10.9.2",
-    "typescript": "^5.4.2"
+    "typescript": "^5.5.3"
   },
   "dependencies": {
-    "node-addon-api": "^8.0.0",
-    "rebory": "^0.2.10"
+    "cmake-js": "^7.3.0",
+    "node-addon-api": "^8.0.0"
   }
 }

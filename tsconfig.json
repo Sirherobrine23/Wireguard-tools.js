@@ -20,6 +20,7 @@
   "exclude": [
     "**/libs/**",
     "**/docs/**",
+    "build/**",
     "node_modules/",
     "index.mjs"
   ],

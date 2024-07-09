@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [ 16.x, 18.x, 20.x, latest ]
+        node-version: [ 18.x, 20.x, 21.x, latest ]
     steps:
       - name: Disable sudo PATH replace
         run: |
@@ -32,18 +32,13 @@ jobs:
       - uses: actions/setup-go@v4
         with:
           go-version-file: addon/userspace/go/go.mod
-          go-version: ">=1.22.0"
-
-      - name: "Setup zig"
-        uses: korandoru/setup-zig@v1
-        with:
-          zig-version: "master"
+          go-version: ">=1.22"
 
       - name: Install build dependencies
-        run: sudo apt update && sudo apt install -y build-essential
+        run: sudo apt update && sudo apt install -y build-essential cmake
 
       - name: Install node dependencies
         run: npm install --no-save --no-audit --no-fund --ignore-scripts
 
       - name: Run tests
-        run: ./node_modules/.bin/rebory build && sudo node --no-warnings --loader ts-node/esm src/index_test.js
+        run: npm run build && sudo node --no-warnings --loader ts-node/esm src/index_test.js

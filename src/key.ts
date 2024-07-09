@@ -106,10 +106,6 @@ function keyToBase64(key: Uint8Array): string {
   return Buffer.from(key).toString("base64");
 }
 
-export function keyToHex(key: string): string {
-  return Buffer.from(key, "base64").toString("hex");
-}
-
 /**
  * Generate preshared key
  */

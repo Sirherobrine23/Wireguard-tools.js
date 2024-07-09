@@ -40,26 +40,6 @@ class DeleteInterface : public Promised {
   }
 };
 
-class ListDevices : public Promised {
-  WireguardDevices wgDevs;
-  public:
-  ListDevices(const Napi::Env &env): Promised(env), wgDevs{} {}
-
-  void Execute() override {
-    try {
-      wgDevs.getInterfaces();
-    } catch (std::string &err) { SetError(err); }
-  }
-
-  void runOk(std::function<void(Napi::Value)> callback) override {
-    Napi::HandleScope scope(Env());
-    const Napi::Env env = Env();
-    const Napi::Array interf = Napi::Array::New(env);
-    for (auto &ip : wgDevs) interf.Set(interf.Length(), ip);
-    callback(interf);
-  }
-};
-
 class SetConfig : public WireguardConfig, public Promised {
   public:
   void Execute() {

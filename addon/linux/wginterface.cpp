@@ -30,7 +30,7 @@ std::string getWireguardVersion() {
   #endif
 
   std::string version = "Unknown";
-  
+
   // /sys/module/wireguard/version - for kernel module
   if (std::filesystem::exists("/sys/module/wireguard/version")) {
     std::ifstream file("/sys/module/wireguard/version");
@@ -100,9 +100,9 @@ void WireguardConfig::getWireguardConfig() {
   for ((peer) = (devConfig)->first_peer; (peer); (peer) = (peer)->next_peer) {
     auto PeerConfig = Peer();
     if (peer->flags & WGPEER_HAS_PRESHARED_KEY) PeerConfig.presharedKey = wgKeys::toString(peer->preshared_key);
-    if (peer->flags & WGPEER_HAS_PERSISTENT_KEEPALIVE_INTERVAL) PeerConfig.keepInterval = peer->persistent_keepalive_interval;
     if (peer->endpoint.addr.sa_family == AF_INET||peer->endpoint.addr.sa_family == AF_INET6) PeerConfig.endpoint = HostAdresses(true, &peer->endpoint.addr);
 
+    PeerConfig.keepInterval = peer->persistent_keepalive_interval;
     PeerConfig.lastHandshake = peer->last_handshake_time.tv_sec*1000;
     PeerConfig.rxBytes = peer->rx_bytes;
     PeerConfig.txBytes = peer->tx_bytes;
