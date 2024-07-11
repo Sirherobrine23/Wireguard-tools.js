@@ -215,23 +215,4 @@ class WireguardConfig {
   void getWireguardConfig();
 };
 
-namespace WireguardUserspace {
-  // Get Wireguard-go version
-  std::string getWireguardVersion();
-
-  // Close all wireguard tunels
-  void closeAllWireguardTunnels();
-
-  // Create tunel and return path to tunel
-  std::string createWireguardTunnel(std::string wgName);
-
-  // Delete tunel by name and return true if success
-  void deleteWireguardTunnel(std::string wgName);
-
-  // List all tunels
-  std::vector<std::string> listTunnels();
-
-  // Check if tunel exist
-  bool checkIfExistTunnel(std::string wgName);
-};
 #endif

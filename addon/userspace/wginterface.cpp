@@ -26,7 +26,7 @@ void IpManeger::GetInInterface(std::string interfaceName) {}
 std::string driveLoad(std::map<std::string, std::string> load) { return ""; }
 
 std::string getWireguardVersion() {
-  return std::string(wgVersion());
+  return std::string("wireguard-go ").append(wgVersion());
 }
 
 void WireguardDevices::getInterfaces() {
@@ -68,7 +68,7 @@ void WireguardConfig::setWireguardConfig() {
     }
   }
 
-  std::string err = setWg((char*)this->name.c_str(), (char*)userspaceConfig.append("\n").c_str());
+  std::string err = setWg(0, (char*)this->name.c_str(), (char*)userspaceConfig.append("\n").c_str());
   if (!err.empty()) throw err;
 }
 

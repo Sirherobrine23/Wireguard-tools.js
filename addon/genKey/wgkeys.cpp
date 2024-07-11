@@ -1,4 +1,5 @@
 #include "wgkeys.hh"
+#include <cstdio>
 #include <errno.h>
 #include <fcntl.h>
 #include <iostream>
@@ -330,15 +331,16 @@ std::string wgKeys::toHex(const std::string &keyBase64) {
   wg_key key;
   wgKeys::stringToKey(key, keyBase64);
   char hex[65];
-  for (int i = 0; i < 32; ++i) sprintf(hex + i * 2, "%02x", key[i]);
+  // for (int i = 0; i < 32; ++i) sprintf(hex + i * 2, "%02x", key[i]);
+  for (int i = 0; i < 32; ++i) snprintf(hex + i * 2, 3, "%02x", key[i]);
   hex[64] = '\0';
   return std::string(hex);
 }
 
 std::string wgKeys::HextoBase64(const std::string &s_hex) {
   wg_key key;
-  for(unsigned i = 0, uchr ; i < s_hex.length() ; i += 2) {
-    sscanf( s_hex.c_str()+ i, "%2x", &uchr); // conversion
+  for(unsigned i = 0, uchr; i < s_hex.length(); i += 2) {
+    sscanf(s_hex.c_str() + i, "%2x", &uchr); // conversion
     key[i/2] = uchr; // save as char
   }
   return wgKeys::toString(key);

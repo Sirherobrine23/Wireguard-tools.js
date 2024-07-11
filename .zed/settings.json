@@ -8,30 +8,25 @@
   "formatter": "auto",
   "format_on_save": "off",
   "tab_size": 2,
-  "file_scan_exclusions": [
-    "/*-lock",
-    "/node_modules",
-    "/build"
-  ],
   "languages": {
     "TypeScript": {
-      "hard_tabs": false
-      "format_on_save": true,
+      "hard_tabs": false,
+      "format_on_save": "on",
       "code_actions_on_format": {
         "source.organizeImports": true,
         "source.removeUnusedImports": true
       }
     },
     "JavaScript": {
-      "hard_tabs": false
-      "format_on_save": true,
+      "hard_tabs": false,
+      "format_on_save": "on",
       "code_actions_on_format": {
         "source.organizeImports": true,
         "source.removeUnusedImports": true
       }
     },
     "Go": {
-      "format_on_save": true
+      "format_on_save": "on"
     },
     "C++": {
       "hard_tabs": false

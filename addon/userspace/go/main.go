@@ -14,9 +14,6 @@ import (
 
 func main() {}
 
-// Default log level to print in terminal
-const levelLog = device.LogLevelSilent
-
 func getCharErr(err error) *C.char {
 	if err == nil {
 		return C.CString("")
@@ -63,10 +60,12 @@ func stopWg(wgName *C.char) (bool, *C.char) {
 	tunName := C.GoString(wgName)
 	if dev, ok := Devices[tunName]; ok {
 		dev.Close()
+		delete(Devices, tunName)
 		if tun, ok := Tuns[tunName]; ok {
 			if err := tun.Close(); err != nil {
 				return false, getCharErr(err)
 			}
+			delete(Tuns, tunName)
 		}
 		return true, nil
 	}
@@ -76,7 +75,7 @@ func stopWg(wgName *C.char) (bool, *C.char) {
 // Set config in tun, if not exist create and add to Tuns
 //
 //export setWg
-func setWg(wgName, wgConfig *C.char) *C.char {
+func setWg(levelLog int, wgName, wgConfig *C.char) *C.char {
 	tunName, configString := C.GoString(wgName), C.GoString(wgConfig)
 	_, okTuns := Tuns[tunName]
 	_, okDev := Devices[tunName]
