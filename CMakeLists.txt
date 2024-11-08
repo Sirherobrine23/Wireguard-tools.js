@@ -8,6 +8,17 @@ add_compile_definitions(NAPI_VERSION=8 NAPI_CPP_EXCEPTIONS)
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_CXX_STANDARD 17)
 
+set(ARCH "${CMAKE_SYSTEM_PROCESSOR}")
+set(OSS "${CMAKE_SYSTEM_NAME}")
+string(TOLOWER ${OSS} OSS)
+string(TOLOWER ${ARCH} ARCH)
+
+if(${ARCH} STREQUAL "x86_64")
+  set(ARCH "x64")
+elseif(${ARCH} STREQUAL "aarch64")
+  set(ARCH "arm64")
+endif()
+
 execute_process(COMMAND node -p "require('node-addon-api').include"
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
   OUTPUT_VARIABLE NODE_ADDON_API_DIR
@@ -20,7 +31,7 @@ include_directories("${CMAKE_CURRENT_SOURCE_DIR}/addon")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/addon/genKey")
 
 if(UNIX)
-  add_definitions(-fpermissive -fexceptions -w -fpermissive -fPIC)
+  add_definitions(-fpermissive -fexceptions -w -fpermissive)
 endif()
 
 file(GLOB SOURCE_FILES
@@ -42,13 +53,21 @@ if(MSVC)
     "ws2_32.lib"
     "setupapi.lib"
   )
+  set(OSS "win32")
 elseif(UNIX AND NOT APPLE OR ANDROID)
   include_directories("${CMAKE_CURRENT_SOURCE_DIR}/addon/linux")
   file(GLOB SOURCE_FILES ${SOURCE_FILES}
     "${CMAKE_CURRENT_SOURCE_DIR}/addon/linux/wireguard.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/addon/linux/wginterface.cpp"
   )
+  set(OSS "linux")
 else()
+  if(ANDROID)
+    set(OSS "android")
+  elseif(APPLE)
+    set(OSS "darwin")
+  endif()
+
   message(STATUS "Buiding go Userspace")
   if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/addon/userspace/wg-go.o)
     file(REMOVE_RECURSE ${CMAKE_CURRENT_SOURCE_DIR}/addon/userspace/wg-go.o)
@@ -81,7 +100,13 @@ else()
 endif()
 
 add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES} ${CMAKE_JS_SRC})
-set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "" SUFFIX ".node")
+set_target_properties(${PROJECT_NAME}
+  PROPERTIES
+  PREFIX "" SUFFIX ".node"
+  RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/prebuild/${OSS}/${ARCH}"
+  ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/prebuild/${OSS}/${ARCH}"
+  LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/prebuild/${OSS}/${ARCH}"
+)
 target_link_libraries(${PROJECT_NAME} ${USERSPACEOBJ} ${CMAKE_JS_LIB})
 
 if(MSVC AND CMAKE_JS_NODELIB_DEF AND CMAKE_JS_NODELIB_TARGET)

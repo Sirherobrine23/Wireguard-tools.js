@@ -1,5 +1,6 @@
 import path from "node:path";
 import { LoadAddon, projectRoot } from "./addons.js";
+import { privateKey } from "./key.js";
 
 export interface Peer {
   /** Preshared key to peer */
@@ -92,8 +93,19 @@ export const addon = await LoadAddon<{
 });
 
 export const {
-  constants: {driveVersion = "Unknown"},
+  constants: { driveVersion = "Unknown" },
   getConfig,
   setConfig,
   deleteInterface
 } = addon;
+
+/**
+ * Get current config if not exists create new interface with name
+ *
+ * @param name - Interface name
+ * @param config - Config to set in wireguard interface
+ */
+export async function updateInterface(name: string, config: SetConfig): Promise<void> {
+  const currentConfig = await getConfig(name).then(data => data, async (): Promise<GetConfig> => ({name: name, privateKey: await privateKey(), peers: {}}))
+  return setConfig({...currentConfig, ...config})
+}

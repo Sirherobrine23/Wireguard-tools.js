@@ -19,7 +19,7 @@ await test("Wireguard interface", async t => {
       presharedKey: await presharedKey(),
       keepInterval: 25,
       allowedIPs: [
-        format("10.66.66.%d/32", i+2)
+        format("10.66.66.%d/32", i + 2)
       ],
     }
   }
