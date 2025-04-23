@@ -1,6 +1,0 @@
--std=c++17
--Iaddon/
--Iaddon/genKey
--Inode_modules/node-addon-api
--I/usr/local/include/node
--I/opt/local/include/node

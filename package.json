@@ -33,22 +33,21 @@
     "node": ">=16.0.0"
   },
   "binary": {
-    "napi_versions": [8]
+    "napi_versions": [
+      8
+    ]
   },
   "scripts": {
-    "install": "cmake-js compile",
-    "build": "cmake-js rebuild",
-    "test": "cmake-js compile && node --no-warnings --loader ts-node/esm src/index_test.js",
+    "go": "go build -buildmode=c-shared -o wg.node .",
     "prepack": "tsc --build --clean && tsc --build",
     "postpack": "tsc --build --clean"
   },
   "devDependencies": {
-    "@types/node": "^20.14.10",
+    "@types/node": "^20.17.30",
     "ts-node": "^10.9.2",
-    "typescript": "^5.5.3"
+    "typescript": "^5.8.3"
   },
   "dependencies": {
-    "cmake-js": "^7.3.0",
-    "node-addon-api": "^8.0.0"
+    "node-addon-api": "^8.3.1"
   }
 }
