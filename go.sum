@@ -32,3 +32,9 @@ gvisor.dev/gvisor v0.0.0-20230927004350-cbd86285d259 h1:TbRPT0HtzFP3Cno1zZo7yPzE
 gvisor.dev/gvisor v0.0.0-20230927004350-cbd86285d259/go.mod h1:AVgIgHMwK63XvmAzWG9vLQ41YnVHN0du0tEC46fI7yY=
 sirherobrine23.com.br/Sirherobrine23/napi-go v0.1.1 h1:qbAry0o+aR4ZPWqGu1LP2MzcAHL/JcwsOLK64ekLsFM=
 sirherobrine23.com.br/Sirherobrine23/napi-go v0.1.1/go.mod h1:ou35usxSZyinNvaeRHPlnxglSrmc9Wg9cfJ4mE5/9kA=
+sirherobrine23.com.br/Sirherobrine23/napi-go v0.1.2-0.20250428163922-3668cf5c7a3a h1:4DODPfHJMwvHzzNaldOuuUtsWG9zCKSPOEPypyy4KxA=
+sirherobrine23.com.br/Sirherobrine23/napi-go v0.1.2-0.20250428163922-3668cf5c7a3a/go.mod h1:ou35usxSZyinNvaeRHPlnxglSrmc9Wg9cfJ4mE5/9kA=
+sirherobrine23.com.br/Sirherobrine23/napi-go v0.1.2-0.20250428194608-42a0c9998ddd h1:bIfQ7cHjiRPX8BCne/tqhVAqOAZJcjwCEurGO6CfWu4=
+sirherobrine23.com.br/Sirherobrine23/napi-go v0.1.2-0.20250428194608-42a0c9998ddd/go.mod h1:ou35usxSZyinNvaeRHPlnxglSrmc9Wg9cfJ4mE5/9kA=
+sirherobrine23.com.br/Sirherobrine23/napi-go v0.1.2-0.20250428221559-379bd75a8e14 h1:UMNGes46f1fIZfC4S59lXJ2/pBl/pj8HJHkEBrkFJeQ=
+sirherobrine23.com.br/Sirherobrine23/napi-go v0.1.2-0.20250428221559-379bd75a8e14/go.mod h1:ou35usxSZyinNvaeRHPlnxglSrmc9Wg9cfJ4mE5/9kA=

@@ -12,10 +12,18 @@ import (
 
 //go:linkname wg sirherobrine23.com.br/Sirherobrine23/napi-go/entry.Register
 func wg(env napi.EnvType, export *napi.Object) {
-	getConfig, _ := napi.CreateFunction(env, "getConfig", GetInterface)
+	getConfig, err := napi.GoFuncOf(env, GetInterface)
+	if err != nil {
+		panic(err)
+	}
 	export.Set("getConfig", getConfig)
-	setConfig, _ := napi.CreateFunction(env, "setConfig", SetInterface)
+	
+	setConfig, err := napi.GoFuncOf(env, SetInterface)
+	if err != nil {
+		panic(err)
+	}
 	export.Set("setConfig", setConfig)
+	
 	// deleteInterface, _ := napi.CreateFunction(env, "deleteInterface", DeleteInterface)
 	// export.Set("deleteInterface", deleteInterface)
 }

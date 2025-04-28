@@ -3,94 +3,64 @@
 package wg_addon
 
 import (
-	"context"
 	"fmt"
 	"net"
+	"strings"
 	"time"
 
 	"sirherobrine23.com.br/Sirherobrine23/napi-go"
-	"sirherobrine23.com.br/Sirherobrine23/napi-go/js"
 
 	"golang.zx2c4.com/wireguard/wgctrl"
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
-var SetInterface = napi.Callback(func(env napi.EnvType, this napi.ValueType, args []napi.ValueType) (napi.ValueType, error) {
-	if len(args) == 0 {
-		return nil, fmt.Errorf("set interface config")
+func SetInterface(wgDevConfig Config) error {
+	if wgDevConfig.Name == "" {
+		return fmt.Errorf("set wireguard config")
 	}
-
-	var wgDevConfig Config
-	if err := js.ValueFrom(args[0], &wgDevConfig); err != nil {
-		return nil, err
-	}
-
-	promise, err := napi.CreatePromise(env)
+	
+	devInfo, err := wgDevConfig.WgConfig()
 	if err != nil {
+		return err
+	}
+
+	// Get client to wireguard
+	client, err := wgctrl.New()
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+
+	// Set Config
+	if err := client.ConfigureDevice(wgDevConfig.Name, devInfo); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func GetInterface(interfaceName string) (config *Config, err error) {
+	if interfaceName = strings.TrimSpace(interfaceName); interfaceName == "" {
+		return nil, fmt.Errorf("set interface name")
+	}
+
+	// Get client to wireguard
+	var client *wgctrl.Client
+	if client, err = wgctrl.New(); err != nil {
 		return nil, err
 	}
-	_, err = napi.CreateAyncWorker(env, context.Background(), func(env napi.EnvType, ctx context.Context) {
-		devInfo, err := wgDevConfig.WgConfig()
-		if err != nil {
-			napiErr, _ := napi.CreateError(env, err.Error())
-			promise.Reject(napiErr)
-			return
-		}
+	defer client.Close()
 
-		// Get client to wireguard
-		client, err := wgctrl.New()
-		if err != nil {
-			napiErr, _ := napi.CreateError(env, err.Error())
-			promise.Reject(napiErr)
-			return
-		}
-		defer client.Close()
-
-		// Set Config
-		if err := client.ConfigureDevice(wgDevConfig.Name, devInfo); err != nil {
-			napiErr, _ := napi.CreateError(env, err.Error())
-			promise.Reject(napiErr)
-			return
-		}
-
-		// Resolve promise
-		und, _ := env.Undefined()
-		promise.Resolve(und)
-	})
-	return promise, err
-})
-
-var GetInterface = napi.Callback(func(env napi.EnvType, this napi.ValueType, args []napi.ValueType) (napi.ValueType, error) {
-	if len(args) == 0 {
-		return nil, fmt.Errorf("set interface name")
-	}
-	interfaceName := napi.ToString(args[0])
-	typeof, err := interfaceName.Type()
-	if !(err == nil || typeof == napi.TypeString) {
-		return nil, fmt.Errorf("set interface name")
+	// Get config
+	var dev *wgtypes.Device
+	if dev, err = client.Device(interfaceName); err != nil {
+		return nil, err
 	}
 
-	var config Config
-
-	{
-		interfaceName, _ := interfaceName.Utf8Value()
-		// Get client to wireguard
-		var client *wgctrl.Client
-		if client, err = wgctrl.New(); err != nil {
-			return nil, err
-		}
-		defer client.Close()
-
-		// Get config
-		var dev *wgtypes.Device
-		if dev, err = client.Device(interfaceName); err != nil {
-			return nil, err
-		}
-		config.FromWg(dev)
-	}
-
-	return js.ValueOf(env, config)
-})
+	config = &Config{}
+	config.FromWg(dev)
+	return
+}
 
 var DeleteInterface = napi.Callback(func(env napi.EnvType, this napi.ValueType, args []napi.ValueType) (napi.ValueType, error) {
 	if len(args) == 0 {

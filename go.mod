@@ -5,7 +5,7 @@ go 1.24.2
 require (
 	golang.zx2c4.com/wireguard v0.0.0-20231211153847-12269c276173
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20241231184526-a9ab2273dd10
-	sirherobrine23.com.br/Sirherobrine23/napi-go v0.1.1
+	sirherobrine23.com.br/Sirherobrine23/napi-go v0.1.2-0.20250428221559-379bd75a8e14
 )
 
 require (
