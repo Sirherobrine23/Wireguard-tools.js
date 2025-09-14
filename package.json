@@ -33,7 +33,9 @@
     "node": ">=16.0.0"
   },
   "binary": {
-    "napi_versions": [8]
+    "napi_versions": [
+      8
+    ]
   },
   "scripts": {
     "install": "cmake-js compile",
@@ -43,12 +45,12 @@
     "postpack": "tsc --build --clean"
   },
   "devDependencies": {
-    "@types/node": "^20.14.10",
+    "@types/node": "^20.19.14",
     "ts-node": "^10.9.2",
-    "typescript": "^5.5.3"
+    "typescript": "^5.9.2"
   },
   "dependencies": {
-    "cmake-js": "^7.3.0",
-    "node-addon-api": "^8.0.0"
+    "cmake-js": "^7.3.1",
+    "node-addon-api": "^8.5.0"
   }
 }
