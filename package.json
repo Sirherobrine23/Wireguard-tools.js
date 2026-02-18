@@ -45,9 +45,9 @@
     "postpack": "tsc --build --clean"
   },
   "devDependencies": {
-    "@types/node": "^20.19.14",
+    "@types/node": "^20.19.33",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.3"
   },
   "dependencies": {
     "cmake-js": "^8.0.0",
