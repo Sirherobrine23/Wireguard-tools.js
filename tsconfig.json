@@ -1,9 +1,14 @@
 {
   "compilerOptions": {
-    "esModuleInterop": true,
+    "types": ["node"],
+    
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "target": "ESNext",
+
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
+    "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "declaration": true,
     "strict": false,
@@ -14,7 +19,8 @@
     "skipLibCheck": true,
     "allowJs": true,
     "lib": [
-      "ESNext"
+      "ESNext",
+      "ES2022"
     ]
   },
   "exclude": [

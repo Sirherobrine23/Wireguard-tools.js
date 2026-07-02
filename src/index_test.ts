@@ -1,3 +1,3 @@
-import "./quick_test.js";
-import "./key_test.js";
-import "./wginterface_test.js";
+import "./quick_test.ts";
+import "./key_test.ts";
+import "./wginterface_test.ts";

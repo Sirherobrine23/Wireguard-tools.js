@@ -1,6 +1,6 @@
-import * as wginterface from "./wginterface.js"
-import { publicKey, privateKey } from "./key.js"
-import * as quick from "./quick.js"
+import * as wginterface from "./wginterface.ts"
+import { publicKey, privateKey } from "./key.ts"
+import * as quick from "./quick.ts"
 import { isIP } from "net"
 
 export class Wireguard extends Map<string, wginterface.Peer> {

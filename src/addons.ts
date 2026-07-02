@@ -1,7 +1,11 @@
 import path from "node:path";
 import fs from "node:fs/promises";
-const __dirname = import.meta.dirname || path.dirname((await import("node:url")).fileURLToPath(import.meta.url)); // Solve current __dirname in ESM module
+import nodeURL from "node:url"
+
+// Solve current __dirname in ESM module
+const __dirname = import.meta.dirname || path.dirname(nodeURL.fileURLToPath(import.meta.url));
 export const projectRoot = path.resolve(__dirname, "..");
+
 if (__dirname.includes(".asar")) {
   console.warn("Check if addon nothing includes in .asar file")
 }
@@ -42,16 +46,23 @@ async function exists(filePath: string) {
 }
 
 export async function LoadAddon<T = any>(addonFile: string,  exports?: Record<string, any>): Promise<T> {
-  let _addonFile: string = null
-  if (await exists(addonFile)) _addonFile = addonFile;
-  else if (await exists(path.resolve(projectRoot, addonFile))) _addonFile = path.resolve(projectRoot, addonFile)
-    else if (await exists(path.resolve(projectRoot, addonFile+".node"))) _addonFile = path.resolve(projectRoot, addonFile+".node")
-      else if (await exists(path.resolve(projectRoot, "build/Release", addonFile))) _addonFile = path.resolve(projectRoot, "build/Release", addonFile)
-        else if (await exists(path.resolve(projectRoot, "build/Release", addonFile+".node"))) _addonFile = path.resolve(projectRoot, "build/Release", addonFile+".node")
-          else if (await exists(path.resolve(projectRoot, "build/Debug", addonFile))) _addonFile = path.resolve(projectRoot, "build/Debug", addonFile)
-            else if (await exists(path.resolve(projectRoot, "build/Debug", addonFile+".node"))) _addonFile = path.resolve(projectRoot, "build/Debug", addonFile+".node")
-  if (!_addonFile) throw new Error("Cannot load required addon")
-  let ext: NodeJS.Moduledlopen = {exports: Object.assign({}, exports)}
-  process.dlopen(ext, _addonFile)
-  return ext.exports
+  let filesTests = [
+    addonFile,
+    path.resolve(projectRoot, addonFile),
+    path.resolve(projectRoot, addonFile+".node"),
+    path.resolve(projectRoot, "build/Release", addonFile),
+    path.resolve(projectRoot, "build/Release", addonFile+".node"),
+    path.resolve(projectRoot, "build/Debug", addonFile),
+    path.resolve(projectRoot, "build/Debug", addonFile+".node"),
+  ]
+
+  for (const file of filesTests) {
+    if (await exists(file)) {
+      let ext: NodeJS.Moduledlopen = { exports: Object.assign({}, exports) }
+      process.dlopen(ext, file)
+      return ext.exports
+    }
+  }
+
+  throw new Error("Cannot load required addon")
 }

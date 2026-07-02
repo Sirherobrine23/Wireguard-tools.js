@@ -1,6 +1,6 @@
-import { isIP } from "net";
-import { format } from "util";
-import { SetConfig } from "./wginterface.js";
+import { isIP } from "node:net";
+import { format } from "node:util";
+import type { SetConfig } from "./wginterface.ts";
 
 export interface QuickConfig extends Omit<SetConfig, "name">, Partial<Record<`${"Post" | "Pre"}${"Up" | "Down"}`, string[]>> {
   DNS?: string[];

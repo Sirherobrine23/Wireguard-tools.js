@@ -6,12 +6,12 @@
   "type": "module",
   "main": "./src/index.js",
   "types": "./src/index.d.ts",
-  "homepage": "https://sirherobrine23.org/Wireguard/Wireguard-tools.js#readme",
-  "author": "Matheus Sampaio Queiroga <srherobrine20@gmail.com> (https://sirherobrine23.org/)",
+  "homepage": "https://sirherobrine23.com.br/Sirherobrine23/Wireguard-tools.js#readme",
+  "author": "Matheus Sampaio Queiroga <srherobrine20@gmail.com> (https://sirherobrine23.com.br/)",
   "license": "GPL-3.0-or-later",
   "repository": {
     "type": "git",
-    "url": "https://sirherobrine23.org/Wireguard/Wireguard-tools.js.git"
+    "url": "https://sirherobrine23.com.br/Sirherobrine23/Wireguard-tools.js.git"
   },
   "keywords": [
     "wireguard",
@@ -21,7 +21,7 @@
     "wireguard-utils"
   ],
   "bugs": {
-    "url": "https://sirherobrine23.org/Wireguard/Wireguard-tools.js/issues/new"
+    "url": "https://sirherobrine23.com.br/Wireguard/Wireguard-tools.js/issues/new"
   },
   "sponsor": {
     "url": "https://github.com/sponsors/Sirherobrine23"
@@ -38,16 +38,15 @@
     ]
   },
   "scripts": {
-    "go": "go build -buildmode=c-shared -o wg.node .",
+    "go": "go build -v -buildmode=c-shared -o wg.node .",
     "prepack": "tsc --build --clean && tsc --build",
     "postpack": "tsc --build --clean"
   },
   "devDependencies": {
-    "@types/node": "^20.17.30",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.8.3"
+    "@types/node": "^26.1.0",
+    "typescript": "^6.0.3"
   },
   "dependencies": {
-    "node-addon-api": "^8.3.1"
+    "node-addon-api": "^8.9.0"
   }
 }

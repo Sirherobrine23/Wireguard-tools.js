@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert";
-import { QuickConfig, parse, stringify } from "./quick.js";
+import type { QuickConfig } from "./quick.ts";
+import { parse, stringify } from "./quick.ts";
 
 const StaticConfig = `[Interface]
 ListenPort = 38451

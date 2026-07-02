@@ -1,11 +1,10 @@
 module sirherobrine23.com.br/Wireguard/Wireguard-tools.js
 
-go 1.24.2
+go 1.26.0
 
 require (
-	golang.zx2c4.com/wireguard v0.0.0-20231211153847-12269c276173
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20241231184526-a9ab2273dd10
-	sirherobrine23.com.br/Sirherobrine23/napi-go v0.1.2-0.20250428221559-379bd75a8e14
+	sirherobrine23.com.br/Sirherobrine23/napi-go v0.1.2-0.20250519152915-f5b390708d7c
 )
 
 require (
@@ -18,5 +17,5 @@ require (
 	golang.org/x/net v0.33.0 // indirect
 	golang.org/x/sync v0.10.0 // indirect
 	golang.org/x/sys v0.28.0 // indirect
-	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2 // indirect
+	golang.zx2c4.com/wireguard v0.0.0-20231211153847-12269c276173 // indirect
 )

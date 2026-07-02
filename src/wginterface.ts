@@ -1,5 +1,5 @@
 import path from "node:path";
-import { LoadAddon, projectRoot } from "./addons.js";
+import { LoadAddon, projectRoot } from "./addons.ts";
 
 export interface Peer {
   /** Preshared key to peer */
@@ -61,7 +61,7 @@ export interface SetConfig extends Config<SetPeer> {
 };
 
 /**
- * Exported wireguard-tools.js addon
+ * Exported wireguard-tools.ts addon
  */
 export const addon = await LoadAddon<{
   /** External functions or drive info */

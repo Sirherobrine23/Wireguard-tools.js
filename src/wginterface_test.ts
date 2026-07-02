@@ -1,8 +1,9 @@
 import assert from "node:assert";
 import test from "node:test";
 import { format } from "node:util";
-import { presharedKey, privateKey, publicKey } from "./key.js";
-import { Config, deleteInterface, getConfig, setConfig } from "./wginterface.js";
+import { presharedKey, privateKey, publicKey } from "./key.ts";
+import type { Config } from "./wginterface.ts";
+import { deleteInterface, getConfig, setConfig } from "./wginterface.ts";
 
 await test("Wireguard interface", async t => {
   const newConfig: Config = {
